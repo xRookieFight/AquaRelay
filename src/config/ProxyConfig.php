@@ -46,7 +46,8 @@ final class ProxyConfig {
 				(int) $networkSettings["bind"]["port"],
 				$networkSettings["backend"]["address"],
 				(int) $networkSettings["backend"]["port"],
-				(int) $networkSettings["session-timeout"],
+				(int) $networkSettings["batch-threshold"],
+				(int) $networkSettings["compression-level"],
 				(int) $networkSettings["max-mtu"]
 			),
 			new MiscSettings(

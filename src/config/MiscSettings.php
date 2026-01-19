@@ -30,11 +30,11 @@ final class MiscSettings {
 		private string $logName
 	){}
 
-	public function isDebugMode() : bool{
+	public function isDebugMode() : bool {
 		return $this->debugMode;
 	}
 
-	public function setDebugMode(bool $debugMode) : void{
+	public function setDebugMode(bool $debugMode) : void {
 		$this->debugMode = $debugMode;
 	}
 
@@ -42,8 +42,7 @@ final class MiscSettings {
 		return $this->logName;
 	}
 
-	public function setLogName(string $logName) : void
-	{
+	public function setLogName(string $logName) : void {
 		$this->logName = $logName;
 	}
 }

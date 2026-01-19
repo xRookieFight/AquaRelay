@@ -30,31 +30,32 @@ final class NetworkSettings {
 		private int $bindPort,
 		private string $backendAddress,
 		private int $backendPort,
-		private int $sessionTimeout,
+		private int $batchThreshold,
+		private int $compressionLevel,
 		private int $maxMtu
 	){}
 
-	public function getBindAddress() : string{
+	public function getBindAddress() : string {
 		return $this->bindAddress;
 	}
 
-	public function setBindAddress(string $bindAddress) : void{
+	public function setBindAddress(string $bindAddress) : void {
 		$this->bindAddress = $bindAddress;
 	}
 
-	public function getBindPort() : int{
+	public function getBindPort() : int {
 		return $this->bindPort;
 	}
 
-	public function setBindPort(int $bindPort) : void{
+	public function setBindPort(int $bindPort) : void {
 		$this->bindPort = $bindPort;
 	}
 
-	public function getBackendAddress() : string{
+	public function getBackendAddress() : string {
 		return $this->backendAddress;
 	}
 
-	public function setBackendAddress(string $backendAddress) : void{
+	public function setBackendAddress(string $backendAddress) : void {
 		$this->backendAddress = $backendAddress;
 	}
 
@@ -62,23 +63,31 @@ final class NetworkSettings {
 		return $this->backendPort;
 	}
 
-	public function setBackendPort(int $backendPort) : void{
+	public function setBackendPort(int $backendPort) : void {
 		$this->backendPort = $backendPort;
 	}
 
-	public function getSessionTimeout() : int{
-		return $this->sessionTimeout;
+	public function getBatchThreshold() : int {
+		return $this->batchThreshold;
 	}
 
-	public function setSessionTimeout(int $sessionTimeout) : void{
-		$this->sessionTimeout = $sessionTimeout;
+	public function setBatchThreshold(int $batchThreshold) : void {
+		$this->batchThreshold = $batchThreshold;
 	}
 
-	public function getMaxMtu() : int{
+	public function getCompressionLevel() : int {
+		return $this->compressionLevel;
+	}
+
+	public function setCompressionLevel(int $compressionLevel) : void {
+		$this->compressionLevel = $compressionLevel;
+	}
+
+	public function getMaxMtu() : int {
 		return $this->maxMtu;
 	}
 
-	public function setMaxMtu(int $maxMtu) : void{
+	public function setMaxMtu(int $maxMtu) : void {
 		$this->maxMtu = $maxMtu;
 	}
 }

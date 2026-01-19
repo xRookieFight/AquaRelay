@@ -172,7 +172,15 @@ class ProxyServer {
 
 		$this->playerManager = new PlayerManager();
 
-		ZlibCompressor::setInstance(new ZlibCompressor(ZlibCompressor::DEFAULT_LEVEL, ZlibCompressor::DEFAULT_THRESHOLD, ZlibCompressor::DEFAULT_MAX_DECOMPRESSION_SIZE));
+		$threshold = $this->getConfig()->getNetworkSettings()->getBatchThreshold();
+		$compressionThreshold = $threshold >= 0 ? $threshold : null;
+
+		$compressionLevel = $this->getConfig()->getNetworkSettings()->getCompressionLevel();
+		if ($compressionLevel < 1 || $compressionLevel > 9){
+			throw new \RuntimeException("Compression level must be between 1 and 9");
+		}
+
+		ZlibCompressor::setInstance(new ZlibCompressor($compressionLevel, $compressionThreshold, ZlibCompressor::DEFAULT_MAX_DECOMPRESSION_SIZE));
 		$this->logger->debug("ZLib compressor initialized");
 
 		$this->logger->info("Initializing RakLib Interface...");

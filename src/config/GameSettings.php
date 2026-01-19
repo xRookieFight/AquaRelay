@@ -31,27 +31,27 @@ final class GameSettings {
 		private string $subMotd
 	){}
 
-	public function getMaxPlayers() : int{
+	public function getMaxPlayers() : int {
 		return $this->maxPlayers;
 	}
 
-	public function setMaxPlayers(int $maxPlayers) : void{
+	public function setMaxPlayers(int $maxPlayers) : void {
 		$this->maxPlayers = $maxPlayers;
 	}
 
-	public function getMotd() : string{
+	public function getMotd() : string {
 		return $this->motd;
 	}
 
-	public function setMotd(string $motd) : void{
+	public function setMotd(string $motd) : void {
 		$this->motd = $motd;
 	}
 
-	public function getSubMotd() : string{
+	public function getSubMotd() : string {
 		return $this->subMotd;
 	}
 
-	public function setSubMotd(string $subMotd) : void{
+	public function setSubMotd(string $subMotd) : void {
 		$this->subMotd = $subMotd;
 	}
 }
