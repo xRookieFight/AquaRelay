@@ -29,6 +29,6 @@ jobs:
         uses: peter-evans/repository-dispatch@v4
         with:
           token: ${{ steps.generate-token.outputs.token }}
-          repository: ${{ github.repository_owner }}/RestrictedActions
+          repository: pmmp/RestrictedActions
           event-type: auto_approve_collaborator_pr
           client-payload: '{"repo": "${{ github.repository }}", "pull_request_id": "${{ github.event.pull_request.number }}", "reviewer_id": "0" }'
