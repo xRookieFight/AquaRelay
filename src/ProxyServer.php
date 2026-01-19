@@ -37,7 +37,7 @@ use pocketmine\network\mcpe\protocol\ProtocolInfo;
 class ProxyServer {
 
 	public const NAME = "AquaRelay";
-	public const VERSION = "1.1.0-alpha1"; // Server
+	public const VERSION = "1.0.0-alpha1"; // Semver
 	public const IS_DEVELOPMENT = true;
 	public RakLibInterface $interface;
 	private MainLogger $logger;
