@@ -42,6 +42,7 @@ class ResourcePackHandler extends PacketHandler {
 
 				$pk = ResourcePackStackPacket::create(
 					resourcePackStack: [],
+					behaviorPackStack: [],
 					mustAccept: false,
 					baseGameVersion: "*",
 					experiments: new Experiments([], false),

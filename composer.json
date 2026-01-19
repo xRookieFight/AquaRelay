@@ -15,9 +15,9 @@
 		"pocketmine/color": "^0.3.0",
 		"pocketmine/log": "^0.4.0",
 		"pocketmine/bedrock-block-upgrade-schema": "~5.2.0+bedrock-1.21.110",
-		"pocketmine/bedrock-data": "~6.3.0+bedrock-1.21.130",
-		"pocketmine/bedrock-item-upgrade-schema": "~1.16.0+bedrock-1.21.110",
-		"pocketmine/bedrock-protocol": "~54.0.0+bedrock-1.21.130",
+		"nethergamesmc/bedrock-data": "dev-master",
+        "pocketmine/bedrock-item-upgrade-schema": "~1.16.0+bedrock-1.21.110",
+        "nethergamesmc/bedrock-protocol": "dev-master",
 		"symfony/yaml": "^7.0",
 		"ramsey/uuid": "~4.9.0",
 		"symfony/filesystem": "~6.4.0"
@@ -36,6 +36,16 @@
 			"@php -dphar.readonly=0 scripts/build.php"
 		]
 	},
-	"minimum-stability": "stable",
-	"prefer-stable": true
+	"repositories": [
+      {
+         "type": "vcs",
+         "url":  "git@github.com:NetherGamesMC/BedrockProtocol.git"
+      },
+      {
+         "type": "vcs",
+         "url":  "git@github.com:NetherGamesMC/BedrockData.git"
+      }
+   ],
+   "minimum-stability": "stable",
+   "prefer-stable": true
 }

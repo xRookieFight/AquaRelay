@@ -25,6 +25,7 @@ use aquarelay\network\raklib\RakLibInterface;
 use pocketmine\network\mcpe\protocol\DataPacket;
 use raklib\client\ClientSocket;
 use pmmp\encoding\ByteBufferWriter;
+use pocketmine\network\mcpe\protocol\ProtocolInfo;
 use raklib\protocol\ConnectionRequest;
 use raklib\protocol\OpenConnectionRequest1;
 use raklib\protocol\OpenConnectionRequest2;
@@ -96,7 +97,7 @@ class BackendRakClient {
 
 	public function sendGamePacket(DataPacket $packet) : void {
 		$writer = new ByteBufferWriter();
-		$packet->encode($writer);
+		$packet->encode($writer, ProtocolInfo::CURRENT_PROTOCOL);
 		$payload = RakLibInterface::MCPE_RAKNET_PACKET_ID . $writer->getData();
 		$this->sendRaw($payload);
 	}

@@ -28,6 +28,8 @@ use aquarelay\network\compression\ZlibCompressor;
 use aquarelay\network\ProxyLoop;
 use aquarelay\network\raklib\RakLibInterface;
 use aquarelay\player\PlayerManager;
+use aquarelay\plugin\PluginLoader;
+use aquarelay\plugin\PluginManager;
 use aquarelay\utils\Colors;
 use aquarelay\utils\MainLogger;
 use pocketmine\network\mcpe\protocol\ProtocolInfo;
@@ -35,13 +37,14 @@ use pocketmine\network\mcpe\protocol\ProtocolInfo;
 class ProxyServer {
 
 	public const NAME = "AquaRelay";
-	public const VERSION = "1.0.0-alpha1"; // Semver
+	public const VERSION = "1.1.0-alpha1"; // Server
 	public const IS_DEVELOPMENT = true;
 	public RakLibInterface $interface;
 	private MainLogger $logger;
 	private ProxyConfig $config;
 	private static ?self $instance = null;
 	private PlayerManager $playerManager;
+	private PluginManager $pluginManager;
 
 	/**
 	 * Returns a server instance, can be nullable
@@ -148,6 +151,11 @@ class ProxyServer {
 		return $this->playerManager;
 	}
 
+	public function getPluginManager() : PluginManager
+	{
+		return $this->pluginManager;
+	}
+
 	public function __construct(
 		private string $dataPath,
 		private string $resourcePath
@@ -211,6 +219,15 @@ class ProxyServer {
 
 		$this->logger->info("Proxy started! (" . round(microtime(true) - $startTime, 3) ."s)");
 
+		$pluginsPath = $this->dataPath . "plugins" . DIRECTORY_SEPARATOR;
+		if (!is_dir($pluginsPath)) {
+			@mkdir($pluginsPath, 0755, true);
+		}
+		$pluginLoader = new PluginLoader($this, $pluginsPath);
+		$this->pluginManager = new PluginManager($this, $pluginLoader);
+		$this->pluginManager->loadPlugins();
+
+		
 		$loop = new ProxyLoop($this);
 		$loop->run();
 	}
