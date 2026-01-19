@@ -213,12 +213,6 @@ class ProxyServer {
 		$this->interface = new RakLibInterface($this->dataPath, $this->logger, $this->getAddress(), $this->getPort(), $this->getConfig()->getNetworkSettings()->getMaxMtu());
 		$this->interface->setName($this->getMotd(), $this->getSubMotd());
 
-		$this->logger->info("Listening on {$this->getAddress()}:{$this->getPort()}");
-
-		$this->interface->start();
-
-		$this->logger->info("Proxy started! (" . round(microtime(true) - $startTime, 3) ."s)");
-
 		$pluginsPath = $this->dataPath . "plugins" . DIRECTORY_SEPARATOR;
 		if (!is_dir($pluginsPath)) {
 			@mkdir($pluginsPath, 0755, true);
@@ -227,6 +221,11 @@ class ProxyServer {
 		$this->pluginManager = new PluginManager($this, $pluginLoader);
 		$this->pluginManager->loadPlugins();
 
+		$this->logger->info("Listening on {$this->getAddress()}:{$this->getPort()}");
+
+		$this->interface->start();
+
+		$this->logger->info("Proxy started! (" . round(microtime(true) - $startTime, 3) ."s)");
 		
 		$loop = new ProxyLoop($this);
 		$loop->run();

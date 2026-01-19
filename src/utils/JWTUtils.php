@@ -26,9 +26,7 @@ namespace aquarelay\utils;
 class JWTUtils
 {
 
-	use InstanceTrait;
-
-	private function split(string $jwt) : array{
+	private static function split(string $jwt) : array{
 		$v = explode(".", $jwt, limit: 4);
 		if(count($v) !== 3){
 			throw new JWTException("Expected exactly 3 JWT parts delimited by a period");
@@ -36,11 +34,11 @@ class JWTUtils
 		return [$v[0], $v[1], $v[2]];
 	}
 
-	public function b64UrlEncode(string $str) : string{
+	public static function b64UrlEncode(string $str) : string{
 		return rtrim(strtr(base64_encode($str), '+/', '-_'), '=');
 	}
 
-	public function b64UrlDecode(string $str) : string{
+	public static function b64UrlDecode(string $str) : string{
 		if(($len = strlen($str) % 4) !== 0){
 			$str .= str_repeat('=', 4 - $len);
 		}
@@ -51,17 +49,17 @@ class JWTUtils
 		return $decoded;
 	}
 
-	public function parse(string $token) : array{
-		$v = $this->split($token);
-		$header = json_decode($this->b64UrlDecode($v[0]), true);
+	public static function parse(string $token) : array{
+		$v = self::split($token);
+		$header = json_decode(self::b64UrlDecode($v[0]), true);
 		if(!is_array($header)){
-			throw new JWTException("Failed to decode JWT header JSON: " . json_last_error_msg());
+			throw new JwtException("Failed to decode JWT header JSON: " . json_last_error_msg());
 		}
-		$body = json_decode($this->b64UrlDecode($v[1]), true);
+		$body = json_decode(self::b64UrlDecode($v[1]), true);
 		if(!is_array($body)){
-			throw new JWTException("Failed to decode JWT payload JSON: " . json_last_error_msg());
+			throw new JwtException("Failed to decode JWT payload JSON: " . json_last_error_msg());
 		}
-		$signature = $this->b64UrlDecode($v[2]);
+		$signature = self::b64UrlDecode($v[2]);
 		return [$header, $body, $signature];
 	}
 

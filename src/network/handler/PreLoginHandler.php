@@ -37,6 +37,8 @@ class PreLoginHandler extends PacketHandler {
 			return false;
 		}
 
+		$this->session->setProtocolId($packet->getProtocolVersion());
+		
 		$pk = NetworkSettingsPacket::create(
 			NetworkSettingsPacket::COMPRESS_EVERYTHING,
 			CompressionAlgorithm::ZLIB,

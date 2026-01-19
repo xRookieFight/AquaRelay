@@ -51,6 +51,7 @@ class NetworkSession {
 	private array $sendBuffer = [];
 	private bool $enableCompression = false;
 	private int $lastUsed;
+	private ?int $protocolId = null;
 	private ?string $username = null;
 	private ?int $ping = null;
 	private bool $connected = true;
@@ -110,6 +111,14 @@ class NetworkSession {
 		} else {
 			$this->debug("Unknown packet ID: 0x" . dechex(ord($buffer[0])));
 		}
+	}
+
+	public function setProtocolId(int $protocolId) : void{
+		$this->protocolId = $protocolId;
+	}
+
+	public function getProtocolId() : int{
+		return $this->protocolId ?? ProtocolInfo::CURRENT_PROTOCOL;
 	}
 
 	public function sendDataPacket(ClientboundPacket $packet, bool $immediate = false) : void {

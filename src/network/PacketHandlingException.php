@@ -21,18 +21,15 @@
 
 declare(strict_types=1);
 
-namespace aquarelay\utils;
+namespace aquarelay\network;
 
-use Ramsey\Uuid\UuidInterface;
+/**
+ * Thrown when an error occurs during packet handling - for example, a message contained invalid options, packet shorter
+ * than expected, unknown packet, etc.
+ */
+class PacketHandlingException extends \RuntimeException{
 
-class LoginData {
-	public function __construct(
-		public readonly string $username,
-		public readonly UuidInterface $Uuid,
-		public readonly string $xuid,
-		public readonly array $chainData,   // JWT Chain
-		public readonly string $clientData, // JWT Client
-		public readonly int $protocolVersion,
-		public int $clientSubId = 0
-	) {}
+	public static function wrap(\Throwable $previous, ?string $prefix = null) : self{
+		return new self(($prefix !== null ? $prefix . ": " : "") . $previous->getMessage(), 0, $previous);
+	}
 }

@@ -28,13 +28,16 @@ use aquarelay\utils\LoginData;
 use pocketmine\network\mcpe\protocol\DataPacket;
 use pocketmine\network\mcpe\protocol\LoginPacket;
 use pocketmine\network\mcpe\protocol\StartGamePacket;
+use Ramsey\Uuid\UuidInterface;
 
 class Player
 {
+	protected UuidInterface $uuid;
 
 	public int $proxyRuntimeId;
 
 	public ?int $backendRuntimeId = null;
+	protected string $xuid = "";
 
 	private $upstreamSession;
 	private ?BackendRakClient $downstreamConnection = null;
@@ -44,7 +47,8 @@ class Player
 	public function __construct($upstreamSession, LoginData $loginData) {
 		$this->upstreamSession = $upstreamSession;
 		$this->loginData = $loginData;
-
+        $this->xuid = $loginData->xuid;
+		$this->uuid = $loginData->Uuid;
 		$this->proxyRuntimeId = mt_rand(10000, 50000);
 	}
 
@@ -65,6 +69,14 @@ class Player
 
 	public function getDownstream(): ?BackendRakClient {
 		return $this->downstreamConnection;
+	}
+
+	public function getUuid(): UuidInterface {
+		return $this->uuid;
+	}
+
+	public function getXuid(): string {
+		return $this->xuid;
 	}
 
 	public function sendLoginToBackend(): void {
