@@ -1,9 +1,9 @@
 name: Build & Push Docker Image
 
 on:
-  push:
-    tags:
-      - "v*"
+  workflow_dispatch:
+  repository_dispatch:
+    types: aquarelay_docker_push
 
 jobs:
   docker:
