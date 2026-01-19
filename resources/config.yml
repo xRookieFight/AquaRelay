@@ -24,3 +24,5 @@ game-settings:
   max-players: 50 # Maximum number of players allowed to connect
   motd: "§bAquaRelay Proxy" # Main MOTD shown in the server list
   sub-motd: "www.aquarelay.dev" # Secondary MOTD shown below the main one
+
+config-version: 1 # Do not change this.

@@ -23,9 +23,12 @@ declare(strict_types=1);
 
 namespace aquarelay\config;
 
+use aquarelay\config\category\GameSettings;
+use aquarelay\config\category\MiscSettings;
+use aquarelay\config\category\NetworkSettings;
 use Symfony\Component\Yaml\Yaml;
 
-final class ProxyConfig {
+class ProxyConfig {
 
 	public function __construct(
 		private readonly NetworkSettings $networkSettings,
@@ -35,6 +38,16 @@ final class ProxyConfig {
 
 	public static function load(string $file) : self{
 		$data = Yaml::parseFile($file);
+		$template = Yaml::parseFile(\aquarelay\RESOURCE_PATH . "config.yml");
+
+		$configVersion = $data["config-version"] ?? 0;
+
+		if (!ConfigUpdater::getInstance()->isUpToDate($configVersion)) {
+			$data = ConfigUpdater::getInstance()->update($data, $template);
+			$data["config-version"] = ConfigUpdater::CONFIG_VERSION;
+
+			file_put_contents($file, Yaml::dump($data, 4, 2));
+		}
 		
 		$networkSettings = $data["network-settings"];
 		$miscSettings = $data["misc-settings"];

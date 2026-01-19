@@ -21,7 +21,7 @@
 
 declare(strict_types=1);
 
-namespace aquarelay\config;
+namespace aquarelay\config\category;
 
 final class GameSettings {
 
