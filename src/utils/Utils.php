@@ -22,7 +22,7 @@ declare(strict_types=1);
 
 namespace aquarelay\utils;
 
-class ProxyUtils {
+class Utils {
 
     public const OS_WINDOWS = "win";
     public const OS_IOS = "ios";
@@ -67,7 +67,7 @@ class ProxyUtils {
     /**
      * Get the current Operating System.
      * * @param bool $recalculate Force recalculation of the OS
-     * @return string one of the ProxyUtils::OS_* constants
+     * @return string one of the Utils::OS_* constants
      */
     public static function getOS(bool $recalculate = false): string {
         if (self::$os === null || $recalculate) {

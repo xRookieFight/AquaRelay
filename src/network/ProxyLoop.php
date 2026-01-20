@@ -26,15 +26,21 @@ namespace aquarelay\network;
 use aquarelay\network\raklib\RakLibPacketSender;
 use aquarelay\ProxyServer;
 use pocketmine\network\mcpe\protocol\PacketPool;
+use pocketmine\snooze\SleeperHandler;
 
 class ProxyLoop {
 
 	/** @var NetworkSession[] */
 	private array $sessions = [];
 
+	private SleeperHandler $sleeper;
+
+	const TICK_INTERVAL = 0.05;
+
 	public function __construct(
 		private ProxyServer $server
 	){
+		$this->sleeper = new SleeperHandler();
 		$this->server->interface->setHandlers(
 			$this->handleConnect(...),
 			$this->handlePacket(...),
@@ -44,20 +50,19 @@ class ProxyLoop {
 	}
 
 	public function run() : void {
-        $tickInterval = 0.05;
         $nextTick = microtime(true);
 
         while(true) {
             $now = microtime(true);
 
-            $this->server->interface->tick(); 
+            $this->server->interface->tick();
 
             if ($now >= $nextTick) {
                 $this->tick();
-                $nextTick += $tickInterval;
+                $nextTick += self::TICK_INTERVAL;
             }
 
-            usleep(1000); 
+            $this->sleeper->sleepUntil($nextTick);
         }
     }
 

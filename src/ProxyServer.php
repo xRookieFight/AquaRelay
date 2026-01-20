@@ -34,7 +34,7 @@ use aquarelay\plugin\PluginManager;
 use aquarelay\task\TaskScheduler;
 use aquarelay\utils\Colors;
 use aquarelay\utils\MainLogger;
-use aquarelay\utils\ProxyUtils;
+use aquarelay\utils\Utils;
 use pocketmine\network\mcpe\protocol\ProtocolInfo;
 
 class ProxyServer {
@@ -275,11 +275,7 @@ class ProxyServer {
 
         $this->handleRestartThrottle();
         $this->logger->shutdown();
-        
-        // Ensure the process actually dies (force kill self)
-        // We use exit(0) to signal to the OS that this was a purposeful, clean shutdown.
-        @ProxyUtils::kill(ProxyUtils::pid()); 
-        exit(0);
+        @Utils::kill(Utils::pid()); 
     }
 
     /**
