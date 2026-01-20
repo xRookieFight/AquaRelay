@@ -52,6 +52,8 @@ class ProxyLoop {
 
 	private function tick() : void {
 		$this->server->interface->tick();
+		
+		$this->server->getScheduler()->processAll();
 
 		foreach($this->sessions as $session) {
 			$player = $session->getPlayer();

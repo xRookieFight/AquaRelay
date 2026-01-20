@@ -120,6 +120,13 @@ class PluginLoader {
 			require_once $vendorPath;
 		}
 
+		$srcPath = $path . DIRECTORY_SEPARATOR . "src";
+		if (is_dir($srcPath)) {
+			$this->registerPluginAutoloader($srcPath);
+		}
+
+		$this->loadPhpFilesRecursive($srcPath);
+
 		$mainClass = $description->getMain();
 		
 		$classFile = $path . DIRECTORY_SEPARATOR . "src" . DIRECTORY_SEPARATOR . str_replace("\\", DIRECTORY_SEPARATOR, $mainClass) . ".php";
@@ -141,11 +148,61 @@ class PluginLoader {
 		$plugin = new $mainClass();
 		$plugin->setDescription($description);
 		$plugin->setServer($this->server);
-		$plugin->onLoad();
+		
+		try {
+			$plugin->onLoad();
+		} catch (\Throwable $e) {
+			$this->logger->error("Error in plugin {$description->getName()} onLoad: " . $e->getMessage());
+			throw new PluginException("Plugin onLoad failed: " . $e->getMessage(), previous: $e);
+		}
 
 		$this->logger->info("Successfully loaded plugin: " . $plugin->getName() . " v" . $plugin->getVersion());
 
 		return $plugin;
+	}
+
+	/**
+	 * Recursively loads all PHP files from a directory
+	 */
+	private function loadPhpFilesRecursive(string $dir) : void
+	{
+		if (!is_dir($dir)) {
+			return;
+		}
+
+		$files = @scandir($dir);
+		if ($files === false) {
+			return;
+		}
+
+		foreach ($files as $file) {
+			if ($file === "." || $file === "..") {
+				continue;
+			}
+
+			$fullPath = $dir . DIRECTORY_SEPARATOR . $file;
+
+			if (is_dir($fullPath)) {
+				$this->loadPhpFilesRecursive($fullPath);
+			} elseif (is_file($fullPath) && str_ends_with($fullPath, ".php")) {
+				require_once $fullPath;
+			}
+		}
+	}
+
+	/**
+	 * Registers a custom autoloader for the plugin
+	 */
+	private function registerPluginAutoloader(string $srcPath) : void
+	{
+		spl_autoload_register(function(string $class) use ($srcPath) : void {
+			$classPath = str_replace("\\", DIRECTORY_SEPARATOR, $class);
+			$filePath = $srcPath . DIRECTORY_SEPARATOR . $classPath . ".php";
+
+			if (file_exists($filePath)) {
+				require_once $filePath;
+			}
+		});
 	}
 
 	/**

@@ -30,6 +30,7 @@ use aquarelay\network\raklib\RakLibInterface;
 use aquarelay\player\PlayerManager;
 use aquarelay\plugin\PluginLoader;
 use aquarelay\plugin\PluginManager;
+use aquarelay\task\TaskScheduler;
 use aquarelay\utils\Colors;
 use aquarelay\utils\MainLogger;
 use pocketmine\network\mcpe\protocol\ProtocolInfo;
@@ -45,6 +46,7 @@ class ProxyServer {
 	private static ?self $instance = null;
 	private PlayerManager $playerManager;
 	private PluginManager $pluginManager;
+	private TaskScheduler $taskScheduler;
 
 	/**
 	 * Returns a server instance, can be nullable
@@ -156,6 +158,11 @@ class ProxyServer {
 		return $this->pluginManager;
 	}
 
+	public function getScheduler() : TaskScheduler
+	{
+		return $this->taskScheduler;
+	}
+
 	public function __construct(
 		private string $dataPath,
 		private string $resourcePath
@@ -197,6 +204,7 @@ class ProxyServer {
 		$this->logger->info("This server is running Minecraft: Bedrock Edition " . Colors::AQUA . "v" . $this->getMinecraftVersion());
 
 		$this->playerManager = new PlayerManager();
+		$this->taskScheduler = new TaskScheduler();
 
 		$threshold = $this->getConfig()->getNetworkSettings()->getBatchThreshold();
 		$compressionThreshold = $threshold >= 0 ? $threshold : null;
