@@ -43,25 +43,34 @@ class ProxyLoop {
 		);
 	}
 
-	public function run() : void{
-		while(true){
-			$this->tick();
-			usleep(1000);
-		}
-	}
+	public function run() : void {
+        $tickInterval = 0.05;
+        $nextTick = microtime(true);
 
-	private function tick() : void {
-		$this->server->interface->tick();
-		
-		$this->server->getScheduler()->processAll();
+        while(true) {
+            $now = microtime(true);
 
-		foreach($this->sessions as $session) {
-			$player = $session->getPlayer();
-			if($player !== null && $player->getDownstream() !== null) {
-				$player->getDownstream()->tick(function($payload) use ($player) {});
-			}
-		}
-	}
+            $this->server->interface->tick(); 
+
+            if ($now >= $nextTick) {
+                $this->tick();
+                $nextTick += $tickInterval;
+            }
+
+            usleep(1000); 
+        }
+    }
+
+    private function tick() : void {
+        $this->server->getScheduler()->processAll();
+
+        foreach($this->sessions as $session) {
+            $player = $session->getPlayer();
+            if($player !== null && $player->getDownstream() !== null) {
+                $player->getDownstream()->tick(function($payload) use ($player) {});
+            }
+        }
+    }
 
 	private function handleConnect(int $sessionId, string $ip, int $port): void {
 		$this->server->getLogger()->info("Client connected: $ip:$port (ID: $sessionId)");

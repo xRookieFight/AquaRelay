@@ -27,12 +27,14 @@ use aquarelay\config\ProxyConfig;
 use aquarelay\network\compression\ZlibCompressor;
 use aquarelay\network\ProxyLoop;
 use aquarelay\network\raklib\RakLibInterface;
+use aquarelay\player\Player;
 use aquarelay\player\PlayerManager;
 use aquarelay\plugin\PluginLoader;
 use aquarelay\plugin\PluginManager;
 use aquarelay\task\TaskScheduler;
 use aquarelay\utils\Colors;
 use aquarelay\utils\MainLogger;
+use aquarelay\utils\ProxyUtils;
 use pocketmine\network\mcpe\protocol\ProtocolInfo;
 
 class ProxyServer {
@@ -47,6 +49,8 @@ class ProxyServer {
 	private PlayerManager $playerManager;
 	private PluginManager $pluginManager;
 	private TaskScheduler $taskScheduler;
+
+	private float $startProcessTime;
 
 	/**
 	 * Returns a server instance, can be nullable
@@ -172,7 +176,7 @@ class ProxyServer {
 		}
 
 		self::$instance = $this;
-		$startTime = microtime(true);
+		$this->startProcessTime = microtime(true);
 		$configFile = $this->dataPath . "config.yml";
 
 		if (!file_exists($configFile)) {
@@ -206,6 +210,8 @@ class ProxyServer {
 		$this->playerManager = new PlayerManager();
 		$this->taskScheduler = new TaskScheduler();
 
+		register_shutdown_function([$this, "shutdown"]);
+
 		$threshold = $this->getConfig()->getNetworkSettings()->getBatchThreshold();
 		$compressionThreshold = $threshold >= 0 ? $threshold : null;
 
@@ -233,10 +239,63 @@ class ProxyServer {
 
 		$this->interface->start();
 
-		$this->logger->info("Proxy started! (" . round(microtime(true) - $startTime, 3) ."s)");
+		$this->logger->info("Proxy started! (" . round(microtime(true) - $this->startProcessTime, 3) ."s)");
 		
 		$loop = new ProxyLoop($this);
 		$loop->run();
 	}
 
+	public function shutdown() : void
+    {
+        $shutdownStart = microtime(true);
+
+		foreach ($this->getOnlinePlayers() as $player) {
+			/** @var Player $player */
+			$player->disconnect("Proxy is shutting down");
+		}
+
+        foreach ($this->pluginManager->getPlugins() as $plugin) {
+            if ($plugin->isEnabled()) {
+                try {
+                    $this->pluginManager->disablePlugin($plugin);
+                } catch (\Throwable $e) {
+                    $this->logger->error("Failed to disable plugin " . $plugin->getName() . ": " . $e->getMessage());
+                    $this->logger->logException($e);
+                }
+            }
+        }
+
+        $this->taskScheduler->cancelAllTasks();
+        $this->taskScheduler->shutdown();
+        
+        $this->interface->shutdown();
+
+        $duration = round(microtime(true) - $shutdownStart, 3);
+        $this->logger->info("Shutdown completed in {$duration}s.");
+
+        $this->handleRestartThrottle();
+        $this->logger->shutdown();
+        
+        // Ensure the process actually dies (force kill self)
+        // We use exit(0) to signal to the OS that this was a purposeful, clean shutdown.
+        @ProxyUtils::kill(ProxyUtils::pid()); 
+        exit(0);
+    }
+
+    /**
+     * Prevents the server from restarting too quickly if it was only up for a few seconds.
+     * This saves CPU/Disk if the server is in a crash-loop.
+     */
+    private function handleRestartThrottle() : void 
+    {
+        $uptime = time() - (int)$this->startProcessTime;
+        $minUptime = 10;
+        
+        if ($uptime < $minUptime) {
+            $spacing = $minUptime - $uptime;
+            echo PHP_EOL . "--- [AquaRelay] Server ran for only {$uptime}s. Waiting {$spacing}s before exit ---" . PHP_EOL;
+            echo "--- (Press Ctrl+C to skip wait) ---" . PHP_EOL;
+            sleep($spacing);
+        }
+    }
 }

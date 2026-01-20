@@ -46,8 +46,8 @@ class DelayedTask extends Task {
 
 	public function onRun() : void {
 		$this->elapsedTicks++;
-		
-		if ($this->elapsedTicks >= $this->delay && !$this->isCancelled()) {
+
+		if ($this->elapsedTicks >= $this->delay && !$this->task->isCancelled() && !$this->isCancelled()) {
 			$this->task->onRun();
 		}
 	}

@@ -101,4 +101,8 @@ class Player
 
 		$this->sendDataPacket($packet);
 	}
+
+	public function disconnect(string $reason = "Disconnected from proxy"): void {
+		$this->upstreamSession->disconnect($reason);
+	}
 }

@@ -54,7 +54,7 @@ class RepeatingTask extends Task {
 	public function onRun() : void {
 		$this->elapsedTicks++;
 		
-		if ($this->elapsedTicks >= $this->delay && ($this->elapsedTicks - $this->delay) % $this->period === 0 && !$this->isCancelled()) {
+		if ($this->elapsedTicks >= $this->delay && ($this->elapsedTicks - $this->delay) % $this->period === 0 && !$this->task->isCancelled() && !$this->isCancelled()) {
 			$this->task->onRun();
 		}
 	}
