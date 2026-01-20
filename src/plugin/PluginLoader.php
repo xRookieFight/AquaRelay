@@ -136,7 +136,7 @@ class PluginLoader {
 		$description = PluginDescription::fromYaml($data);
 
 		if (!$this->isCompatible($description->getApiVersion(), $this->server::VERSION)) {
-			$this->logger->error("Could not load plugin '{$description->getName()}': requires API version {$description->getApiVersion()}, server is {$this->server::VERSION}");
+			$this->logger->error("Could not load plugin '{$description->getName()}': requires API version {$description->getApiVersion()}, server is " . ProxyServer::VERSION);
 			return null;
 		}
 
@@ -178,7 +178,7 @@ class PluginLoader {
 			$plugin->onLoad();
 		} catch (\Throwable $e) {
 			$this->logger->error("Error in plugin {$description->getName()} onLoad: " . $e->getMessage());
-			throw new PluginException("Plugin onLoad failed: " . $e->getMessage(), previous: $e);
+			throw new PluginException("Plugin onLoad failed: " . $e->getMessage());
 		}
 		return $plugin;
 	}
