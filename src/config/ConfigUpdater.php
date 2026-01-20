@@ -29,7 +29,7 @@ class ConfigUpdater {
 
 	use InstanceTrait;
 
-	public const CONFIG_VERSION = 1;
+	public const CONFIG_VERSION = 2;
 
 	public function isUpToDate(int $configVersion) : bool
 	{
