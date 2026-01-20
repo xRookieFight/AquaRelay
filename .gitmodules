@@ -4,3 +4,6 @@
 [submodule "scripts/startup"]
 	path = scripts/startup
 	url = https://github.com/AquaRelay/scripts.git
+[submodule "tools/ExamplePlugin"]
+	path = tools/ExamplePlugin
+	url = https://github.com/AquaRelay/ExamplePlugin.git

@@ -36,15 +36,11 @@ use function scandir;
  */
 class PluginLoader {
 
-	private ProxyServer $server;
 	private MainLogger $logger;
-	private string $pluginsPath;
 
-	public function __construct(ProxyServer $server, string $pluginsPath)
+	public function __construct(private ProxyServer $server, private string $pluginsPath)
 	{
-		$this->server = $server;
 		$this->logger = $server->getLogger();
-		$this->pluginsPath = $pluginsPath;
 	}
 
 	/**
@@ -102,9 +98,33 @@ class PluginLoader {
 	}
 
 	/**
-	 * Loads a plugin from a directory
+	 * Checks if the plugin API version is compatible with the server API version
+	 *
+	 * @param string $pluginVersion Version required by plugin (e.g. "5.0.0")
+	 * @param string $serverVersion Version of server (e.g. "5.3.2")
+	 * @return bool
 	 */
-	private function loadDirectoryPlugin(string $path) : ?PluginBase
+	private function isCompatible(string $pluginVersion, string $serverVersion) : bool {
+		$pluginParts = array_map('intval', explode(".", $pluginVersion));
+		$serverParts = array_map('intval', explode(".", $serverVersion));
+
+		for ($i = count($pluginParts); $i < 3; $i++) $pluginParts[$i] = 0;
+		for ($i = count($serverParts); $i < 3; $i++) $serverParts[$i] = 0;
+
+		if ($pluginParts[0] !== $serverParts[0]) return false;
+
+		for ($i = 1; $i < 3; $i++) {
+			if ($serverParts[$i] < $pluginParts[$i]) return false;
+		}
+
+		return true;
+	}
+
+	/**
+	 * Loads a plugin from a directory
+	 * @throws PluginException
+	 */
+	private function loadDirectoryPlugin(string $path) : ?Plugin
 	{
 		$pluginYmlPath = $path . DIRECTORY_SEPARATOR . "plugin.yml";
 
@@ -114,6 +134,11 @@ class PluginLoader {
 
 		$data = Yaml::parseFile($pluginYmlPath);
 		$description = PluginDescription::fromYaml($data);
+
+		if (!$this->isCompatible($description->getApiVersion(), $this->server::VERSION)) {
+			$this->logger->error("Could not load plugin '{$description->getName()}': requires API version {$description->getApiVersion()}, server is {$this->server::VERSION}");
+			return null;
+		}
 
 		$vendorPath = $path . DIRECTORY_SEPARATOR . "vendor" . DIRECTORY_SEPARATOR . "autoload.php";
 		if (file_exists($vendorPath)) {
@@ -141,8 +166,8 @@ class PluginLoader {
 			throw new PluginException("Main class $mainClass not found in $path");
 		}
 
-		if (!is_subclass_of($mainClass, PluginBase::class)) {
-			throw new PluginException("Main class must extend " . PluginBase::class);
+		if (!is_subclass_of($mainClass, Plugin::class)) {
+			throw new PluginException("Main class must extend " . Plugin::class);
 		}
 
 		$plugin = new $mainClass();
@@ -155,9 +180,6 @@ class PluginLoader {
 			$this->logger->error("Error in plugin {$description->getName()} onLoad: " . $e->getMessage());
 			throw new PluginException("Plugin onLoad failed: " . $e->getMessage(), previous: $e);
 		}
-
-		$this->logger->info("Successfully loaded plugin: " . $plugin->getName() . " v" . $plugin->getVersion());
-
 		return $plugin;
 	}
 
@@ -207,8 +229,9 @@ class PluginLoader {
 
 	/**
 	 * Loads a plugin from a phar archive
+	 * @throws PluginException
 	 */
-	private function loadPharPlugin(string $path) : ?PluginBase
+	private function loadPharPlugin(string $path) : ?Plugin
 	{
 		try {
 			$pharYmlPath = "phar://" . $path . "/plugin.yml";
@@ -240,16 +263,14 @@ class PluginLoader {
 				throw new PluginException("Main class $mainClass not found in phar: $path");
 			}
 
-			if (!is_subclass_of($mainClass, PluginBase::class)) {
-				throw new PluginException("Main class must extend " . PluginBase::class);
+			if (!is_subclass_of($mainClass, Plugin::class)) {
+				throw new PluginException("Main class must extend " . Plugin::class);
 			}
 
 			$plugin = new $mainClass();
 			$plugin->setDescription($description);
 			$plugin->setServer($this->server);
 			$plugin->onLoad();
-
-			$this->logger->info("Successfully loaded plugin from phar: " . $plugin->getName() . " v" . $plugin->getVersion());
 
 			return $plugin;
 		} catch (\PharException $e) {

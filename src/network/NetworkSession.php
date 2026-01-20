@@ -93,7 +93,7 @@ class NetworkSession {
 					$this->processSinglePacket($buffer);
 				}
 			} catch (\Exception $e) {
-				$this->server->getLogger()->error("Batch decode error: " . $e->getMessage());
+				$this->debug("Batch decode error: " . $e->getMessage());
 			}
 		}
 	}

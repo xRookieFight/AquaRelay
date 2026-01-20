@@ -30,6 +30,7 @@ class PluginDescription {
 
 	private string $name;
 	private string $version;
+	private string $apiVersion;
 	private string $main;
 	private string $description = "";
 	private array $authors = [];
@@ -40,24 +41,30 @@ class PluginDescription {
 	public function __construct(
 		string $name,
 		string $version,
+		string $apiVersion,
 		string $main
 	) {
 		$this->name = $name;
 		$this->version = $version;
+		$this->apiVersion = $apiVersion;
 		$this->main = $main;
 	}
 
+	/**
+	 * @throws PluginException
+	 */
 	public static function fromYaml(array $data) : self
 	{
 		$name = $data["name"] ?? "";
 		$version = $data["version"] ?? "1.0.0";
+		$apiVersion = $data["aquarelay"] ?? "";
 		$main = $data["main"] ?? "";
 
-		if (empty($name) || empty($main)) {
-			throw new PluginException("Plugin description must have 'name' and 'main' fields");
+		if (empty($name) || empty($main) || empty($apiVersion)) {
+			throw new PluginException("Plugin description must have 'name', 'aquarelay' and 'main' fields");
 		}
 
-		$desc = new self($name, $version, $main);
+		$desc = new self($name, $version, $apiVersion,  $main);
 		$desc->description = $data["description"] ?? "";
 		$desc->authors = $data["authors"] ?? [];
 		$desc->website = $data["website"] ?? "";
@@ -70,6 +77,7 @@ class PluginDescription {
 	public function getName() : string { return $this->name; }
 	public function getVersion() : string { return $this->version; }
 	public function getMain() : string { return $this->main; }
+	public function getApiVersion() : string { return $this->apiVersion; }
 	public function getDescription() : string { return $this->description; }
 	public function getAuthors() : array { return $this->authors; }
 	public function getWebsite() : string { return $this->website; }

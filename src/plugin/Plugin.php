@@ -24,11 +24,12 @@ declare(strict_types=1);
 namespace aquarelay\plugin;
 
 use aquarelay\ProxyServer;
+use aquarelay\task\TaskScheduler;
 
 /**
  * Base class for all AquaRelay plugins
  */
-abstract class PluginBase {
+abstract class Plugin {
 
 	private PluginDescription $description;
 	private ProxyServer $server;
@@ -125,5 +126,14 @@ abstract class PluginBase {
 	public function setEnabled(bool $enabled) : void
 	{
 		$this->enabled = $enabled;
+	}
+
+	/**
+	 * Returns task scheduler, alias of ProxyServer#getScheduler
+	 * @return TaskScheduler
+	 */
+	public function getScheduler() : TaskScheduler
+	{
+		return $this->server->getScheduler();
 	}
 }

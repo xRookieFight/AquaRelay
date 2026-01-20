@@ -22,6 +22,7 @@
 namespace aquarelay\network\raklib\client;
 
 use aquarelay\network\raklib\RakLibInterface;
+use aquarelay\ProxyServer;
 use pocketmine\network\mcpe\protocol\DataPacket;
 use raklib\client\ClientSocket;
 use pmmp\encoding\ByteBufferWriter;
@@ -76,14 +77,28 @@ class BackendRakClient {
 		$this->socket->writePacket($buffer);
 	}
 
-	public function tick(callable $onPacket) : void{
-		while(($buffer = $this->socket->readPacket()) !== null){
-			if(!$this->connected){
+	public function tick(callable $onPacket) : void {
+		while (true) {
+			try {
+				$buffer = $this->socket->readPacket();
+			} catch (\RuntimeException $e) {
+				ProxyServer::getInstance()->getLogger()->debug("Failed to recv packet: " . $e->getMessage());
+
+				$this->connected = false;
+				$this->socket->close();
+				break;
+			}
+
+			if ($buffer === null) break;
+
+			if (!$this->connected) {
 				$this->connected = true;
 			}
+
 			$onPacket($buffer);
 		}
 	}
+
 
 	private function send(Packet $packet) : void{
 		$serializer = new PacketSerializer();

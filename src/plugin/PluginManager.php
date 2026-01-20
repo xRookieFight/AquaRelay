@@ -30,16 +30,10 @@ use aquarelay\ProxyServer;
  */
 class PluginManager {
 
-	private ProxyServer $server;
-	private PluginLoader $loader;
-	/** @var PluginBase[] */
+	/** @var Plugin[] */
 	private array $plugins = [];
 
-	public function __construct(ProxyServer $server, PluginLoader $loader)
-	{
-		$this->server = $server;
-		$this->loader = $loader;
-	}
+	public function __construct(private ProxyServer $server, private PluginLoader $loader){}
 
 	/**
 	 * Loads all plugins from the plugins directory
@@ -47,7 +41,6 @@ class PluginManager {
 	public function loadPlugins() : void
 	{
 		$this->plugins = $this->loader->loadPlugins();
-		$this->server->getLogger()->info("Loaded " . count($this->plugins) . " plugin(s)");
 
 		foreach ($this->plugins as $plugin) {
 			try {
@@ -60,8 +53,9 @@ class PluginManager {
 
 	/**
 	 * Enables a plugin
+	 * @throws PluginException
 	 */
-	public function enablePlugin(PluginBase $plugin) : void
+	public function enablePlugin(Plugin $plugin) : void
 	{
 		if ($plugin->isEnabled()) {
 			return;
@@ -82,7 +76,7 @@ class PluginManager {
 	/**
 	 * Disables a plugin
 	 */
-	public function disablePlugin(PluginBase $plugin) : void
+	public function disablePlugin(Plugin $plugin) : void
 	{
 		if (!$plugin->isEnabled()) {
 			return;
@@ -96,7 +90,7 @@ class PluginManager {
 	/**
 	 * Gets a plugin by name
 	 */
-	public function getPlugin(string $name) : ?PluginBase
+	public function getPlugin(string $name) : ?Plugin
 	{
 		return $this->plugins[$name] ?? null;
 	}
