@@ -37,10 +37,15 @@ use function scandir;
 class PluginLoader {
 
 	private MainLogger $logger;
+	private string $dataPath;
 
 	public function __construct(private ProxyServer $server, private string $pluginsPath)
 	{
 		$this->logger = $server->getLogger();
+		$this->dataPath = $this->pluginsPath . DIRECTORY_SEPARATOR . "data";
+		if (!is_dir($this->dataPath)) {
+			mkdir($this->dataPath, 0755, true);
+		}
 	}
 
 	/**
@@ -78,13 +83,23 @@ class PluginLoader {
 				if (is_dir($fullPath)) {
 					$plugin = $this->loadDirectoryPlugin($fullPath);
 					if ($plugin !== null) {
-						$plugins[$plugin->getName()] = $plugin;
+						$name = $plugin->getName();
+						if (isset($plugins[$name])) {
+							$this->logger->warning("Plugin '$name' already loaded, skipping duplicate.");
+							continue;
+						}
+						$plugins[$name] = $plugin;
 					}
 				}
 				elseif (is_file($fullPath) && str_ends_with($fullPath, ".phar")) {
 					$plugin = $this->loadPharPlugin($fullPath);
 					if ($plugin !== null) {
-						$plugins[$plugin->getName()] = $plugin;
+						$name = $plugin->getName();
+						if (isset($plugins[$name])) {
+							$this->logger->warning("Plugin '$name' already loaded, skipping duplicate.");
+							continue;
+						}
+						$plugins[$name] = $plugin;
 					}
 				}
 			} catch (PluginException $e) {
@@ -173,7 +188,8 @@ class PluginLoader {
 		$plugin = new $mainClass();
 		$plugin->setDescription($description);
 		$plugin->setServer($this->server);
-		
+		$plugin->setDataFolder($this->dataPath . DIRECTORY_SEPARATOR . $description->getName());
+
 		try {
 			$plugin->onLoad();
 		} catch (\Throwable $e) {
@@ -270,6 +286,7 @@ class PluginLoader {
 			$plugin = new $mainClass();
 			$plugin->setDescription($description);
 			$plugin->setServer($this->server);
+			$plugin->setDataFolder($this->dataPath . DIRECTORY_SEPARATOR . $description->getName());
 			$plugin->onLoad();
 
 			return $plugin;

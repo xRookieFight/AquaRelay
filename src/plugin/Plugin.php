@@ -23,8 +23,14 @@ declare(strict_types=1);
 
 namespace aquarelay\plugin;
 
+use aquarelay\config\Config;
 use aquarelay\ProxyServer;
 use aquarelay\task\TaskScheduler;
+use Symfony\Component\Yaml\Yaml;
+
+use function file_exists;
+use function is_dir;
+use function mkdir;
 
 /**
  * Base class for all AquaRelay plugins
@@ -34,6 +40,8 @@ abstract class Plugin {
 	private PluginDescription $description;
 	private ProxyServer $server;
 	private bool $enabled = false;
+	private string $dataFolder;
+	private ?Config $config = null;
 
 	/**
 	 * Called when the plugin is loaded
@@ -135,5 +143,36 @@ abstract class Plugin {
 	public function getScheduler() : TaskScheduler
 	{
 		return $this->server->getScheduler();
+	}
+
+	/**
+	 * Sets the data folder for the plugin
+	 */
+	public function setDataFolder(string $dataFolder) : void
+	{
+		$this->dataFolder = $dataFolder;
+		if (!is_dir($this->dataFolder)) {
+			mkdir($this->dataFolder, 0755, true);
+		}
+	}
+
+	/**
+	 * Gets the data folder for the plugin
+	 */
+	public function getDataFolder() : string
+	{
+		return $this->dataFolder;
+	}
+
+	/**
+	 * Gets the config object
+	 */
+	public function getConfig() : Config
+	{
+		if ($this->config === null) {
+			$configPath = $this->dataFolder . DIRECTORY_SEPARATOR . 'config.yml';
+			$this->config = new Config($configPath);
+		}
+		return $this->config;
 	}
 }
