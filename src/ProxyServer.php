@@ -258,6 +258,19 @@ class ProxyServer {
 		$loop->run();
 	}
 
+	/**
+	 * Summary of broadcastMessage
+	 * @param string $message
+	 * @return void
+	 */
+	public function broadcastMessage(string $message) : void
+	{
+		foreach ($this->getOnlinePlayers() as $player) {
+			/** @var Player $player */
+			$player->sendMessage($message);
+		}
+	}
+
 	public function shutdown() : void
     {
         $shutdownStart = microtime(true);

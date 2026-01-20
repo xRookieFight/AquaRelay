@@ -38,8 +38,11 @@ use pocketmine\network\mcpe\protocol\DisconnectPacket;
 use pocketmine\network\mcpe\protocol\PacketPool;
 use pocketmine\network\mcpe\protocol\PlayStatusPacket;
 use pocketmine\network\mcpe\protocol\ProtocolInfo;
+use pocketmine\network\mcpe\protocol\TextPacket;
+use pocketmine\network\mcpe\protocol\SetTitlePacket;
 use pocketmine\network\mcpe\protocol\ResourcePacksInfoPacket;
 use pocketmine\network\mcpe\protocol\serializer\PacketBatch;
+use pocketmine\network\mcpe\protocol\ToastRequestPacket;
 use pocketmine\network\mcpe\protocol\types\CompressionAlgorithm;
 use raklib\generic\DisconnectReason;
 use raklib\utils\InternetAddress;
@@ -216,7 +219,6 @@ class NetworkSession {
 				$packet = $this->packetPool->getPacket($packetData);
 				if ($packet !== null) {
 					$packet->decode(new ByteBufferReader($packetData), ProtocolInfo::CURRENT_PROTOCOL);
-
 					$player->handleBackendPacket($packet);
 				}
 			}
@@ -272,6 +274,42 @@ class NetworkSession {
 			$this->handler = $handler;
 			$this->handler?->setUp();
 		}
+	}
+
+	public function onMessage(string $message) : void{
+		$this->sendDataPacket(TextPacket::raw($message));
+	}
+
+	public function onJukeboxPopup(string $message) : void{
+		$this->sendDataPacket(TextPacket::jukeboxPopup($message));
+	}
+
+	public function onPopup(string $message) : void{
+		$this->sendDataPacket(TextPacket::popup($message));
+	}
+
+	public function onTip(string $message) : void{
+		$this->sendDataPacket(TextPacket::tip($message));
+	}
+
+	public function onTitle(string $title) : void{
+		$this->sendDataPacket(SetTitlePacket::title($title));
+	}
+
+	public function onSubTitle(string $subtitle) : void{
+		$this->sendDataPacket(SetTitlePacket::subtitle($subtitle));
+	}
+
+	public function onActionBar(string $actionBar) : void{
+		$this->sendDataPacket(SetTitlePacket::actionBarMessage($actionBar));
+	}
+
+	public function onTitleDuration(int $fadeIn, int $stay, int $fadeOut) : void{
+		$this->sendDataPacket(SetTitlePacket::setAnimationTimes($fadeIn, $stay, $fadeOut));
+	}
+
+	public function onToastNotification(string $title, string $body) : void{
+		$this->sendDataPacket(ToastRequestPacket::create($title, $body));
 	}
 
 	public function debug(string $message) : void

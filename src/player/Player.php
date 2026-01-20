@@ -102,6 +102,42 @@ class Player
 		$this->sendDataPacket($packet);
 	}
 
+	public function sendMessage(string $message) : void{
+		$this->upstreamSession->onMessage($message);
+	}
+
+	public function sendPopup(string $message) : void{
+		$this->upstreamSession->onPopup($message);
+	}
+
+	public function sendTip(string $message) : void{
+		$this->upstreamSession->onTip($message);
+	}
+
+	public function sendJukeboxPopup(string $message) : void{
+		$this->upstreamSession->onJukeboxPopup($message);
+	}
+
+	public function sendTitle(string $title, string $subtitle = "", int $fadeIn = 0, int $stay = 0, int $fadeOut = 0) : void{
+      if($fadeIn >= 0 && $stay >= 0 && $fadeOut >= 0){
+		$this->upstreamSession->onTitleDuration($fadeIn, $stay, $fadeOut);
+	  }
+
+	  if($subtitle !== ""){
+		  $this->upstreamSession->onSubTitle($subtitle);
+	  }
+
+	  $this->upstreamSession->onTitle($title);
+	}
+
+	public function sendToastNotification(string $title, string $body) : void{
+		$this->upstreamSession->onToastNotification($title, $body);
+	}
+
+	public function sendActionBar(string $actionBar) : void{
+		$this->upstreamSession->onActionBar($actionBar);
+	}
+
 	public function disconnect(string $reason = "Disconnected from proxy"): void {
 		$this->upstreamSession->disconnect($reason);
 	}
