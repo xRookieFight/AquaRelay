@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "361e7ee91d57168d0affd370c2fa6aab",
+    "content-hash": "61205ce0f075d76e3aee0cfa8b5b9617",
     "packages": [
         {
             "name": "brick/math",
@@ -65,31 +65,6 @@
                 }
             ],
             "time": "2025-11-24T14:40:29+00:00"
-        },
-        {
-            "name": "nethergamesmc/bedrock-data",
-            "version": "dev-master",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/NetherGamesMC/BedrockData.git",
-                "reference": "296da233d991329540ce5bfb5d2060abda179e16"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/NetherGamesMC/BedrockData/zipball/296da233d991329540ce5bfb5d2060abda179e16",
-                "reference": "296da233d991329540ce5bfb5d2060abda179e16",
-                "shasum": ""
-            },
-            "default-branch": true,
-            "type": "library",
-            "license": [
-                "CC0-1.0"
-            ],
-            "description": "Blobs of data generated from Minecraft: Bedrock Edition, used by PocketMine-MP",
-            "support": {
-                "source": "https://github.com/NetherGamesMC/BedrockData/tree/master"
-            },
-            "time": "2025-12-09T19:52:49+00:00"
         },
         {
             "name": "nethergamesmc/bedrock-protocol",
@@ -197,58 +172,6 @@
                 "source": "https://github.com/cweiske/jsonmapper/tree/v5.0.0"
             },
             "time": "2024-09-08T10:20:00+00:00"
-        },
-        {
-            "name": "pocketmine/bedrock-block-upgrade-schema",
-            "version": "5.2.0",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/pmmp/BedrockBlockUpgradeSchema.git",
-                "reference": "5d7889c9a1cdf9e3cd814d2a104ad69b75116ec7"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/pmmp/BedrockBlockUpgradeSchema/zipball/5d7889c9a1cdf9e3cd814d2a104ad69b75116ec7",
-                "reference": "5d7889c9a1cdf9e3cd814d2a104ad69b75116ec7",
-                "shasum": ""
-            },
-            "type": "library",
-            "notification-url": "https://packagist.org/downloads/",
-            "license": [
-                "CC0-1.0"
-            ],
-            "description": "Schemas describing how to upgrade saved block data in older Minecraft: Bedrock Edition world saves",
-            "support": {
-                "issues": "https://github.com/pmmp/BedrockBlockUpgradeSchema/issues",
-                "source": "https://github.com/pmmp/BedrockBlockUpgradeSchema/tree/5.2.0"
-            },
-            "time": "2025-10-02T13:22:10+00:00"
-        },
-        {
-            "name": "pocketmine/bedrock-item-upgrade-schema",
-            "version": "1.16.0",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/pmmp/BedrockItemUpgradeSchema.git",
-                "reference": "8c48ceaa72d390e89c4dbff9542aa4dfa734057d"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/pmmp/BedrockItemUpgradeSchema/zipball/8c48ceaa72d390e89c4dbff9542aa4dfa734057d",
-                "reference": "8c48ceaa72d390e89c4dbff9542aa4dfa734057d",
-                "shasum": ""
-            },
-            "type": "library",
-            "notification-url": "https://packagist.org/downloads/",
-            "license": [
-                "CC0-1.0"
-            ],
-            "description": "JSON schemas for upgrading items found in older Minecraft: Bedrock world saves",
-            "support": {
-                "issues": "https://github.com/pmmp/BedrockItemUpgradeSchema/issues",
-                "source": "https://github.com/pmmp/BedrockItemUpgradeSchema/tree/1.16.0"
-            },
-            "time": "2025-10-02T13:22:32+00:00"
         },
         {
             "name": "pocketmine/binaryutils",
@@ -1119,7 +1042,6 @@
     "aliases": [],
     "minimum-stability": "stable",
     "stability-flags": {
-        "nethergamesmc/bedrock-data": 20,
         "nethergamesmc/bedrock-protocol": 20
     },
     "prefer-stable": true,
@@ -1131,5 +1053,5 @@
         "ext-zlib": ">=1.2.11"
     },
     "platform-dev": {},
-    "plugin-api-version": "2.9.0"
+    "plugin-api-version": "2.6.0"
 }

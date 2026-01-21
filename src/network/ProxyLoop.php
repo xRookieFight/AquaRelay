@@ -23,33 +23,39 @@ declare(strict_types=1);
 
 namespace aquarelay\network;
 
+use aquarelay\network\compression\ZlibCompressor;
 use aquarelay\network\raklib\RakLibPacketSender;
+use aquarelay\player\Player;
 use aquarelay\ProxyServer;
+use pmmp\encoding\ByteBufferReader;
 use pocketmine\network\mcpe\protocol\PacketPool;
+use pocketmine\network\mcpe\protocol\serializer\PacketBatch;
+use pocketmine\network\mcpe\protocol\types\CompressionAlgorithm;
 use pocketmine\snooze\SleeperHandler;
+use pocketmine\network\mcpe\protocol\ProtocolInfo;
 
 class ProxyLoop {
 
-	/** @var NetworkSession[] */
-	private array $sessions = [];
+    /** @var NetworkSession[] */
+    private array $sessions = [];
 
-	private SleeperHandler $sleeper;
+    private SleeperHandler $sleeper;
 
-	const TICK_INTERVAL = 0.05;
+    const TICK_INTERVAL = 0.05;
 
-	public function __construct(
-		private ProxyServer $server
-	){
-		$this->sleeper = new SleeperHandler();
-		$this->server->interface->setHandlers(
-			$this->handleConnect(...),
-			$this->handlePacket(...),
-			$this->handleDisconnect(...),
-			$this->handlePing(...)
-		);
-	}
+    public function __construct(
+        private ProxyServer $server
+    ){
+        $this->sleeper = new SleeperHandler();
+        $this->server->interface->setHandlers(
+            $this->handleConnect(...),
+            $this->handlePacket(...),
+            $this->handleDisconnect(...),
+            $this->handlePing(...)
+        );
+    }
 
-	public function run() : void {
+    public function run() : void {
         $nextTick = microtime(true);
 
         while(true) {
@@ -71,53 +77,87 @@ class ProxyLoop {
 
         foreach($this->sessions as $session) {
             $player = $session->getPlayer();
+            
             if($player !== null && $player->getDownstream() !== null) {
-                $player->getDownstream()->tick(function($payload) use ($player) {});
+                $player->getDownstream()->tick(function($payload) use ($player) {
+                    $this->handleBackendPayload($player, $payload);
+                });
             }
         }
     }
 
-	private function handleConnect(int $sessionId, string $ip, int $port): void {
-		$this->server->getLogger()->info("Client connected: $ip:$port (ID: $sessionId)");
+    private function handleBackendPayload(Player $player, string $payload): void {
+        $pid = \ord($payload[0]);
+        if ($pid !== 0xFE) return;
 
-		$session = new NetworkSession(
-			$this->server,
-			NetworkSessionManager::getInstance(),
-			PacketPool::getInstance(),
-			new RakLibPacketSender($sessionId, $this->server->interface),
-			$ip,
-			$port
-		);
+        $compression = \ord($payload[1]);
+        $buffer = substr($payload, 2);
 
-		$this->sessions[$sessionId] = $session;
-	}
+        if ($compression === CompressionAlgorithm::ZLIB) {
+            try {
+                $buffer = ZlibCompressor::getInstance()->decompress($buffer);
+            } catch (\Exception $e) { return; }
+        }
 
-	private function handlePacket(int $sessionId, string $payload): void {
-		$firstByte = ord($payload[0]);
+        try {
+            $stream = new ByteBufferReader($buffer);
+            $packets = PacketBatch::decodeRaw($stream);
+            
+            foreach ($packets as $pktBuffer) {
+                $packet = PacketPool::getInstance()->getPacket($pktBuffer);
+                if ($packet !== null) {
+                    $packet->decode(new ByteBufferReader($pktBuffer), ProtocolInfo::CURRENT_PROTOCOL);
+                    $player->handleBackendPacket($packet);
+                }
+            }
+        } catch (\Exception $e) {
+            // Log error if needed
+        }
+    }
 
-		if($firstByte !== 0xfe){
-			$this->server->getLogger()->warning("Unexpected RakNet packet ID: 0x" . dechex($firstByte));
-			return;
-		}
+    private function handleConnect(int $sessionId, string $ip, int $port): void {
+        $this->server->getLogger()->info("Client connected: $ip:$port (ID: $sessionId)");
 
-		if(!isset($this->sessions[$sessionId])){
-			return;
-		}
+        $session = new NetworkSession(
+            $this->server,
+            NetworkSessionManager::getInstance(),
+            PacketPool::getInstance(),
+            new RakLibPacketSender($sessionId, $this->server->interface),
+            $ip,
+            $port
+        );
 
-		$this->sessions[$sessionId]->handleEncodedPacket(substr($payload, 1));
-	}
+        $this->sessions[$sessionId] = $session;
+    }
 
-	private function handleDisconnect(int $sessionId, string $reason): void {
-		$this->server->getLogger()->info("Client disconnected: $reason");
-		NetworkSessionManager::getInstance()->remove($this->sessions[$sessionId]);
-		$this->server->getPlayerManager()->removePlayer($this->sessions[$sessionId]);
-		unset($this->sessions[$sessionId]);
-	}
+    private function handlePacket(int $sessionId, string $payload): void {
+        $firstByte = ord($payload[0]);
 
-	private function handlePing(int $sessionId, int $ping) : void
-	{
-		if (isset($this->sessions[$sessionId])){
-			$this->sessions[$sessionId]->setPing($ping);
-		}
-	}
+        if($firstByte !== 0xfe){
+            // Ignore non-game packets
+            return;
+        }
+
+        if(!isset($this->sessions[$sessionId])){
+            return;
+        }
+
+        $this->sessions[$sessionId]->handleEncodedPacket(substr($payload, 1));
+    }
+
+    private function handleDisconnect(int $sessionId, string $reason): void {
+        $this->server->getLogger()->info("Client disconnected: $reason");
+        if(isset($this->sessions[$sessionId])){
+            NetworkSessionManager::getInstance()->remove($this->sessions[$sessionId]);
+            $this->server->getPlayerManager()->removePlayer($this->sessions[$sessionId]);
+            unset($this->sessions[$sessionId]);
+        }
+    }
+
+    private function handlePing(int $sessionId, int $ping) : void
+    {
+        if (isset($this->sessions[$sessionId])){
+            $this->sessions[$sessionId]->setPing($ping);
+        }
+    }
 }

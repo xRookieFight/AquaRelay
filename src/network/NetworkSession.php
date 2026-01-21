@@ -49,271 +49,210 @@ use raklib\utils\InternetAddress;
 use Ramsey\Uuid\Uuid;
 
 class NetworkSession {
-	/** @var string[] */
-	private array $sendBuffer = [];
-	private ?bool $enableCompression = null;
-	private int $lastUsed;
-	private ?int $protocolId = null;
-	private ?string $username = null;
-	private ?int $ping = null;
-	private bool $connected = true;
-	private bool $logged = false;
-	private ?PacketHandler $handler;
-	private ?Player $player = null;
+    /** @var string[] */
+    private array $sendBuffer = [];
+    private ?bool $enableCompression = null;
+    private int $lastUsed;
+    private ?int $protocolId = null;
+    private ?string $username = null;
+    private ?int $ping = null;
+    private bool $connected = true;
+    private bool $logged = false;
+    private ?PacketHandler $handler;
+    private ?Player $player = null;
 
-	public function __construct(
-		private ProxyServer $server,
-		private NetworkSessionManager $manager,
-		private PacketPool $packetPool,
-		private PacketSender $sender,
-		private string $ip,
-		private int $port
-	){
-		$this->manager->add($this);
-		$this->lastUsed = time();
-		$this->setHandler(new PreLoginHandler($this, $this->server->getLogger()));
-	}
+    public function __construct(
+        private ProxyServer $server,
+        private NetworkSessionManager $manager,
+        private PacketPool $packetPool,
+        private PacketSender $sender,
+        private string $ip,
+        private int $port
+    ){
+        $this->manager->add($this);
+        $this->lastUsed = time();
+        $this->setHandler(new PreLoginHandler($this, $this->server->getLogger()));
+    }
 
-	public function handleEncodedPacket(string $payload) : void {
-		$compressionType = ord($payload[0]);
-		$data = substr($payload, 1);
+    public function handleEncodedPacket(string $payload) : void {
+        $compressionType = ord($payload[0]);
+        $data = substr($payload, 1);
 
-		if($compressionType === CompressionAlgorithm::ZLIB){
-			try {
-				$data = ZlibCompressor::getInstance()->decompress($data);
-			} catch (\Exception $e) {
-				$this->server->getLogger()->error("Decompressing error: " . $e->getMessage());
-				return;
-			}
-		}
+        if($compressionType === CompressionAlgorithm::ZLIB){
+            try {
+                $data = ZlibCompressor::getInstance()->decompress($data);
+            } catch (\Exception $e) {
+                $this->server->getLogger()->error("Decompressing error: " . $e->getMessage());
+                return;
+            }
+        }
 
-		if (ord($data[0]) === 0xc1) {
-			$this->processSinglePacket($data);
-		} else {
-			try {
-				$stream = new ByteBufferReader($data);
-				foreach(PacketBatch::decodeRaw($stream) as $buffer){
-					$this->processSinglePacket($buffer);
-				}
-			} catch (\Exception $e) {
-				$this->debug("Batch decode error: " . $e->getMessage());
-			}
-		}
-	}
+        if (ord($data[0]) === 0xc1) {
+            $this->processSinglePacket($data);
+        } else {
+            try {
+                $stream = new ByteBufferReader($data);
+                foreach(PacketBatch::decodeRaw($stream) as $buffer){
+                    $this->processSinglePacket($buffer);
+                }
+            } catch (\Exception $e) {
+                $this->debug("Batch decode error: " . $e->getMessage());
+            }
+        }
+    }
 
-	private function processSinglePacket(string $buffer) : void {
-		$packet = $this->packetPool->getPacket($buffer);
-		if($packet !== null){
-			$this->debug("Incoming packet: " . $packet->getName());
-			$packet->decode(new ByteBufferReader($buffer), ProtocolInfo::CURRENT_PROTOCOL);
+    private function processSinglePacket(string $buffer) : void {
+        $packet = $this->packetPool->getPacket($buffer);
+        if($packet !== null){
+            //$this->debug("Incoming packet: " . $packet->getName());
+            $packet->decode(new ByteBufferReader($buffer), ProtocolInfo::CURRENT_PROTOCOL);
 
-			if($this->handler !== null){
-				$packet->handle($this->handler);
-			}
-		} else {
-			$this->debug("Unknown packet ID: 0x" . dechex(ord($buffer[0])));
-		}
-	}
+            if($this->handler !== null){
+                $packet->handle($this->handler);
+            }
+        }
+    }
 
-	public function setProtocolId(int $protocolId) : void{
-		$this->protocolId = $protocolId;
-	}
+    public function connectToBackend(): void {
+        $player = $this->player;
+        if($player === null) return;
 
-	public function getProtocolId() : int{
-		return $this->protocolId ?? ProtocolInfo::CURRENT_PROTOCOL;
-	}
+        $targetIp = $this->server->getConfig()->getNetworkSettings()->getBackendAddress();
+        $targetPort = $this->server->getConfig()->getNetworkSettings()->getBackendPort();
 
-	public function sendDataPacket(ClientboundPacket $packet, bool $immediate = false) : void {
-		$this->debug("Sending packet: " . $packet->getName());
-		$writer = new ByteBufferWriter();
+        $this->server->getLogger()->info("Connecting " . $player->getName() . " to $targetIp:$targetPort...");
 
-		$packet->encode($writer, ProtocolInfo::CURRENT_PROTOCOL);
-		$payload = $writer->getData();
+        $backend = new BackendRakClient(new InternetAddress($targetIp, $targetPort, 4));
+        
+        $player->setDownstream($backend);
 
-		$this->addToSendBuffer($payload);
+        $this->server->getLogger()->info("Queueing LoginPacket for Backend...");
+        $player->sendLoginToBackend();
 
-		if ($immediate) {
-			$this->flushGamePacketQueue();
-		}
-	}
+        $backend->connect();
+    }
 
-	public function flushGamePacketQueue() : void {
-		if (count($this->sendBuffer) > 0) {
-			$stream = new ByteBufferWriter();
+    public function setProtocolId(int $protocolId) : void{
+        $this->protocolId = $protocolId;
+    }
 
-			PacketBatch::encodeRaw($stream, $this->sendBuffer);
-			$batchData = $stream->getData();
-			$this->sendBuffer = [];
+    public function getProtocolId() : int{
+        return $this->protocolId ?? ProtocolInfo::CURRENT_PROTOCOL;
+    }
 
-			if (is_null($this->enableCompression)) {
-				$finalPayload = $batchData;
-			} else {
-				$finalPayload = $this->enableCompression
-					? "\x00" . ZlibCompressor::getInstance()->compress($batchData)
-					: "\xff" . $batchData;
-			}
+    public function sendDataPacket(ClientboundPacket $packet, bool $immediate = false) : void {
+        //$this->debug("Sending packet: " . $packet->getName());
+        $writer = new ByteBufferWriter();
 
-			$this->sendEncoded($finalPayload);
-		}
-	}
+        $packet->encode($writer, ProtocolInfo::CURRENT_PROTOCOL);
+        $payload = $writer->getData();
 
-	private function sendEncoded(string $payload) : void {
-		$this->sender->sendRawPacket($payload);
-	}
+        $this->addToSendBuffer($payload);
 
-	public function enableCompression() : void {
-		$this->enableCompression = true;
-	}
+        if ($immediate) {
+            $this->flushGamePacketQueue();
+        }
+    }
 
-	public function addToSendBuffer(string $buffer) : void {
-		$this->sendBuffer[] = $buffer;
-	}
+    public function flushGamePacketQueue() : void {
+        if (count($this->sendBuffer) > 0) {
+            $stream = new ByteBufferWriter();
+            PacketBatch::encodeRaw($stream, $this->sendBuffer);
+            $batchData = $stream->getData();
+            $this->sendBuffer = [];
 
-	public function disconnect(string $reason) : void{
-		$this->sendDataPacket(DisconnectPacket::create(DisconnectReason::CLIENT_DISCONNECT, $reason, ""));
-	}
+            if (is_null($this->enableCompression)) {
+                $finalPayload = $batchData;
+            } else {
+                $finalPayload = $this->enableCompression ? "\x00" . ZlibCompressor::getInstance()->compress($batchData) : "\xff" . $batchData;
+            }
 
-	public function onNetworkSettingsSuccess(): void {
-		$this->setHandler(new LoginHandler($this, $this->server->getLogger()));
-	}
+            try {
+                $this->sendEncoded($finalPayload);
+            } catch (\Throwable $e) {
+                // Silently ignore send errors to disconnected clients
+            }
+        }
+    }
 
-	public function onClientLoginSuccess(): void {
-		$this->debug("Login handled. Starting Resource Pack sequence...");
+    public function sendEncoded(string $payload) : void {
+        $this->sender->sendRawPacket($payload);
+    }
 
-		$this->sendDataPacket(PlayStatusPacket::create(PlayStatusPacket::LOGIN_SUCCESS));
+    public function enableCompression() : void {
+        $this->enableCompression = true;
+    }
 
-		$infoPacket = 
-		ResourcePacksInfoPacket::create(
-			resourcePackEntries: [],
-			behaviorPackEntries: [],
-			mustAccept: false,
-			hasAddons: false,
-			hasScripts: false,
-			forceServerPacks: false,
-			cdnUrls: [],
-			worldTemplateId: Uuid::fromString(Uuid::NIL),
-			worldTemplateVersion: "",
-			forceDisableVibrantVisuals: true,
-		);
+    public function addToSendBuffer(string $buffer) : void {
+        $this->sendBuffer[] = $buffer;
+    }
 
-		$this->sendDataPacket($infoPacket, true);
+    public function disconnect(string $reason) : void{
+        $this->sendDataPacket(DisconnectPacket::create(DisconnectReason::CLIENT_DISCONNECT, $reason, ""));
+    }
 
-		$this->setHandler(new ResourcePackHandler($this, $this->server->getLogger()));
-	}
+    public function onNetworkSettingsSuccess(): void {
+        $this->setHandler(new LoginHandler($this, $this->server->getLogger()));
+    }
 
-	public function connectToBackend(): void {
-		$player = $this->player;
-		if($player === null) return;
+    public function onClientLoginSuccess(): void {
+        $this->debug("Login handled. Starting Resource Pack sequence...");
 
-		$targetIp = $this->server->getConfig()->getNetworkSettings()->getBackendAddress();
-		$targetPort = $this->server->getConfig()->getNetworkSettings()->getBackendPort();
+        $this->sendDataPacket(PlayStatusPacket::create(PlayStatusPacket::LOGIN_SUCCESS));
 
-		$backend = new BackendRakClient(new InternetAddress($targetIp, $targetPort, 4));
-		$player->setDownstream($backend);
+        $infoPacket = ResourcePacksInfoPacket::create(
+            resourcePackEntries: [],
+            behaviorPackEntries: [],
+            mustAccept: false,
+            hasAddons: false,
+            hasScripts: false,
+            forceServerPacks: false,
+            cdnUrls: [],
+            worldTemplateId: Uuid::fromString(Uuid::NIL),
+            worldTemplateVersion: "",
+            forceDisableVibrantVisuals: true,
+        );
 
-		$backend->connect();
+        $this->sendDataPacket($infoPacket, true);
 
-		$backend->tick(function(string $payload) use ($player) {
-			if (ord($payload[0]) === 0xfe) {
-				$packetData = substr($payload, 1);
-				$packet = $this->packetPool->getPacket($packetData);
-				if ($packet !== null) {
-					$packet->decode(new ByteBufferReader($packetData), ProtocolInfo::CURRENT_PROTOCOL);
-					$player->handleBackendPacket($packet);
-				}
-			}
-		});
+        $this->setHandler(new ResourcePackHandler($this, $this->server->getLogger()));
+    }
 
-		$player->sendLoginToBackend();
-	}
+    public function setPlayer(Player $player): void {
+        $this->player = $player;
+    }
 
-	public function setPlayer(Player $player): void {
-		$this->player = $player;
-	}
+    public function getPlayer(): ?Player {
+        return $this->player;
+    }
 
-	public function getPlayer(): ?Player {
-		return $this->player;
-	}
+    public function getPing() : int { return $this->ping; }
+    public function tick(): void { $this->lastUsed = time(); }
+    public function getUsername() : string { return $this->username; }
+    public function setUsername(string $name): void { $this->username = $name; }
+    public function setPing(int $ping): void { $this->ping = $ping; }
+    public function isConnected() : bool { return $this->connected; }
+    public function isLogged() : bool { return $this->logged; }
+    
+    public function getHandler() : ?PacketHandler { return $this->handler; }
+    public function setHandler(?PacketHandler $handler) : void {
+        if($this->connected){
+            $this->handler = $handler;
+            $this->handler?->setUp();
+        }
+    }
 
-	public function getPing() : int
-	{
-		return $this->ping;
-	}
+    public function onMessage(string $message) : void{ $this->sendDataPacket(TextPacket::raw($message)); }
+    public function onJukeboxPopup(string $message) : void{ $this->sendDataPacket(TextPacket::jukeboxPopup($message)); }
+    public function onPopup(string $message) : void{ $this->sendDataPacket(TextPacket::popup($message)); }
+    public function onTip(string $message) : void{ $this->sendDataPacket(TextPacket::tip($message)); }
+    public function onTitle(string $title) : void{ $this->sendDataPacket(SetTitlePacket::title($title)); }
+    public function onSubTitle(string $subtitle) : void{ $this->sendDataPacket(SetTitlePacket::subtitle($subtitle)); }
+    public function onActionBar(string $actionBar) : void{ $this->sendDataPacket(SetTitlePacket::actionBarMessage($actionBar)); }
+    public function onTitleDuration(int $fadeIn, int $stay, int $fadeOut) : void{ $this->sendDataPacket(SetTitlePacket::setAnimationTimes($fadeIn, $stay, $fadeOut)); }
+    public function onToastNotification(string $title, string $body) : void{ $this->sendDataPacket(ToastRequestPacket::create($title, $body)); }
 
-	public function tick(): void {
-		$this->lastUsed = time();
-	}
-	public function getUsername() : string {
-		return $this->username;
-	}
-	public function setUsername(string $name): void {
-		$this->username = $name;
-	}
-
-	public function setPing(int $ping): void
-	{
-		$this->ping = $ping;
-	}
-
-	public function isConnected() : bool
-	{
-		return $this->connected;
-	}
-
-	public function isLogged() : bool
-	{
-		return $this->logged;
-	}
-
-	public function getHandler() : ?PacketHandler {
-		return $this->handler;
-	}
-
-	public function setHandler(?PacketHandler $handler) : void {
-		if($this->connected){
-			$this->handler = $handler;
-			$this->handler?->setUp();
-		}
-	}
-
-	public function onMessage(string $message) : void{
-		$this->sendDataPacket(TextPacket::raw($message));
-	}
-
-	public function onJukeboxPopup(string $message) : void{
-		$this->sendDataPacket(TextPacket::jukeboxPopup($message));
-	}
-
-	public function onPopup(string $message) : void{
-		$this->sendDataPacket(TextPacket::popup($message));
-	}
-
-	public function onTip(string $message) : void{
-		$this->sendDataPacket(TextPacket::tip($message));
-	}
-
-	public function onTitle(string $title) : void{
-		$this->sendDataPacket(SetTitlePacket::title($title));
-	}
-
-	public function onSubTitle(string $subtitle) : void{
-		$this->sendDataPacket(SetTitlePacket::subtitle($subtitle));
-	}
-
-	public function onActionBar(string $actionBar) : void{
-		$this->sendDataPacket(SetTitlePacket::actionBarMessage($actionBar));
-	}
-
-	public function onTitleDuration(int $fadeIn, int $stay, int $fadeOut) : void{
-		$this->sendDataPacket(SetTitlePacket::setAnimationTimes($fadeIn, $stay, $fadeOut));
-	}
-
-	public function onToastNotification(string $title, string $body) : void{
-		$this->sendDataPacket(ToastRequestPacket::create($title, $body));
-	}
-
-	public function debug(string $message) : void
-	{
-		$this->server->getLogger()->debug("[NetworkSession - $this->ip:$this->port]: $message");
-	}
+    public function debug(string $message) : void {
+        $this->server->getLogger()->debug("[NetworkSession - $this->ip:$this->port]: $message");
+    }
 }

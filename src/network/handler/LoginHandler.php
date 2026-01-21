@@ -24,7 +24,6 @@ declare(strict_types=1);
 namespace aquarelay\network\handler;
 
 use aquarelay\lang\TranslationFactory;
-use aquarelay\lang\TranslationKeys;
 use aquarelay\network\PacketHandlingException;
 use aquarelay\ProxyServer;
 use aquarelay\utils\JWTException;

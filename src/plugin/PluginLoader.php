@@ -64,6 +64,11 @@ class PluginLoader {
 		}
 
 		$entries = @scandir($this->pluginsPath);
+		foreach ($entries as $entry) {
+			if ($entry === "data") {
+				unset($entries[array_search($entry, $entries)]);
+			}
+		}
 		if ($entries === false) {
 			$this->logger->error("Failed to scan plugins directory");
 			return $plugins;

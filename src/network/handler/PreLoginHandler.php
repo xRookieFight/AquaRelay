@@ -32,9 +32,11 @@ use pocketmine\network\mcpe\protocol\types\CompressionAlgorithm;
 class PreLoginHandler extends PacketHandler {
 
 	public function handleRequestNetworkSettings(RequestNetworkSettingsPacket $packet): bool {
-		if ($packet->getProtocolVersion() > ProtocolInfo::CURRENT_PROTOCOL){
+       $protocolVersion = $packet->getProtocolVersion();
+		if(!$this->isCompatibleProtocol($protocolVersion)){
 			$this->session->sendDataPacket(PlayStatusPacket::create(PlayStatusPacket::LOGIN_FAILED_SERVER));
-			return false;
+
+			return true;
 		}
 
 		$this->session->setProtocolId($packet->getProtocolVersion());
@@ -51,5 +53,9 @@ class PreLoginHandler extends PacketHandler {
 
 		$this->session->onNetworkSettingsSuccess();
 		return true;
+	}
+
+	protected function isCompatibleProtocol(int $protocolVersion) : bool{
+		return in_array($protocolVersion, ProtocolInfo::ACCEPTED_PROTOCOL, true);
 	}
 }
