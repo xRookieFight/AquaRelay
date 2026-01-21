@@ -125,7 +125,7 @@ abstract class AsyncTask extends Runnable
     public function publishProgress(mixed $progress): void
     {
         $progressUpdates = $this->progressUpdates;
-        if (null === $progressUpdates) {
+        if (is_null($progressUpdates)) {
             $progressUpdates = $this->progressUpdates = new ThreadSafeArray();
         }
         $progressUpdates[] = \igbinary_serialize($progress) ?? throw new \InvalidArgumentException('Progress must be serializable');

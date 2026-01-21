@@ -76,7 +76,7 @@ class Utils
      */
     public static function getOS(bool $recalculate = false): string
     {
-        if (null === self::$os || $recalculate) {
+        if (is_null(self::$os) || $recalculate) {
             $uname = php_uname('s');
             $machine = php_uname('m');
 

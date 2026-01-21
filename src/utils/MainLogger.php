@@ -131,7 +131,7 @@ class MainLogger extends ThreadSafe implements \Logger
         $time = date('H:i:s');
 
         $currentThread = NativeThread::getCurrentThread();
-        $threadName = null === $currentThread ? $this->mainThreadName : (new \ReflectionClass($currentThread))->getShortName();
+        $threadName = is_null($currentThread) ? $this->mainThreadName : (new \ReflectionClass($currentThread))->getShortName();
 
         $formatted = sprintf($this->format, $time, $threadName, $color, $level, $message);
 

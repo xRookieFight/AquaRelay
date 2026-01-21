@@ -151,7 +151,7 @@ class TaskScheduler
      */
     public function submitAsyncTask(AsyncTask $task): int
     {
-        if (null === $this->asyncPool) {
+        if (is_null($this->asyncPool)) {
             $this->asyncPool = new AsyncPool(4, -1);
         }
 

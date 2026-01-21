@@ -156,10 +156,9 @@ class ProxyLoop
 
     private function handleDisconnect(int $sessionId, string $reason): void
     {
-        $this->server->getLogger()->info("Client disconnected: {$reason}");
         if (isset($this->sessions[$sessionId])) {
-            NetworkSessionManager::getInstance()->remove($this->sessions[$sessionId]);
-            $this->server->getPlayerManager()->removePlayer($this->sessions[$sessionId]);
+			$session = $this->sessions[$sessionId];
+			$session->onDisconnect();
             unset($this->sessions[$sessionId]);
         }
     }

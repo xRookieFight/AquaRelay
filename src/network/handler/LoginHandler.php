@@ -137,7 +137,7 @@ class LoginHandler extends PacketHandler
                     }
                 }
 
-                if (null === $claimsArray) {
+                if (is_null($claimsArray)) {
                     throw new PacketHandlingException("'extraData' not found in legacy chain data");
                 }
             }

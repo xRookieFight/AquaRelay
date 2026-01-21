@@ -81,7 +81,7 @@ class ResourcePackHandler extends PacketHandler
 
                 $this->session->flushGamePacketQueue();
                 $this->session->connectToBackend();
-                $this->session->setHandler(new GamePacketHandler($this->session, $this->logger));
+                $this->session->setHandler(new InGamePacketHandler($this->session, $this->logger));
 
                 return true;
 

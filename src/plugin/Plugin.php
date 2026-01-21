@@ -157,7 +157,7 @@ abstract class Plugin
      */
     public function getConfig(): Config
     {
-        if (null === $this->config) {
+        if (is_null($this->config)) {
             $configPath = $this->dataFolder.DIRECTORY_SEPARATOR.'config.yml';
             $this->config = new Config($configPath);
         }

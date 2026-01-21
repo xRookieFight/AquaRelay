@@ -70,7 +70,7 @@ class AsyncPool
             }
         }
 
-        if (null === $worker || ($minUsage > 0 && \count($this->workers) < $this->workerCount)) {
+        if (is_null($worker) || ($minUsage > 0 && \count($this->workers) < $this->workerCount)) {
             for ($i = 0; $i < $this->workerCount; ++$i) {
                 if (!isset($this->workers[$i])) {
                     $worker = $i;

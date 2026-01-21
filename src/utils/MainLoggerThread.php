@@ -118,7 +118,7 @@ class MainLoggerThread extends Thread
 
     private function archiveIfNeeded(&$handle): void
     {
-        if (null === $this->archiveDir || $this->currentSize < $this->maxFileSize) {
+        if (is_null($this->archiveDir) || $this->currentSize < $this->maxFileSize) {
             return;
         }
 

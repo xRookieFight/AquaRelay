@@ -107,20 +107,17 @@ class NetworkSession
     public function connectToBackend(): void
     {
         $player = $this->player;
-        if (null === $player) {
-            return;
-        }
+        if (is_null($player)) return;
 
         $targetIp = $this->server->getConfig()->getNetworkSettings()->getBackendAddress();
         $targetPort = $this->server->getConfig()->getNetworkSettings()->getBackendPort();
 
-        $this->server->getLogger()->info('Connecting '.$player->getName()." to {$targetIp}:{$targetPort}...");
+        $this->server->getLogger()->debug('Connecting '.$player->getName()." to {$targetIp}:{$targetPort}...");
 
         $backend = new BackendRakClient(new InternetAddress($targetIp, $targetPort, 4));
 
         $player->setDownstream($backend);
 
-        $this->server->getLogger()->info('Queueing LoginPacket for Backend...');
         $player->sendLoginToBackend();
 
         $backend->connect();
@@ -138,7 +135,6 @@ class NetworkSession
 
     public function sendDataPacket(ClientboundPacket $packet, bool $immediate = false): void
     {
-        // $this->debug("Sending packet: " . $packet->getName());
         $writer = new ByteBufferWriter();
 
         $packet->encode($writer, ProtocolInfo::CURRENT_PROTOCOL);
@@ -167,9 +163,7 @@ class NetworkSession
 
             try {
                 $this->sendEncoded($finalPayload);
-            } catch (\Throwable $e) {
-                // Silently ignore send errors to disconnected clients
-            }
+            } catch (\Throwable) {}
         }
     }
 
@@ -333,13 +327,22 @@ class NetworkSession
     private function processSinglePacket(string $buffer): void
     {
         $packet = $this->packetPool->getPacket($buffer);
-        if (null !== $packet) {
-            $this->debug('Incoming packet: '.$packet->getName());
+        if (!is_null($packet)) {
             $packet->decode(new ByteBufferReader($buffer), ProtocolInfo::CURRENT_PROTOCOL);
 
-            if (null !== $this->handler) {
+            if (!is_null($this->handler)) {
                 $packet->handle($this->handler);
             }
         }
     }
+
+	public function onDisconnect() : void
+	{
+		NetworkSessionManager::getInstance()->remove($this);
+
+		$player = $this->getPlayer();
+		if (!is_null($player)){
+			$this->server->getPlayerManager()->removePlayer($player);
+		}
+	}
 }

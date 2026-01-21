@@ -180,7 +180,7 @@ final class BackendRakClient
 
         $header = $this->writeVarInt(strlen($payload));
         $batch = $header.$payload;
-        $final = "\xFE".$batch;
+        $final = RakLibInterface::MCPE_RAKNET_PACKET_ID.$batch;
 
         $this->sendEncapsulatedRaw($final);
     }
@@ -201,14 +201,12 @@ final class BackendRakClient
         $header = $this->writeVarInt(strlen($payload));
         $batch = $header.$payload;
 
-        // Standard Game Packets use ZLIB Deflate (0x00)
         $compressed = @zlib_encode($batch, ZLIB_ENCODING_DEFLATE, 7);
         if (false === $compressed) {
             return;
         }
 
-        // 0xFE + 0x00 + Data
-        $final = "\xFE\x00".$compressed;
+        $final = RakLibInterface::MCPE_RAKNET_PACKET_ID. "\x00".$compressed;
 
         $this->sendEncapsulatedRaw($final);
     }
@@ -324,7 +322,7 @@ final class BackendRakClient
 
         if (0x10 === $pid && self::STATE_CONNECTING_3 === $this->state) {
             $this->state = self::STATE_CONNECTED;
-            ProxyServer::getInstance()->getLogger()->info('RakNet Connected. Negotiating Protocol...');
+            ProxyServer::getInstance()->getLogger()->debug('RakNet connected. Negotiating Protocol...');
 
             $this->sendNewIncomingConnection();
             $this->sendNetworkSettingsRequest();
@@ -336,7 +334,6 @@ final class BackendRakClient
         if (0xFE === $pid) {
             if (self::STATE_GAME_HANDSHAKE === $this->state) {
                 $this->state = self::STATE_LOGGED_IN;
-                ProxyServer::getInstance()->getLogger()->info('Protocol Negotiated. Logging in...');
 
                 foreach ($this->sendQueue as $p) {
                     $this->encodeAndSend($p);
