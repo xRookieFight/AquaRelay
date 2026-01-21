@@ -29,6 +29,10 @@ use aquarelay\utils\LoginData;
 use pocketmine\network\mcpe\protocol\ClientboundPacket;
 use pocketmine\network\mcpe\protocol\DataPacket;
 use pocketmine\network\mcpe\protocol\LoginPacket;
+use pocketmine\network\mcpe\protocol\PlayStatusPacket;
+use pocketmine\network\mcpe\protocol\RequestChunkRadiusPacket;
+use pocketmine\network\mcpe\protocol\ResourcePackClientResponsePacket;
+use pocketmine\network\mcpe\protocol\ResourcePacksInfoPacket;
 use pocketmine\network\mcpe\protocol\StartGamePacket;
 use Ramsey\Uuid\UuidInterface;
 
@@ -94,13 +98,34 @@ class Player
 	}
 
 	public function handleBackendPacket(DataPacket $packet): void {
-		if ($packet instanceof StartGamePacket) {
-			$this->backendRuntimeId = $packet->runtimeEntityId;
-			$packet->runtimeEntityId = $this->proxyRuntimeId;
-		}
+        if ($packet instanceof ResourcePacksInfoPacket) {
+            $pk = ResourcePackClientResponsePacket::create(
+                ResourcePackClientResponsePacket::STATUS_COMPLETED,
+                [] 
+            );
+            $this->sendToBackend($pk);
+            return;
+        }
 
-		$this->sendDataPacket($packet);
-	}
+        if ($packet instanceof PlayStatusPacket) {
+            if ($packet->status === PlayStatusPacket::LOGIN_SUCCESS) {
+                return;
+            }
+        }
+
+        if ($packet instanceof StartGamePacket) {
+            $this->upstreamSession->debug("StartGamePacket received! Triggering world load...");
+
+            $this->backendRuntimeId = $packet->runtimeEntityId;
+            $packet->runtimeEntityId = $this->proxyRuntimeId;
+
+            $radiusPk = RequestChunkRadiusPacket::create(8, 0);
+            $this->downstreamConnection->sendGamePacket($radiusPk);
+            $this->upstreamSession->debug("Sent Forced Chunk Request (radius 8).");
+        }
+
+        $this->sendDataPacket($packet);
+    }
 
 	public function sendMessage(string $message) : void{
 		$this->upstreamSession->onMessage($message);
