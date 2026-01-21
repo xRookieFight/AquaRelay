@@ -25,28 +25,33 @@ namespace aquarelay\player;
 
 use aquarelay\utils\LoginData;
 
-class PlayerManager {
-	/** @var Player[] */
-	private array $players = [];
+class PlayerManager
+{
+    /** @var Player[] */
+    private array $players = [];
 
-	public function createPlayer($session, LoginData $data): Player {
-		$player = new Player($session, $data);
-		$this->players[spl_object_hash($session)] = $player;
-		return $player;
-	}
+    public function createPlayer($session, LoginData $data): Player
+    {
+        $player = new Player($session, $data);
+        $this->players[spl_object_hash($session)] = $player;
 
-	public function getPlayerBySession($session): ?Player {
-		return $this->players[spl_object_hash($session)] ?? null;
-	}
+        return $player;
+    }
 
-	public function removePlayer($session): void {
-		if (!is_null($this->getPlayerBySession($session))) {
-			unset($this->players[spl_object_hash($session)]);
-		}
-	}
+    public function getPlayerBySession($session): ?Player
+    {
+        return $this->players[spl_object_hash($session)] ?? null;
+    }
 
-	public function all() : array
-	{
-		return array_values($this->players);
-	}
+    public function removePlayer($session): void
+    {
+        if (!is_null($this->getPlayerBySession($session))) {
+            unset($this->players[spl_object_hash($session)]);
+        }
+    }
+
+    public function all(): array
+    {
+        return array_values($this->players);
+    }
 }

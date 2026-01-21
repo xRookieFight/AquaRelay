@@ -27,15 +27,15 @@ use aquarelay\ProxyServer;
 
 class TranslationFactory
 {
-	public static function translate(string $key, array $args = []): string
-	{
-		return ProxyServer::getInstance()->getLanguage()->translate($key, $args);
-	}
+    public static function translate(string $key, array $args = []): string
+    {
+        return ProxyServer::getInstance()->getLanguage()->translate($key, $args);
+    }
 
-	public static function languageSelected(string $fullName, string $code): string
-	{
-		return self::translate("language.selected", [
-			$fullName, $code
-		]);
-	}
+    public static function languageSelected(string $fullName, string $code): string
+    {
+        return self::translate('language.selected', [
+            $fullName, $code,
+        ]);
+    }
 }

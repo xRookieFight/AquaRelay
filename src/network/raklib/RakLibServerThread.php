@@ -37,68 +37,73 @@ use raklib\server\SimpleProtocolAcceptor;
 use raklib\utils\ExceptionTraceCleaner;
 use raklib\utils\InternetAddress;
 
-class RakLibServerThread extends Thread {
+class RakLibServerThread extends Thread
+{
+    private bool $running = false;
+    private ThreadSafeArray $mainToThread;
+    private ThreadSafeArray $threadToMain;
 
-	private bool $running = false;
-	private ThreadSafeArray $mainToThread;
-	private ThreadSafeArray $threadToMain;
+    public function __construct(
+        private string $mainPath,
+        private MainLogger $logger,
+        private string $address,
+        private int $port,
+        private int $maxMtu,
+        private int $protocolVersion,
+        private int $rakServerId
+    ) {
+        $this->mainToThread = new ThreadSafeArray();
+        $this->threadToMain = new ThreadSafeArray();
+    }
 
-	public function __construct(
-		private string $mainPath,
-		private MainLogger $logger,
-		private string $address,
-		private int $port,
-		private int $maxMtu,
-		private int $protocolVersion,
-		private int $rakServerId
-	){
-		$this->mainToThread = new ThreadSafeArray();
-		$this->threadToMain = new ThreadSafeArray();
-	}
+    public function getReadBuffer(): ThreadSafeArray
+    {
+        return $this->threadToMain;
+    }
 
-	public function getReadBuffer() : ThreadSafeArray {
-		return $this->threadToMain;
-	}
+    public function getWriteBuffer(): ThreadSafeArray
+    {
+        return $this->mainToThread;
+    }
 
-	public function getWriteBuffer() : ThreadSafeArray {
-		return $this->mainToThread;
-	}
+    public function stop(): void
+    {
+        $this->running = false;
+    }
 
-	public function stop() : void {
-		$this->running = false;
-	}
+    public function run(): void
+    {
+        gc_disable();
+        $this->running = true;
 
-	public function run(): void {
-		gc_disable();
-		$this->running = true;
-		require dirname(__DIR__, 3) . '/vendor/autoload.php';
+        require dirname(__DIR__, 3).'/vendor/autoload.php';
 
-		try {
-			$socket = new ServerSocket(new InternetAddress($this->address, $this->port, 4)); // IPV6 = 6 so we aren't using it for now
-		} catch (SocketException $e) {
-			$this->logger->error("Socket bind failed: " . $e->getMessage());
-			return;
-		}
+        try {
+            $socket = new ServerSocket(new InternetAddress($this->address, $this->port, 4)); // IPV6 = 6 so we aren't using it for now
+        } catch (SocketException $e) {
+            $this->logger->error('Socket bind failed: '.$e->getMessage());
 
-		\GlobalLogger::set($this->logger);
-		$server = new Server(
-			mt_rand(0, 1000000),
-			$this->logger,
-			$socket,
-			$this->maxMtu,
-			new SimpleProtocolAcceptor($this->protocolVersion),
-			new UserToRakLibThreadMessageReceiver(new PthreadsChannelReader($this->mainToThread)),
-			new RakLibToUserThreadMessageSender(new PthreadsChannelWriter($this->threadToMain)),
-			new ExceptionTraceCleaner($this->mainPath),
-			recvMaxSplitParts: 512
-		);
+            return;
+        }
 
-		while ($this->running) {
-			$server->tickProcessor();
-			usleep(5000);
-		}
+        \GlobalLogger::set($this->logger);
+        $server = new Server(
+            random_int(0, 1000000),
+            $this->logger,
+            $socket,
+            $this->maxMtu,
+            new SimpleProtocolAcceptor($this->protocolVersion),
+            new UserToRakLibThreadMessageReceiver(new PthreadsChannelReader($this->mainToThread)),
+            new RakLibToUserThreadMessageSender(new PthreadsChannelWriter($this->threadToMain)),
+            new ExceptionTraceCleaner($this->mainPath),
+            recvMaxSplitParts: 512
+        );
 
-		$server->waitShutdown();
-	}
+        while ($this->running) {
+            $server->tickProcessor();
+            usleep(5000);
+        }
 
+        $server->waitShutdown();
+    }
 }

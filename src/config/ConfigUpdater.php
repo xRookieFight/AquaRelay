@@ -25,35 +25,37 @@ namespace aquarelay\config;
 
 use aquarelay\utils\InstanceTrait;
 
-class ConfigUpdater {
+class ConfigUpdater
+{
+    use InstanceTrait;
 
-	use InstanceTrait;
+    public const CONFIG_VERSION = 2;
 
-	public const CONFIG_VERSION = 2;
+    public function isUpToDate(int $configVersion): bool
+    {
+        return $configVersion >= self::CONFIG_VERSION;
+    }
 
-	public function isUpToDate(int $configVersion) : bool
-	{
-		return $configVersion >= self::CONFIG_VERSION;
-	}
+    public function update(array $current, array $config): array
+    {
+        foreach ($config as $key => $value) {
+            if (!array_key_exists($key, $current)) {
+                $current[$key] = $value;
 
-	public function update(array $current, array $config) : array {
-		foreach ($config as $key => $value) {
-			if (!array_key_exists($key, $current)) {
-				$current[$key] = $value;
-				continue;
-			}
+                continue;
+            }
 
-			if (is_array($value) && is_array($current[$key])) {
-				$current[$key] = self::update($current[$key], $value);
-			}
-		}
+            if (is_array($value) && is_array($current[$key])) {
+                $current[$key] = self::update($current[$key], $value);
+            }
+        }
 
-		foreach ($current as $key => $_) {
-			if (!array_key_exists($key, $config)) {
-				unset($current[$key]);
-			}
-		}
+        foreach ($current as $key => $_) {
+            if (!array_key_exists($key, $config)) {
+                unset($current[$key]);
+            }
+        }
 
-		return $current;
-	}
+        return $current;
+    }
 }

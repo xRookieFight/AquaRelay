@@ -23,6 +23,4 @@ declare(strict_types=1);
 
 namespace aquarelay\lang;
 
-final class LanguageNotFoundException extends \RuntimeException{
-
-}
+final class LanguageNotFoundException extends \RuntimeException {}

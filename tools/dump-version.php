@@ -21,22 +21,23 @@
 
 declare(strict_types=1);
 
-require dirname(__DIR__) . '/vendor/autoload.php';
+require dirname(__DIR__).'/vendor/autoload.php';
 
 use aquarelay\ProxyServer;
 use pocketmine\network\mcpe\protocol\ProtocolInfo;
 
 $options = [
-	"version" => ProxyServer::VERSION,
-	"is_dev" => defined(ProxyServer::class . '::IS_DEVELOPMENT')
-		? (ProxyServer::IS_DEVELOPMENT ? "true" : "false")
-		: "false",
-	"mcpe_version" => ProtocolInfo::MINECRAFT_VERSION_NETWORK
+    'version' => ProxyServer::VERSION,
+    'is_dev' => defined(ProxyServer::class.'::IS_DEVELOPMENT')
+        ? (ProxyServer::IS_DEVELOPMENT ? 'true' : 'false')
+        : 'false',
+    'mcpe_version' => ProtocolInfo::MINECRAFT_VERSION_NETWORK,
 ];
 
-if(!isset($argv[1]) || !isset($options[$argv[1]])){
-	fwrite(STDERR, "Usage: php dump-version.php <" . implode("|", array_keys($options)) . ">\n");
-	exit(1);
+if (!isset($argv[1]) || !isset($options[$argv[1]])) {
+    fwrite(STDERR, 'Usage: php dump-version.php <'.implode('|', array_keys($options)).">\n");
+
+    exit(1);
 }
 
 echo $options[$argv[1]];

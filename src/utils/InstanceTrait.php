@@ -26,22 +26,26 @@ namespace aquarelay\utils;
 /**
  * @author PocketMine-MP Team
  */
-trait InstanceTrait {
+trait InstanceTrait
+{
+    private static ?self $instance = null;
 
-	private static ?self $instance = null;
+    public static function getInstance(): self
+    {
+        if (is_null(self::$instance)) {
+            self::$instance = new self();
+        }
 
-	public static function getInstance() : self{
-		if(is_null(self::$instance)){
-			self::$instance = new self();
-		}
-		return self::$instance;
-	}
+        return self::$instance;
+    }
 
-	public static function setInstance(self $instance) : void{
-		self::$instance = $instance;
-	}
+    public static function setInstance(self $instance): void
+    {
+        self::$instance = $instance;
+    }
 
-	public static function reset() : void{
-		self::$instance = null;
-	}
+    public static function reset(): void
+    {
+        self::$instance = null;
+    }
 }

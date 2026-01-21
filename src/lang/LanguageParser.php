@@ -25,51 +25,51 @@ namespace aquarelay\lang;
 
 final class LanguageParser
 {
+    /**
+     * @return array<string, string>
+     */
+    public static function parseFile(string $file): array
+    {
+        $contents = file_get_contents($file);
+        if (false === $contents) {
+            return [];
+        }
 
-	/**
-	 * @return array<string, string>
-	 */
-	public static function parseFile(string $file): array
-	{
-		$contents = file_get_contents($file);
-		if ($contents === false) {
-			return [];
-		}
+        $result = [];
+        $lines = preg_split('/\R/', $contents) ?: [];
+        foreach ($lines as $line) {
+            $line = trim($line);
+            if ('' === $line || str_starts_with($line, ';') || str_starts_with($line, '#')) {
+                continue;
+            }
 
-		$result = [];
-		$lines = preg_split('/\R/', $contents) ?: [];
-		foreach ($lines as $line) {
-			$line = trim($line);
-			if ($line === "" || str_starts_with($line, ";") || str_starts_with($line, "#")) {
-				continue;
-			}
+            $pos = strpos($line, '=');
+            if (false === $pos) {
+                continue;
+            }
 
-			$pos = strpos($line, "=");
-			if ($pos === false) {
-				continue;
-			}
+            $key = trim(substr($line, 0, $pos));
+            $value = trim(substr($line, $pos + 1));
+            $value = self::stripQuotes($value);
+            if ('' !== $key) {
+                $result[$key] = $value;
+            }
+        }
 
-			$key = trim(substr($line, 0, $pos));
-			$value = trim(substr($line, $pos + 1));
-			$value = self::stripQuotes($value);
-			if ($key !== "") {
-				$result[$key] = $value;
-			}
-		}
+        return $result;
+    }
 
-		return $result;
-	}
+    private static function stripQuotes(string $value): string
+    {
+        $len = strlen($value);
+        if ($len >= 2) {
+            $first = $value[0];
+            $last = $value[$len - 1];
+            if (('"' === $first && '"' === $last) || ("'" === $first && "'" === $last)) {
+                return substr($value, 1, -1);
+            }
+        }
 
-	private static function stripQuotes(string $value): string
-	{
-		$len = strlen($value);
-		if ($len >= 2) {
-			$first = $value[0];
-			$last = $value[$len - 1];
-			if (($first === '"' && $last === '"') || ($first === "'" && $last === "'")) {
-				return substr($value, 1, -1);
-			}
-		}
-		return $value;
-	}
+        return $value;
+    }
 }

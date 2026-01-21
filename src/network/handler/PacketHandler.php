@@ -25,18 +25,19 @@ namespace aquarelay\network\handler;
 
 use aquarelay\network\NetworkSession;
 use aquarelay\utils\MainLogger;
-use pocketmine\network\mcpe\protocol\PacketHandlerInterface;
 use pocketmine\network\mcpe\protocol\PacketHandlerDefaultImplTrait;
+use pocketmine\network\mcpe\protocol\PacketHandlerInterface;
 
-abstract class PacketHandler implements PacketHandlerInterface {
-	use PacketHandlerDefaultImplTrait;
+abstract class PacketHandler implements PacketHandlerInterface
+{
+    use PacketHandlerDefaultImplTrait;
 
-	public function __construct(
-		protected NetworkSession $session,
-		protected MainLogger $logger
-	) {
-		// NOOP
-	}
+    public function __construct(
+        protected NetworkSession $session,
+        protected MainLogger $logger
+    ) {
+        // NOOP
+    }
 
-	public function setUp(): void {}
+    public function setUp(): void {}
 }

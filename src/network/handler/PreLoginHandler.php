@@ -29,33 +29,36 @@ use pocketmine\network\mcpe\protocol\ProtocolInfo;
 use pocketmine\network\mcpe\protocol\RequestNetworkSettingsPacket;
 use pocketmine\network\mcpe\protocol\types\CompressionAlgorithm;
 
-class PreLoginHandler extends PacketHandler {
+class PreLoginHandler extends PacketHandler
+{
+    public function handleRequestNetworkSettings(RequestNetworkSettingsPacket $packet): bool
+    {
+        $protocolVersion = $packet->getProtocolVersion();
+        if (!$this->isCompatibleProtocol($protocolVersion)) {
+            $this->session->sendDataPacket(PlayStatusPacket::create(PlayStatusPacket::LOGIN_FAILED_SERVER));
 
-	public function handleRequestNetworkSettings(RequestNetworkSettingsPacket $packet): bool {
-       $protocolVersion = $packet->getProtocolVersion();
-		if(!$this->isCompatibleProtocol($protocolVersion)){
-			$this->session->sendDataPacket(PlayStatusPacket::create(PlayStatusPacket::LOGIN_FAILED_SERVER));
+            return true;
+        }
 
-			return true;
-		}
+        $this->session->setProtocolId($packet->getProtocolVersion());
 
-		$this->session->setProtocolId($packet->getProtocolVersion());
-		
-		$pk = NetworkSettingsPacket::create(
-			NetworkSettingsPacket::COMPRESS_EVERYTHING,
-			CompressionAlgorithm::ZLIB,
-			false,
-			0,
-			0
-		);
-		$this->session->sendDataPacket($pk, true);
-		$this->session->enableCompression();
+        $pk = NetworkSettingsPacket::create(
+            NetworkSettingsPacket::COMPRESS_EVERYTHING,
+            CompressionAlgorithm::ZLIB,
+            false,
+            0,
+            0
+        );
+        $this->session->sendDataPacket($pk, true);
+        $this->session->enableCompression();
 
-		$this->session->onNetworkSettingsSuccess();
-		return true;
-	}
+        $this->session->onNetworkSettingsSuccess();
 
-	protected function isCompatibleProtocol(int $protocolVersion) : bool{
-		return in_array($protocolVersion, ProtocolInfo::ACCEPTED_PROTOCOL, true);
-	}
+        return true;
+    }
+
+    protected function isCompatibleProtocol(int $protocolVersion): bool
+    {
+        return in_array($protocolVersion, ProtocolInfo::ACCEPTED_PROTOCOL, true);
+    }
 }

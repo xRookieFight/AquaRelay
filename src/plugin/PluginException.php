@@ -26,7 +26,6 @@ namespace aquarelay\plugin;
 use Exception;
 
 /**
- * Exception for plugin-related errors
+ * Exception for plugin-related errors.
  */
-class PluginException extends Exception {
-}
+class PluginException extends \Exception {}

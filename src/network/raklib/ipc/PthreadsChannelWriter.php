@@ -26,10 +26,12 @@ namespace aquarelay\network\raklib\ipc;
 use pmmp\thread\ThreadSafeArray;
 use raklib\server\ipc\InterThreadChannelWriter;
 
-final class PthreadsChannelWriter implements InterThreadChannelWriter{
-	public function __construct(private ThreadSafeArray $buffer){}
+final class PthreadsChannelWriter implements InterThreadChannelWriter
+{
+    public function __construct(private ThreadSafeArray $buffer) {}
 
-	public function write(string $str) : void{
-		$this->buffer[] = $str;
-	}
+    public function write(string $str): void
+    {
+        $this->buffer[] = $str;
+    }
 }

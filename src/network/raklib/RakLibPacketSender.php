@@ -25,30 +25,34 @@ namespace aquarelay\network\raklib;
 
 use aquarelay\network\PacketSender;
 
-class RakLibPacketSender implements PacketSender {
+class RakLibPacketSender implements PacketSender
+{
+    private bool $isClosed = false;
 
-	private bool $isClosed = false;
-	public function __construct(
-		private int $sessionId,
-		private RakLibInterface $interface
-	){}
+    public function __construct(
+        private int $sessionId,
+        private RakLibInterface $interface
+    ) {}
 
-	public function sendPacket(string $payload, bool $immediate, ?int $receiptId) : void{
-		if(!$this->isClosed){
-			$this->interface->sendPacket($this->sessionId, $payload, $immediate, $receiptId);
-		}
-	}
+    public function sendPacket(string $payload, bool $immediate, ?int $receiptId): void
+    {
+        if (!$this->isClosed) {
+            $this->interface->sendPacket($this->sessionId, $payload, $immediate, $receiptId);
+        }
+    }
 
-	public function sendRawPacket(string $buffer) : void {
-		if(!$this->isClosed){
-			$this->interface->sendPacket($this->sessionId, $buffer);
-		}
-	}
+    public function sendRawPacket(string $buffer): void
+    {
+        if (!$this->isClosed) {
+            $this->interface->sendPacket($this->sessionId, $buffer);
+        }
+    }
 
-	public function close() : void{
-		if(!$this->isClosed){
-			$this->isClosed = true;
-			$this->interface->close($this->sessionId);
-		}
-	}
+    public function close(): void
+    {
+        if (!$this->isClosed) {
+            $this->isClosed = true;
+            $this->interface->close($this->sessionId);
+        }
+    }
 }

@@ -27,46 +27,48 @@ use aquarelay\utils\InstanceTrait;
 
 class NetworkSessionManager
 {
+    use InstanceTrait {
+        setInstance as private;
+    }
 
-	use InstanceTrait {
-		setInstance as private;
-	}
+    private array $sessions = [];
+    private array $pendingLoginSessions = [];
 
-	private array $sessions = [];
-	private array $pendingLoginSessions = [];
+    public function add(NetworkSession $session): void
+    {
+        $id = spl_object_id($session);
+        $this->sessions[$id] = $session;
+        $this->pendingLoginSessions[$id] = $session;
+    }
 
-	public function add(NetworkSession $session) : void{
-		$id = spl_object_id($session);
-		$this->sessions[$id] = $session;
-		$this->pendingLoginSessions[$id] = $session;
-	}
+    public function markLoginReceived(NetworkSession $session): void
+    {
+        unset($this->pendingLoginSessions[spl_object_id($session)]);
+    }
 
-	public function markLoginReceived(NetworkSession $session) : void{
-		unset($this->pendingLoginSessions[spl_object_id($session)]);
-	}
+    public function remove(NetworkSession $session): void
+    {
+        $id = spl_object_id($session);
+        unset($this->sessions[$id], $this->pendingLoginSessions[$id]);
+    }
 
-	public function remove(NetworkSession $session) : void{
-		$id = spl_object_id($session);
-		unset($this->sessions[$id]);
-		unset($this->pendingLoginSessions[$id]);
-	}
+    public function getSessions(): array
+    {
+        return $this->sessions;
+    }
 
-	public function getSessions() : array
-	{
-		return $this->sessions;
-	}
+    public function getPendingLoginSessions(): array
+    {
+        return $this->pendingLoginSessions;
+    }
 
-	public function getPendingLoginSessions() : array
-	{
-		return $this->pendingLoginSessions;
-	}
-
-	public function tick() : void{
-		foreach($this->sessions as $id => $session){
-			$session->tick();
-			if(!$session->isConnected()){
-				unset($this->sessions[$id]);
-			}
-		}
-	}
+    public function tick(): void
+    {
+        foreach ($this->sessions as $id => $session) {
+            $session->tick();
+            if (!$session->isConnected()) {
+                unset($this->sessions[$id]);
+            }
+        }
+    }
 }

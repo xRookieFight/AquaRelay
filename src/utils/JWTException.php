@@ -23,7 +23,4 @@ declare(strict_types=1);
 
 namespace aquarelay\utils;
 
-final class JWTException extends \RuntimeException
-{
-
-}
+final class JWTException extends \RuntimeException {}

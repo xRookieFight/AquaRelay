@@ -26,88 +26,89 @@ namespace aquarelay\plugin;
 use aquarelay\ProxyServer;
 
 /**
- * Manages plugin loading and lifecycle
+ * Manages plugin loading and lifecycle.
  */
-class PluginManager {
+class PluginManager
+{
+    /** @var Plugin[] */
+    private array $plugins = [];
 
-	/** @var Plugin[] */
-	private array $plugins = [];
+    public function __construct(private ProxyServer $server, private PluginLoader $loader) {}
 
-	public function __construct(private ProxyServer $server, private PluginLoader $loader){}
+    /**
+     * Loads all plugins from the plugins directory.
+     */
+    public function loadPlugins(): void
+    {
+        $this->plugins = $this->loader->loadPlugins();
 
-	/**
-	 * Loads all plugins from the plugins directory
-	 */
-	public function loadPlugins() : void
-	{
-		$this->plugins = $this->loader->loadPlugins();
+        foreach ($this->plugins as $plugin) {
+            try {
+                $this->enablePlugin($plugin);
+            } catch (PluginException $e) {
+                $this->server->getLogger()->error("Failed to enable plugin {$plugin->getName()}: ".$e->getMessage());
+            }
+        }
+    }
 
-		foreach ($this->plugins as $plugin) {
-			try {
-				$this->enablePlugin($plugin);
-			} catch (PluginException $e) {
-				$this->server->getLogger()->error("Failed to enable plugin {$plugin->getName()}: " . $e->getMessage());
-			}
-		}
-	}
+    /**
+     * Enables a plugin.
+     *
+     * @throws PluginException
+     */
+    public function enablePlugin(Plugin $plugin): void
+    {
+        if ($plugin->isEnabled()) {
+            return;
+        }
 
-	/**
-	 * Enables a plugin
-	 * @throws PluginException
-	 */
-	public function enablePlugin(Plugin $plugin) : void
-	{
-		if ($plugin->isEnabled()) {
-			return;
-		}
+        $dependencies = $plugin->getDescription()->getDependencies();
+        foreach ($dependencies as $dep) {
+            if (!isset($this->plugins[$dep])) {
+                throw new PluginException("Plugin {$plugin->getName()} requires plugin {$dep} which is not loaded");
+            }
+        }
 
-		$dependencies = $plugin->getDescription()->getDependencies();
-		foreach ($dependencies as $dep) {
-			if (!isset($this->plugins[$dep])) {
-				throw new PluginException("Plugin {$plugin->getName()} requires plugin $dep which is not loaded");
-			}
-		}
+        $plugin->setEnabled(true);
+        $plugin->onEnable();
+        $this->server->getLogger()->info('Enabled plugin: '.$plugin->getName());
+    }
 
-		$plugin->setEnabled(true);
-		$plugin->onEnable();
-		$this->server->getLogger()->info("Enabled plugin: " . $plugin->getName());
-	}
+    /**
+     * Disables a plugin.
+     */
+    public function disablePlugin(Plugin $plugin): void
+    {
+        if (!$plugin->isEnabled()) {
+            return;
+        }
 
-	/**
-	 * Disables a plugin
-	 */
-	public function disablePlugin(Plugin $plugin) : void
-	{
-		if (!$plugin->isEnabled()) {
-			return;
-		}
+        $plugin->setEnabled(false);
+        $plugin->onDisable();
+        $this->server->getLogger()->info('Disabled plugin: '.$plugin->getName());
+    }
 
-		$plugin->setEnabled(false);
-		$plugin->onDisable();
-		$this->server->getLogger()->info("Disabled plugin: " . $plugin->getName());
-	}
+    /**
+     * Gets a plugin by name.
+     */
+    public function getPlugin(string $name): ?Plugin
+    {
+        return $this->plugins[$name] ?? null;
+    }
 
-	/**
-	 * Gets a plugin by name
-	 */
-	public function getPlugin(string $name) : ?Plugin
-	{
-		return $this->plugins[$name] ?? null;
-	}
+    /**
+     * Gets all loaded plugins.
+     */
+    public function getPlugins(): array
+    {
+        return $this->plugins;
+    }
 
-	/**
-	 * Gets all loaded plugins
-	 */
-	public function getPlugins() : array
-	{
-		return $this->plugins;
-	}
-
-	/**
-	 * Gets the number of loaded plugins
-	 */
-	public function getPluginCount() : int
-	{
-		return count($this->plugins);
-	}
+    /**
+     * Gets the number of loaded plugins.
+     */
+    public function getPluginCount(): int
+    {
+        return count($this->plugins);
+    }
 }

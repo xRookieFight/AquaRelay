@@ -23,20 +23,18 @@ declare(strict_types=1);
 
 namespace aquarelay\task;
 
-use Closure;
+class ClosureTask extends Task
+{
+    public function __construct(
+        private \Closure $task
+    ) {
+        parent::__construct();
+    }
 
-class ClosureTask extends Task {
-
-	public function __construct(
-		private Closure $task
-	) {
-		parent::__construct();
-	}
-
-	public function onRun() : void {
-		if (!$this->isCancelled()) {
-			($this->task)();
-		}
-	}
-
+    public function onRun(): void
+    {
+        if (!$this->isCancelled()) {
+            ($this->task)();
+        }
+    }
 }

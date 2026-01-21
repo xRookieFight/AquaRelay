@@ -26,10 +26,12 @@ namespace aquarelay\network\raklib\ipc;
 use pmmp\thread\ThreadSafeArray;
 use raklib\server\ipc\InterThreadChannelReader;
 
-final class PthreadsChannelReader implements InterThreadChannelReader{
-	public function __construct(private ThreadSafeArray $buffer){}
+final class PthreadsChannelReader implements InterThreadChannelReader
+{
+    public function __construct(private ThreadSafeArray $buffer) {}
 
-	public function read() : ?string{
-		return $this->buffer->shift();
-	}
+    public function read(): ?string
+    {
+        return $this->buffer->shift();
+    }
 }

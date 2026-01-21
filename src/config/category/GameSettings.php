@@ -23,44 +23,52 @@ declare(strict_types=1);
 
 namespace aquarelay\config\category;
 
-final class GameSettings {
+final class GameSettings
+{
+    public function __construct(
+        private int $maxPlayers,
+        private string $motd,
+        private string $subMotd,
+        private bool $xboxauth
+    ) {}
 
-	public function __construct(
-		private int $maxPlayers,
-		private string $motd,
-		private string $subMotd,
-		private bool $xboxauth
-	){}
+    public function getMaxPlayers(): int
+    {
+        return $this->maxPlayers;
+    }
 
-	public function getMaxPlayers() : int {
-		return $this->maxPlayers;
-	}
+    public function setMaxPlayers(int $maxPlayers): void
+    {
+        $this->maxPlayers = $maxPlayers;
+    }
 
-	public function setMaxPlayers(int $maxPlayers) : void {
-		$this->maxPlayers = $maxPlayers;
-	}
+    public function getMotd(): string
+    {
+        return $this->motd;
+    }
 
-	public function getMotd() : string {
-		return $this->motd;
-	}
+    public function setMotd(string $motd): void
+    {
+        $this->motd = $motd;
+    }
 
-	public function setMotd(string $motd) : void {
-		$this->motd = $motd;
-	}
+    public function getSubMotd(): string
+    {
+        return $this->subMotd;
+    }
 
-	public function getSubMotd() : string {
-		return $this->subMotd;
-	}
+    public function setSubMotd(string $subMotd): void
+    {
+        $this->subMotd = $subMotd;
+    }
 
-	public function setSubMotd(string $subMotd) : void {
-		$this->subMotd = $subMotd;
-	}
+    public function getXboxAuth(): bool
+    {
+        return $this->xboxauth;
+    }
 
-	public function getXboxAuth(): bool {
-		return $this->xboxauth;
-	}
-
-	public function setXboxAuth(bool $value): void {
-		$this->xboxauth = $value;
-	}
+    public function setXboxAuth(bool $value): void
+    {
+        $this->xboxauth = $value;
+    }
 }

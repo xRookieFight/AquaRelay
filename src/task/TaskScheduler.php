@@ -23,167 +23,182 @@ declare(strict_types=1);
 
 namespace aquarelay\task;
 
-use Closure;
+use aquarelay\ProxyServer;
 
-class TaskScheduler {
+class TaskScheduler
+{
+    /** @var Task[] */
+    private array $tasks = [];
+    private int $taskIdCounter = 0;
+    private ?AsyncPool $asyncPool = null;
 
-	/** @var Task[] */
-	private array $tasks = [];
-	private int $taskIdCounter = 0;
-	private ?AsyncPool $asyncPool = null;
+    /**
+     * Schedule a task to run.
+     *
+     * @return int Task ID
+     */
+    public function scheduleTask(Task $task): int
+    {
+        $taskId = ++$this->taskIdCounter;
+        $task->setTaskId($taskId);
+        $this->tasks[$taskId] = $task;
 
-	/**
-	 * Schedule a task to run
-	 * @param Task $task
-	 * @return int Task ID
-	 */
-	public function scheduleTask(Task $task) : int {
-		$taskId = ++$this->taskIdCounter;
-		$task->setTaskId($taskId);
-		$this->tasks[$taskId] = $task;
-		return $taskId;
-	}
+        return $taskId;
+    }
 
-	/**
-	 * Schedule a task to run immediately
-	 * @param Closure|Task $task
-	 * @return int Task ID
-	 */
-	public function schedule(Closure|Task $task) : int {
-		if ($task instanceof Closure) {
-			$task = new ClosureTask($task);
-		}
-		return $this->scheduleTask($task);
-	}
+    /**
+     * Schedule a task to run immediately.
+     *
+     * @return int Task ID
+     */
+    public function schedule(\Closure|Task $task): int
+    {
+        if ($task instanceof \Closure) {
+            $task = new ClosureTask($task);
+        }
 
-	/**
-	 * Schedule a task to run after delay (in ticks)
-	 * @param Closure|Task $task
-	 * @param int $delayTicks
-	 * @return int Task ID
-	 */
-	public function scheduleDelayed(Closure|Task $task, int $delayTicks) : int {
-		if ($task instanceof Closure) {
-			$task = new ClosureTask($task);
-		}
-		return $this->scheduleTask(new DelayedTask($task, $delayTicks));
-	}
+        return $this->scheduleTask($task);
+    }
 
-	/**
-	 * Schedule a task to repeat
-	 * @param Closure|Task $task
-	 * @param int $periodTicks Period between executions
-	 * @param int $delayTicks Initial delay before first execution
-	 * @return int Task ID
-	 */
-	public function scheduleRepeating(Closure|Task $task, int $periodTicks, int $delayTicks = 0) : int {
-		if ($task instanceof Closure) {
-			$task = new ClosureTask($task);
-		}
-		return $this->scheduleTask(new RepeatingTask($task, $periodTicks, $delayTicks));
-	}
+    /**
+     * Schedule a task to run after delay (in ticks).
+     *
+     * @return int Task ID
+     */
+    public function scheduleDelayed(\Closure|Task $task, int $delayTicks): int
+    {
+        if ($task instanceof \Closure) {
+            $task = new ClosureTask($task);
+        }
 
-	/**
-	 * Cancel a task by ID
-	 * @param int $taskId
-	 */
-	public function cancelTask(int $taskId) : void {
-		if (isset($this->tasks[$taskId])) {
-			$this->tasks[$taskId]->cancel();
-			unset($this->tasks[$taskId]);
-		}
-	}
+        return $this->scheduleTask(new DelayedTask($task, $delayTicks));
+    }
 
-	/**
-	 * Cancel all tasks
-	 */
-	public function cancelAllTasks() : void {
-		foreach ($this->tasks as $task) {
-			$task->cancel();
-		}
-		$this->tasks = [];
-	}
+    /**
+     * Schedule a task to repeat.
+     *
+     * @param int $periodTicks Period between executions
+     * @param int $delayTicks  Initial delay before first execution
+     *
+     * @return int Task ID
+     */
+    public function scheduleRepeating(\Closure|Task $task, int $periodTicks, int $delayTicks = 0): int
+    {
+        if ($task instanceof \Closure) {
+            $task = new ClosureTask($task);
+        }
 
-	/**
-	 * Process all tasks (called once per tick)
-	 */
-	public function processAll() : void {
-		foreach ($this->tasks as $taskId => $task) {
-			if ($task->isCancelled()) {
-				unset($this->tasks[$taskId]);
-				continue;
-			}
+        return $this->scheduleTask(new RepeatingTask($task, $periodTicks, $delayTicks));
+    }
 
-			try {
-				$task->onRun();
-				if ($task instanceof DelayedTask && $task->isReady()) {
-					unset($this->tasks[$taskId]);
-				}
-			} catch (\Throwable $e) {
-				$logger = \aquarelay\ProxyServer::getInstance()?->getLogger();
-				if ($logger !== null) {
-					$logger->logException($e);
-				}
-				unset($this->tasks[$taskId]);
-			}
-		}
+    /**
+     * Cancel a task by ID.
+     */
+    public function cancelTask(int $taskId): void
+    {
+        if (isset($this->tasks[$taskId])) {
+            $this->tasks[$taskId]->cancel();
+            unset($this->tasks[$taskId]);
+        }
+    }
 
-		if ($this->asyncPool !== null) {
-			$this->asyncPool->collectTasks();
-		}
-	}
+    /**
+     * Cancel all tasks.
+     */
+    public function cancelAllTasks(): void
+    {
+        foreach ($this->tasks as $task) {
+            $task->cancel();
+        }
+        $this->tasks = [];
+    }
 
-	/**
-	 * Submit an async task to the thread pool
-	 * @param AsyncTask $task
-	 * @return int Worker ID
-	 */
-	public function submitAsyncTask(AsyncTask $task) : int {
-		if ($this->asyncPool === null) {
-			$this->asyncPool = new AsyncPool(4, -1);
-		}
-		return $this->asyncPool->submitTask($task);
-	}
+    /**
+     * Process all tasks (called once per tick).
+     */
+    public function processAll(): void
+    {
+        foreach ($this->tasks as $taskId => $task) {
+            if ($task->isCancelled()) {
+                unset($this->tasks[$taskId]);
 
-	/**
-	 * Get the async pool instance
-	 */
-	public function getAsyncPool() : ?AsyncPool {
-		return $this->asyncPool;
-	}
+                continue;
+            }
 
-	/**
-	 * Get all pending tasks
-	 * @return Task[]
-	 */
-	public function getAllTasks() : array {
-		return array_values($this->tasks);
-	}
+            try {
+                $task->onRun();
+                if ($task instanceof DelayedTask && $task->isReady()) {
+                    unset($this->tasks[$taskId]);
+                }
+            } catch (\Throwable $e) {
+                $logger = ProxyServer::getInstance()?->getLogger();
+                if (null !== $logger) {
+                    $logger->logException($e);
+                }
+                unset($this->tasks[$taskId]);
+            }
+        }
 
-	/**
-	 * Get pending task count
-	 * @return int
-	 */
-	public function getTaskCount() : int {
-		return count($this->tasks);
-	}
+        if (null !== $this->asyncPool) {
+            $this->asyncPool->collectTasks();
+        }
+    }
 
-	/**
-	 * Check if a task is pending
-	 * @param int $taskId
-	 * @return bool
-	 */
-	public function isTaskScheduled(int $taskId) : bool {
-		return isset($this->tasks[$taskId]);
-	}
+    /**
+     * Submit an async task to the thread pool.
+     *
+     * @return int Worker ID
+     */
+    public function submitAsyncTask(AsyncTask $task): int
+    {
+        if (null === $this->asyncPool) {
+            $this->asyncPool = new AsyncPool(4, -1);
+        }
 
-	/**
-	 * Shutdown async pool
-	 */
-	public function shutdown() : void {
-		if ($this->asyncPool !== null) {
-			$this->asyncPool->shutdown();
-		}
-	}
+        return $this->asyncPool->submitTask($task);
+    }
 
+    /**
+     * Get the async pool instance.
+     */
+    public function getAsyncPool(): ?AsyncPool
+    {
+        return $this->asyncPool;
+    }
+
+    /**
+     * Get all pending tasks.
+     *
+     * @return Task[]
+     */
+    public function getAllTasks(): array
+    {
+        return array_values($this->tasks);
+    }
+
+    /**
+     * Get pending task count.
+     */
+    public function getTaskCount(): int
+    {
+        return count($this->tasks);
+    }
+
+    /**
+     * Check if a task is pending.
+     */
+    public function isTaskScheduled(int $taskId): bool
+    {
+        return isset($this->tasks[$taskId]);
+    }
+
+    /**
+     * Shutdown async pool.
+     */
+    public function shutdown(): void
+    {
+        if (null !== $this->asyncPool) {
+            $this->asyncPool->shutdown();
+        }
+    }
 }

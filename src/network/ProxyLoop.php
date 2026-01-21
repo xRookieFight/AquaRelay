@@ -29,23 +29,23 @@ use aquarelay\player\Player;
 use aquarelay\ProxyServer;
 use pmmp\encoding\ByteBufferReader;
 use pocketmine\network\mcpe\protocol\PacketPool;
+use pocketmine\network\mcpe\protocol\ProtocolInfo;
 use pocketmine\network\mcpe\protocol\serializer\PacketBatch;
 use pocketmine\network\mcpe\protocol\types\CompressionAlgorithm;
 use pocketmine\snooze\SleeperHandler;
-use pocketmine\network\mcpe\protocol\ProtocolInfo;
 
-class ProxyLoop {
+class ProxyLoop
+{
+    public const TICK_INTERVAL = 0.05;
 
     /** @var NetworkSession[] */
     private array $sessions = [];
 
     private SleeperHandler $sleeper;
 
-    const TICK_INTERVAL = 0.05;
-
     public function __construct(
         private ProxyServer $server
-    ){
+    ) {
         $this->sleeper = new SleeperHandler();
         $this->server->interface->setHandlers(
             $this->handleConnect(...),
@@ -55,10 +55,11 @@ class ProxyLoop {
         );
     }
 
-    public function run() : void {
+    public function run(): void
+    {
         $nextTick = microtime(true);
 
-        while(true) {
+        while (true) {
             $now = microtime(true);
 
             $this->server->interface->tick();
@@ -72,40 +73,46 @@ class ProxyLoop {
         }
     }
 
-    private function tick() : void {
+    private function tick(): void
+    {
         $this->server->getScheduler()->processAll();
 
-        foreach($this->sessions as $session) {
+        foreach ($this->sessions as $session) {
             $player = $session->getPlayer();
-            
-            if($player !== null && $player->getDownstream() !== null) {
-                $player->getDownstream()->tick(function($payload) use ($player) {
+
+            if (null !== $player && null !== $player->getDownstream()) {
+                $player->getDownstream()->tick(function ($payload) use ($player): void {
                     $this->handleBackendPayload($player, $payload);
                 });
             }
         }
     }
 
-    private function handleBackendPayload(Player $player, string $payload): void {
+    private function handleBackendPayload(Player $player, string $payload): void
+    {
         $pid = \ord($payload[0]);
-        if ($pid !== 0xFE) return;
+        if (0xFE !== $pid) {
+            return;
+        }
 
         $compression = \ord($payload[1]);
         $buffer = substr($payload, 2);
 
-        if ($compression === CompressionAlgorithm::ZLIB) {
+        if (CompressionAlgorithm::ZLIB === $compression) {
             try {
                 $buffer = ZlibCompressor::getInstance()->decompress($buffer);
-            } catch (\Exception $e) { return; }
+            } catch (\Exception $e) {
+                return;
+            }
         }
 
         try {
             $stream = new ByteBufferReader($buffer);
             $packets = PacketBatch::decodeRaw($stream);
-            
+
             foreach ($packets as $pktBuffer) {
                 $packet = PacketPool::getInstance()->getPacket($pktBuffer);
-                if ($packet !== null) {
+                if (null !== $packet) {
                     $packet->decode(new ByteBufferReader($pktBuffer), ProtocolInfo::CURRENT_PROTOCOL);
                     $player->handleBackendPacket($packet);
                 }
@@ -115,8 +122,9 @@ class ProxyLoop {
         }
     }
 
-    private function handleConnect(int $sessionId, string $ip, int $port): void {
-        $this->server->getLogger()->info("Client connected: $ip:$port (ID: $sessionId)");
+    private function handleConnect(int $sessionId, string $ip, int $port): void
+    {
+        $this->server->getLogger()->info("Client connected: {$ip}:{$port} (ID: {$sessionId})");
 
         $session = new NetworkSession(
             $this->server,
@@ -130,33 +138,35 @@ class ProxyLoop {
         $this->sessions[$sessionId] = $session;
     }
 
-    private function handlePacket(int $sessionId, string $payload): void {
+    private function handlePacket(int $sessionId, string $payload): void
+    {
         $firstByte = ord($payload[0]);
 
-        if($firstByte !== 0xfe){
+        if (0xFE !== $firstByte) {
             // Ignore non-game packets
             return;
         }
 
-        if(!isset($this->sessions[$sessionId])){
+        if (!isset($this->sessions[$sessionId])) {
             return;
         }
 
         $this->sessions[$sessionId]->handleEncodedPacket(substr($payload, 1));
     }
 
-    private function handleDisconnect(int $sessionId, string $reason): void {
-        $this->server->getLogger()->info("Client disconnected: $reason");
-        if(isset($this->sessions[$sessionId])){
+    private function handleDisconnect(int $sessionId, string $reason): void
+    {
+        $this->server->getLogger()->info("Client disconnected: {$reason}");
+        if (isset($this->sessions[$sessionId])) {
             NetworkSessionManager::getInstance()->remove($this->sessions[$sessionId]);
             $this->server->getPlayerManager()->removePlayer($this->sessions[$sessionId]);
             unset($this->sessions[$sessionId]);
         }
     }
 
-    private function handlePing(int $sessionId, int $ping) : void
+    private function handlePing(int $sessionId, int $ping): void
     {
-        if (isset($this->sessions[$sessionId])){
+        if (isset($this->sessions[$sessionId])) {
             $this->sessions[$sessionId]->setPing($ping);
         }
     }

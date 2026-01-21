@@ -23,6 +23,4 @@ declare(strict_types=1);
 
 namespace aquarelay\network;
 
-final class NetworkException extends \RuntimeException{
-
-}
+final class NetworkException extends \RuntimeException {}

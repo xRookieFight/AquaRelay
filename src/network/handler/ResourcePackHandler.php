@@ -33,55 +33,64 @@ use pocketmine\network\mcpe\protocol\types\BlockPosition;
 use pocketmine\network\mcpe\protocol\types\ChunkPosition;
 use pocketmine\network\mcpe\protocol\types\Experiments;
 
-class ResourcePackHandler extends PacketHandler {
-
-    public function handleRequestChunkRadius(RequestChunkRadiusPacket $packet): bool {
+class ResourcePackHandler extends PacketHandler
+{
+    public function handleRequestChunkRadius(RequestChunkRadiusPacket $packet): bool
+    {
         $this->session->getPlayer()?->sendToBackend($packet);
+
         return true;
     }
 
-    public function handleClientCacheStatus(ClientCacheStatusPacket $packet): bool {
-        $this->session->debug("Client cache status received: " . ($packet->isEnabled() ? "Supported" : "Not Supported"));
+    public function handleClientCacheStatus(ClientCacheStatusPacket $packet): bool
+    {
+        $this->session->debug('Client cache status received: '.($packet->isEnabled() ? 'Supported' : 'Not Supported'));
+
         return true;
     }
 
-    public function handleResourcePackClientResponse(ResourcePackClientResponsePacket $packet): bool {
+    public function handleResourcePackClientResponse(ResourcePackClientResponsePacket $packet): bool
+    {
         switch ($packet->status) {
             case ResourcePackClientResponsePacket::STATUS_HAVE_ALL_PACKS:
-                $this->session->debug("Client has all packs. Sending stack...");
-                $pk = ResourcePackStackPacket::create([], [], false, "*", new Experiments([], false), false);
+                $this->session->debug('Client has all packs. Sending stack...');
+                $pk = ResourcePackStackPacket::create([], [], false, '*', new Experiments([], false), false);
                 $this->session->sendDataPacket($pk, true);
+
                 return true;
 
             case ResourcePackClientResponsePacket::STATUS_COMPLETED:
-                $this->session->debug("Resource packs sequence completed.");
+                $this->session->debug('Resource packs sequence completed.');
 
                 $publisher = NetworkChunkPublisherUpdatePacket::create(
-        new BlockPosition(0, 0, 0),
-        8 * 16,
-        [] 
-    );
-    $this->session->sendDataPacket($publisher);
+                    new BlockPosition(0, 0, 0),
+                    8 * 16,
+                    []
+                );
+                $this->session->sendDataPacket($publisher);
 
-    $chunkPk = LevelChunkPacket::create(
-        new ChunkPosition(0, 0),
-        0, 
-        1,
-        false,
-        null,
-        "\x01\x00\x00" 
-    );
+                $chunkPk = LevelChunkPacket::create(
+                    new ChunkPosition(0, 0),
+                    0,
+                    1,
+                    false,
+                    null,
+                    "\x01\x00\x00"
+                );
                 $this->session->sendDataPacket($chunkPk);
-    
+
                 $this->session->flushGamePacketQueue();
                 $this->session->connectToBackend();
                 $this->session->setHandler(new GamePacketHandler($this->session, $this->logger));
+
                 return true;
 
             case ResourcePackClientResponsePacket::STATUS_REFUSED:
-                $this->session->disconnect("You must accept resource packs.");
+                $this->session->disconnect('You must accept resource packs.');
+
                 return false;
         }
+
         return true;
     }
 }

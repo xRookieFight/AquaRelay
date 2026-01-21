@@ -22,9 +22,13 @@ declare(strict_types=1);
 
 namespace aquarelay\network\compression;
 
-interface Compressor{
-	public function decompress(string $payload) : string;
-	public function compress(string $payload) : string;
-	public function getNetworkId() : int;
-	public function getCompressionThreshold() : ?int;
+interface Compressor
+{
+    public function decompress(string $payload): string;
+
+    public function compress(string $payload): string;
+
+    public function getNetworkId(): int;
+
+    public function getCompressionThreshold(): ?int;
 }

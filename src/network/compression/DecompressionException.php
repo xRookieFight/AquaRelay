@@ -23,6 +23,4 @@ declare(strict_types=1);
 
 namespace aquarelay\network\compression;
 
-final class DecompressionException extends \RuntimeException{
-
-}
+final class DecompressionException extends \RuntimeException {}

@@ -25,10 +25,9 @@ namespace aquarelay\network;
 
 interface PacketSender
 {
+    public function sendPacket(string $payload, bool $immediate, ?int $receiptId): void;
 
-	public function sendPacket(string $payload, bool $immediate, ?int $receiptId) : void;
+    public function sendRawPacket(string $buffer): void;
 
-	public function sendRawPacket(string $buffer) : void;
-
-	public function close() : void;
+    public function close(): void;
 }

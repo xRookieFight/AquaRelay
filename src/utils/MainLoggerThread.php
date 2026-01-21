@@ -46,99 +46,100 @@ use const PATHINFO_FILENAME;
 
 class MainLoggerThread extends Thread
 {
-	private ThreadSafeArray $buffer;
-	private bool $shutdown = false;
+    private ThreadSafeArray $buffer;
+    private bool $shutdown = false;
 
-	private int $currentSize = 0;
+    private int $currentSize = 0;
 
-	public function __construct(
-		private string $logFile,
-		private ?string $archiveDir = null,
-		private int $maxFileSize = 32 * 1024 * 1024
-	){
-		$this->buffer = new ThreadSafeArray();
+    public function __construct(
+        private string $logFile,
+        private ?string $archiveDir = null,
+        private int $maxFileSize = 32 * 1024 * 1024
+    ) {
+        $this->buffer = new ThreadSafeArray();
 
-		touch($this->logFile);
+        touch($this->logFile);
 
-		if ($this->archiveDir !== null && !@mkdir($this->archiveDir) && !is_dir($this->archiveDir)) {
-			throw new \RuntimeException("Unable to create archive directory");
-		}
-	}
+        if (null !== $this->archiveDir && !@mkdir($this->archiveDir) && !is_dir($this->archiveDir)) {
+            throw new \RuntimeException('Unable to create archive directory');
+        }
+    }
 
-	public function write(string $line): void
-	{
-		$this->synchronized(function () use ($line): void {
-			$this->buffer[] = $line;
-			$this->notify();
-		});
-	}
+    public function write(string $line): void
+    {
+        $this->synchronized(function () use ($line): void {
+            $this->buffer[] = $line;
+            $this->notify();
+        });
+    }
 
-	public function shutdown(): void
-	{
-		$this->synchronized(function (): void {
-			$this->shutdown = true;
-			$this->notify();
-		});
-		$this->join();
-	}
+    public function shutdown(): void
+    {
+        $this->synchronized(function (): void {
+            $this->shutdown = true;
+            $this->notify();
+        });
+        $this->join();
+    }
 
-	private function openLogFile()
-	{
-		$handle = fopen($this->logFile, "ab");
-		$stat = fstat($handle);
-		$this->currentSize = $stat !== false ? $stat['size'] : 0;
-		return $handle;
-	}
+    public function run(): void
+    {
+        $handle = $this->openLogFile();
 
-	private function archiveIfNeeded(&$handle): void
-	{
-		if ($this->archiveDir === null || $this->currentSize < $this->maxFileSize) {
-			return;
-		}
+        while (!$this->shutdown) {
+            $this->synchronized(function (): void {
+                if (0 === count($this->buffer) && !$this->shutdown) {
+                    $this->wait();
+                }
+            });
 
-		fclose($handle);
-		clearstatcache();
+            while (($line = $this->buffer->shift()) !== null) {
+                echo $line;
 
-		$date = date("Y-m-d\TH.i.s");
-		$base = pathinfo($this->logFile, PATHINFO_FILENAME);
-		$ext  = pathinfo($this->logFile, PATHINFO_EXTENSION);
+                $clean = preg_replace('/\x1b\[[0-9;]*m/', '', $line);
+                fwrite($handle, $clean);
+                $this->currentSize += strlen($clean);
 
-		$i = 0;
-		do {
-			$name = "$base.$date.$i.$ext";
-			$target = $this->archiveDir . "/" . $name;
-			$i++;
-		} while (file_exists($target));
+                $this->archiveIfNeeded($handle);
+            }
+        }
 
-		@mkdir($this->archiveDir);
-		rename($this->logFile, $target);
+        fclose($handle);
+    }
 
-		$handle = $this->openLogFile();
-		fwrite($handle, "--- Log archived, previous file archived as $name ---\n");
-	}
+    private function openLogFile()
+    {
+        $handle = fopen($this->logFile, 'ab');
+        $stat = fstat($handle);
+        $this->currentSize = false !== $stat ? $stat['size'] : 0;
 
-	public function run(): void
-	{
-		$handle = $this->openLogFile();
+        return $handle;
+    }
 
-		while (!$this->shutdown) {
-			$this->synchronized(function (): void {
-				if (count($this->buffer) === 0 && !$this->shutdown) {
-					$this->wait();
-				}
-			});
+    private function archiveIfNeeded(&$handle): void
+    {
+        if (null === $this->archiveDir || $this->currentSize < $this->maxFileSize) {
+            return;
+        }
 
-			while (($line = $this->buffer->shift()) !== null) {
-				echo $line;
+        fclose($handle);
+        clearstatcache();
 
-				$clean = preg_replace('/\x1b\[[0-9;]*m/', '', $line);
-				fwrite($handle, $clean);
-				$this->currentSize += strlen($clean);
+        $date = date('Y-m-d\\TH.i.s');
+        $base = pathinfo($this->logFile, PATHINFO_FILENAME);
+        $ext = pathinfo($this->logFile, PATHINFO_EXTENSION);
 
-				$this->archiveIfNeeded($handle);
-			}
-		}
+        $i = 0;
+        do {
+            $name = "{$base}.{$date}.{$i}.{$ext}";
+            $target = $this->archiveDir.'/'.$name;
+            ++$i;
+        } while (file_exists($target));
 
-		fclose($handle);
-	}
+        @mkdir($this->archiveDir);
+        rename($this->logFile, $target);
+
+        $handle = $this->openLogFile();
+        fwrite($handle, "--- Log archived, previous file archived as {$name} ---\n");
+    }
 }

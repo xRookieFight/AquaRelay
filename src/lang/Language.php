@@ -31,55 +31,54 @@ use Symfony\Component\Filesystem\Path;
  */
 class Language
 {
+    public const DEFAULT_LANGUAGE = 'eng';
 
-	public const DEFAULT_LANGUAGE = "eng";
+    private string $langName;
 
-	private string $langName;
+    private array $translations = [];
 
-	private array $translations = [];
+    private array $defaultTranslations = [];
 
-	private array $defaultTranslations = [];
+    public function __construct(string $lang)
+    {
+        $this->langName = strtolower($lang);
+        $this->defaultTranslations = $this->loadLang(\aquarelay\LOCALE_DATA_PATH, self::DEFAULT_LANGUAGE);
+        $this->translations = $this->loadLang(\aquarelay\LOCALE_DATA_PATH, $this->langName);
+    }
 
-	public function __construct(string $lang)
-	{
-		$this->langName = strtolower($lang);
-		$this->defaultTranslations = $this->loadLang(\aquarelay\LOCALE_DATA_PATH, self::DEFAULT_LANGUAGE);
-		$this->translations = $this->loadLang(\aquarelay\LOCALE_DATA_PATH, $this->langName);
-	}
+    public function getFullName(): string
+    {
+        return $this->translate('name');
+    }
 
-	public function getFullName(): string
-	{
-		return $this->translate("name");
-	}
+    public function getLang(): string
+    {
+        return $this->langName;
+    }
 
-	public function getLang(): string
-	{
-		return $this->langName;
-	}
+    public function loadLang(string $path, string $languageName): array
+    {
+        $file = Path::join($path, $languageName.'.ini');
+        if (!file_exists($file)) {
+            if (self::DEFAULT_LANGUAGE == $languageName) {
+                throw new LanguageNotFoundException("Language \"{$languageName}\" not found");
+            }
+            ProxyServer::getInstance()->getLogger()->warning("Language file \"{$file}\" not found");
+            $this->langName = self::DEFAULT_LANGUAGE;
 
-	public function loadLang(string $path, string $languageName): array
-	{
-		$file = Path::join($path, $languageName . ".ini");
-		if (!file_exists($file)) {
-			if ($languageName == self::DEFAULT_LANGUAGE) {
-				throw new LanguageNotFoundException("Language \"$languageName\" not found");
-			} else {
-				ProxyServer::getInstance()->getLogger()->warning("Language file \"$file\" not found");
-				$this->langName = self::DEFAULT_LANGUAGE;
-				return [];
-			}
-		}
+            return [];
+        }
 
-		return LanguageParser::parseFile($file);
-	}
+        return LanguageParser::parseFile($file);
+    }
 
-	public function translate(string $key, array $args = []): string
-	{
-		$text = $this->translations[$key] ?? $this->defaultTranslations[$key] ?? $key;
-		foreach ($args as $i => $val) {
-			$text = str_replace('{%' . $i . '}', (string)$val, $text);
-		}
+    public function translate(string $key, array $args = []): string
+    {
+        $text = $this->translations[$key] ?? $this->defaultTranslations[$key] ?? $key;
+        foreach ($args as $i => $val) {
+            $text = str_replace('{%'.$i.'}', (string) $val, $text);
+        }
 
-		return $text;
-	}
+        return $text;
+    }
 }

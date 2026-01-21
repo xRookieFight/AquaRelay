@@ -18,3 +18,5 @@ config.yml
 AquaRelay.phar
 logs
 plugins
+.php-cs-fixer.dist.php
+.php-cs-fixer.cache
