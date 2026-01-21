@@ -24,9 +24,13 @@ declare(strict_types=1);
 namespace aquarelay\network\handler;
 
 use pocketmine\network\mcpe\protocol\ClientCacheStatusPacket;
+use pocketmine\network\mcpe\protocol\LevelChunkPacket;
+use pocketmine\network\mcpe\protocol\NetworkChunkPublisherUpdatePacket;
 use pocketmine\network\mcpe\protocol\RequestChunkRadiusPacket;
 use pocketmine\network\mcpe\protocol\ResourcePackClientResponsePacket;
 use pocketmine\network\mcpe\protocol\ResourcePackStackPacket;
+use pocketmine\network\mcpe\protocol\types\BlockPosition;
+use pocketmine\network\mcpe\protocol\types\ChunkPosition;
 use pocketmine\network\mcpe\protocol\types\Experiments;
 
 class ResourcePackHandler extends PacketHandler {
@@ -51,6 +55,25 @@ class ResourcePackHandler extends PacketHandler {
 
             case ResourcePackClientResponsePacket::STATUS_COMPLETED:
                 $this->session->debug("Resource packs sequence completed.");
+
+                $publisher = NetworkChunkPublisherUpdatePacket::create(
+        new BlockPosition(0, 0, 0),
+        8 * 16,
+        [] 
+    );
+    $this->session->sendDataPacket($publisher);
+
+    $chunkPk = LevelChunkPacket::create(
+        new ChunkPosition(0, 0),
+        0, 
+        1,
+        false,
+        null,
+        "\x01\x00\x00" 
+    );
+                $this->session->sendDataPacket($chunkPk);
+    
+                $this->session->flushGamePacketQueue();
                 $this->session->connectToBackend();
                 $this->session->setHandler(new GamePacketHandler($this->session, $this->logger));
                 return true;

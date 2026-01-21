@@ -21,18 +21,18 @@ use pocketmine\network\mcpe\protocol\LevelSoundEventPacket;
 
 class GamePacketHandler extends PacketHandler {
 
-    /**
-     * This is the "Spawn Response" the backend is waiting for.
-     * Without this, you stay stuck on 'Locating Server'.
-     */
     public function handleSetLocalPlayerAsInitialized(SetLocalPlayerAsInitializedPacket $packet): bool {
         $player = $this->session->getPlayer();
-        if ($player !== null && $player->backendRuntimeId !== null) {
-            $packet->actorRuntimeId = $player->backendRuntimeId;
-            
-            $this->session->debug("Handshaking Spawn: Forwarding Initialization to Backend.");
-            $player->clearAwaitingSpawnResponse();
-            $player->sendToBackend($packet);
+        if ($player !== null) {
+            $this->session->debug("Received SetLocalPlayerAsInitialized from client; packet props: " . print_r(get_object_vars($packet), true));
+            if ($player->backendRuntimeId !== null) {
+                $packet->actorRuntimeId = $player->backendRuntimeId;
+                $this->session->debug("Handshaking Spawn: Forwarding Initialization to Backend (actorRuntimeId={$packet->actorRuntimeId}).");
+                $player->clearAwaitingSpawnResponse();
+                $player->sendToBackend($packet);
+            } else {
+                $this->session->debug("Received SetLocalPlayerAsInitialized but backendRuntimeId is null; not forwarding.");
+            }
         }
         return true;
     }
@@ -88,6 +88,14 @@ class GamePacketHandler extends PacketHandler {
     private function forward(DataPacket $packet): void {
         $player = $this->session->getPlayer();
         if ($player !== null && $player->getDownstream() !== null) {
+            $name = method_exists($packet, 'getName') ? $packet->getName() : get_class($packet);
+            $info = "Forwarding packet: $name";
+            if (property_exists($packet, 'actorRuntimeId')) {
+                $info .= "; actorRuntimeId={$packet->actorRuntimeId}";
+            } elseif (property_exists($packet, 'actorUniqueId')) {
+                $info .= "; actorUniqueId={$packet->actorUniqueId}";
+            }
+            $this->session->debug($info);
             $player->sendToBackend($packet);
         }
     }

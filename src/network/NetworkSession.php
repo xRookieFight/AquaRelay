@@ -104,7 +104,7 @@ class NetworkSession {
     private function processSinglePacket(string $buffer) : void {
         $packet = $this->packetPool->getPacket($buffer);
         if($packet !== null){
-            //$this->debug("Incoming packet: " . $packet->getName());
+            $this->debug("Incoming packet: " . $packet->getName());
             $packet->decode(new ByteBufferReader($buffer), ProtocolInfo::CURRENT_PROTOCOL);
 
             if($this->handler !== null){

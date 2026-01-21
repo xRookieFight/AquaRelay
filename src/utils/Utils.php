@@ -97,7 +97,6 @@ class Utils {
 
         return self::$os;
     }
-
     public static function pid() : int{
 		$result = getmypid();
 		if($result === false){

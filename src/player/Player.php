@@ -28,6 +28,7 @@ use aquarelay\network\raklib\client\BackendRakClient;
 use aquarelay\utils\LoginData;
 use pocketmine\network\mcpe\protocol\ClientboundPacket;
 use pocketmine\network\mcpe\protocol\DataPacket;
+use pocketmine\network\mcpe\protocol\LevelChunkPacket;
 use pocketmine\network\mcpe\protocol\LoginPacket;
 use pocketmine\network\mcpe\protocol\NetworkChunkPublisherUpdatePacket;
 use pocketmine\network\mcpe\protocol\PlayStatusPacket;
@@ -133,9 +134,8 @@ class Player
 			$this->sendDefaultChunkRadius();
 			$this->upstreamSession->debug("StartGamePacket received! Triggering world load...");
 
-			// for test why RuntimeId is null
 			$detectedRuntimeId = null;
-			$candidates = ["runtimeEntityId", "entityRuntimeId", "entityUniqueId", "playerRuntimeId", "entityUniqueIdLow", "entityUniqueIdHigh"];
+			$candidates = ["actorRuntimeId", "actorUniqueId", "runtimeEntityId", "entityRuntimeId", "entityUniqueId", "playerRuntimeId", "entityUniqueIdLow", "entityUniqueIdHigh"];
 			foreach ($candidates as $c) {
 				if (isset($packet->{$c})) {
 					$detectedRuntimeId = $packet->{$c};
@@ -150,12 +150,31 @@ class Player
 				if ($this->backendRuntimeId === null) {
 					$this->upstreamSession->debug("StartGamePacket properties: " . print_r(get_object_vars($packet), true));
 				}
-            $packet->runtimeEntityId = $this->proxyRuntimeId;
+				
+			$written = false;
+			foreach (["actorRuntimeId", "actorUniqueId", "runtimeEntityId", "entityRuntimeId", "entityUniqueId"] as $c) {
+				if (property_exists($packet, $c)) {
+					$packet->{$c} = $this->proxyRuntimeId;
+					$this->upstreamSession->debug("Wrote proxy runtime id into StartGamePacket property '$c'.");
+					$written = true;
+					break;
+				}
+			}
+			if (! $written) {
+				$packet->runtimeEntityId = $this->proxyRuntimeId;
+				$this->upstreamSession->debug("Wrote proxy runtime id into StartGamePacket fallback property 'runtimeEntityId'.");
+			}
 			$this->sendDataPacket($packet);
 			return;
         }
 
 		if ($packet instanceof NetworkChunkPublisherUpdatePacket) {
+			$this->sendDataPacket($packet);
+			$this->upstreamSession->debug("Forwarded NetworkChunkPublisherUpdatePacket from backend to client.");
+            return;
+        }
+
+		if ($packet instanceof LevelChunkPacket) {
             $this->sendDataPacket($packet);
             return;
         }
