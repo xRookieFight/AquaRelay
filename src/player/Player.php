@@ -29,10 +29,12 @@ use aquarelay\utils\LoginData;
 use pocketmine\network\mcpe\protocol\ClientboundPacket;
 use pocketmine\network\mcpe\protocol\DataPacket;
 use pocketmine\network\mcpe\protocol\LoginPacket;
+use pocketmine\network\mcpe\protocol\NetworkChunkPublisherUpdatePacket;
 use pocketmine\network\mcpe\protocol\PlayStatusPacket;
 use pocketmine\network\mcpe\protocol\RequestChunkRadiusPacket;
 use pocketmine\network\mcpe\protocol\ResourcePackClientResponsePacket;
 use pocketmine\network\mcpe\protocol\ResourcePacksInfoPacket;
+use pocketmine\network\mcpe\protocol\SetLocalPlayerAsInitializedPacket;
 use pocketmine\network\mcpe\protocol\StartGamePacket;
 use Ramsey\Uuid\UuidInterface;
 
@@ -43,6 +45,7 @@ class Player
 	public int $proxyRuntimeId;
 
 	public ?int $backendRuntimeId = null;
+	private bool $awaitingSpawnResponse = false;
 	protected string $xuid = "";
 
 	private NetworkSession $upstreamSession;
@@ -64,6 +67,11 @@ class Player
 
 	public function sendToBackend(DataPacket $packet): void {
 		$this->downstreamConnection?->sendGamePacket($packet);
+	}
+
+	public function clearAwaitingSpawnResponse(): void {
+		$this->awaitingSpawnResponse = false;
+		$this->upstreamSession->debug("Cleared awaiting spawn response flag for player " . $this->getName());
 	}
 
 	public function getLoginData(): LoginData { return $this->loginData; }
@@ -97,6 +105,14 @@ class Player
 		$this->sendToBackend($pk);
 	}
 
+	public function sendDefaultChunkRadius(): void {
+		$chunkRadiusPacket = new RequestChunkRadiusPacket();
+		$chunkRadiusPacket->radius = 8;
+		$chunkRadiusPacket->maxRadius = 8;
+		$this->upstreamSession->debug("Sending default chunk radius (8) to backend after login");
+		$this->downstreamConnection->sendGamePacket($chunkRadiusPacket);
+	}
+
 	public function handleBackendPacket(DataPacket $packet): void {
         if ($packet instanceof ResourcePacksInfoPacket) {
             $pk = ResourcePackClientResponsePacket::create(
@@ -114,14 +130,50 @@ class Player
         }
 
         if ($packet instanceof StartGamePacket) {
-            $this->upstreamSession->debug("StartGamePacket received! Triggering world load...");
+			$this->sendDefaultChunkRadius();
+			$this->upstreamSession->debug("StartGamePacket received! Triggering world load...");
 
-            $this->backendRuntimeId = $packet->runtimeEntityId;
+			// for test why RuntimeId is null
+			$detectedRuntimeId = null;
+			$candidates = ["runtimeEntityId", "entityRuntimeId", "entityUniqueId", "playerRuntimeId", "entityUniqueIdLow", "entityUniqueIdHigh"];
+			foreach ($candidates as $c) {
+				if (isset($packet->{$c})) {
+					$detectedRuntimeId = $packet->{$c};
+					$this->upstreamSession->debug("StartGamePacket runtime id taken from property '$c'.");
+					break;
+				}
+			}
+
+			$this->backendRuntimeId = $detectedRuntimeId;
+				$this->upstreamSession->debug("Assigned backend runtime id: " . ($this->backendRuntimeId ?? "null"));
+
+				if ($this->backendRuntimeId === null) {
+					$this->upstreamSession->debug("StartGamePacket properties: " . print_r(get_object_vars($packet), true));
+				}
             $packet->runtimeEntityId = $this->proxyRuntimeId;
+			$this->sendDataPacket($packet);
+			return;
+        }
 
-            $radiusPk = RequestChunkRadiusPacket::create(8, 0);
-            $this->downstreamConnection->sendGamePacket($radiusPk);
-            $this->upstreamSession->debug("Sent Forced Chunk Request (radius 8).");
+		if ($packet instanceof NetworkChunkPublisherUpdatePacket) {
+            $this->sendDataPacket($packet);
+            return;
+        }
+
+		 if ($packet instanceof PlayStatusPacket) {
+            if ($packet->status === PlayStatusPacket::PLAYER_SPAWN) {
+				$this->upstreamSession->debug("Backend sent PLAYER_SPAWN. Client should now initialize.");
+
+				if ($this->backendRuntimeId === null) {
+					$this->upstreamSession->debug("Cannot send spawn notification: backendRuntimeId is null.");
+					$this->awaitingSpawnResponse = false;
+				} else {
+					$this->upstreamSession->debug("Sending spawn notification, waiting for spawn response");
+					$init = SetLocalPlayerAsInitializedPacket::create($this->backendRuntimeId);
+					$this->awaitingSpawnResponse = true;
+					$this->downstreamConnection->sendGamePacket($init);
+				}
+            }
         }
 
         $this->sendDataPacket($packet);

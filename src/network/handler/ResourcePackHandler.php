@@ -24,11 +24,17 @@ declare(strict_types=1);
 namespace aquarelay\network\handler;
 
 use pocketmine\network\mcpe\protocol\ClientCacheStatusPacket;
+use pocketmine\network\mcpe\protocol\RequestChunkRadiusPacket;
 use pocketmine\network\mcpe\protocol\ResourcePackClientResponsePacket;
 use pocketmine\network\mcpe\protocol\ResourcePackStackPacket;
 use pocketmine\network\mcpe\protocol\types\Experiments;
 
 class ResourcePackHandler extends PacketHandler {
+
+    public function handleRequestChunkRadius(RequestChunkRadiusPacket $packet): bool {
+        $this->session->getPlayer()?->sendToBackend($packet);
+        return true;
+    }
 
     public function handleClientCacheStatus(ClientCacheStatusPacket $packet): bool {
         $this->session->debug("Client cache status received: " . ($packet->isEnabled() ? "Supported" : "Not Supported"));
@@ -39,23 +45,14 @@ class ResourcePackHandler extends PacketHandler {
         switch ($packet->status) {
             case ResourcePackClientResponsePacket::STATUS_HAVE_ALL_PACKS:
                 $this->session->debug("Client has all packs. Sending stack...");
-
-                $pk = ResourcePackStackPacket::create(
-                    resourcePackStack: [],
-                    behaviorPackStack: [],
-                    mustAccept: false,
-                    baseGameVersion: "*",
-                    experiments: new Experiments([], false),
-                    useVanillaEditorPacks: false
-                );
-
+                $pk = ResourcePackStackPacket::create([], [], false, "*", new Experiments([], false), false);
                 $this->session->sendDataPacket($pk, true);
                 return true;
 
             case ResourcePackClientResponsePacket::STATUS_COMPLETED:
-                $this->session->debug("Resource packs sequence completed. Connecting to backend...");
-                
-                $this->session->connectToBackend();  
+                $this->session->debug("Resource packs sequence completed.");
+                $this->session->connectToBackend();
+                $this->session->setHandler(new GamePacketHandler($this->session, $this->logger));
                 return true;
 
             case ResourcePackClientResponsePacket::STATUS_REFUSED:
