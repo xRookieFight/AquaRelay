@@ -67,7 +67,7 @@ class ResourcePackHandler extends PacketHandler
                     8 * 16,
                     []
                 );
-                $this->session->sendDataPacket($publisher);
+                $this->session->sendDataPacket($publisher, false);
 
                 $chunkPk = LevelChunkPacket::create(
                     new ChunkPosition(0, 0),
@@ -77,7 +77,7 @@ class ResourcePackHandler extends PacketHandler
                     null,
                     "\x01\x00\x00"
                 );
-                $this->session->sendDataPacket($chunkPk);
+                $this->session->sendDataPacket($chunkPk, false);
 
                 $this->session->flushGamePacketQueue();
                 $this->session->connectToBackend();

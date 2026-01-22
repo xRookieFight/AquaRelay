@@ -133,7 +133,7 @@ class NetworkSession
         return $this->protocolId ?? ProtocolInfo::CURRENT_PROTOCOL;
     }
 
-    public function sendDataPacket(ClientboundPacket $packet, bool $immediate = false): void
+    public function sendDataPacket(ClientboundPacket $packet, bool $immediate = true): void
     {
         $writer = new ByteBufferWriter();
 
@@ -338,11 +338,12 @@ class NetworkSession
 
 	public function onDisconnect() : void
 	{
+		$this->connected = false;
 		NetworkSessionManager::getInstance()->remove($this);
 
 		$player = $this->getPlayer();
 		if (!is_null($player)){
-			$this->server->getPlayerManager()->removePlayer($player);
+			$this->server->getPlayerManager()->removePlayer($this);
 		}
 	}
 }

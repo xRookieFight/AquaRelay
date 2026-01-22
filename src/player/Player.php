@@ -26,9 +26,12 @@ namespace aquarelay\player;
 use aquarelay\network\NetworkSession;
 use aquarelay\network\raklib\client\BackendRakClient;
 use aquarelay\utils\LoginData;
+use pocketmine\network\mcpe\protocol\AddActorPacket;
+use pocketmine\network\mcpe\protocol\AddPlayerPacket;
 use pocketmine\network\mcpe\protocol\ClientboundPacket;
 use pocketmine\network\mcpe\protocol\DataPacket;
 use pocketmine\network\mcpe\protocol\LoginPacket;
+use pocketmine\network\mcpe\protocol\MoveActorDeltaPacket;
 use pocketmine\network\mcpe\protocol\PlayStatusPacket;
 use pocketmine\network\mcpe\protocol\RequestChunkRadiusPacket;
 use pocketmine\network\mcpe\protocol\ResourcePackClientResponsePacket;
@@ -39,7 +42,7 @@ use Ramsey\Uuid\UuidInterface;
 
 class Player
 {
-    public int $proxyRuntimeId;
+    public ?int $proxyRuntimeId = null;
 
     public ?int $backendRuntimeId = null;
     protected UuidInterface $uuid;
@@ -55,7 +58,6 @@ class Player
         $this->loginData = $loginData;
         $this->xuid = $loginData->xuid;
         $this->uuid = $loginData->uuid;
-        $this->proxyRuntimeId = random_int(10000, 50000);
     }
 
     public function sendDataPacket(ClientboundPacket $packet): void
@@ -65,7 +67,11 @@ class Player
 
     public function sendToBackend(DataPacket $packet): void
     {
-        $this->downstreamConnection?->sendGamePacket($packet);
+        if (is_null($this->downstreamConnection)) {
+            $this->upstreamSession->debug('Cannot send packet to backend: downstream connection is null');
+            return;
+        }
+        $this->downstreamConnection->sendGamePacket($packet);
     }
 
     public function getLoginData(): LoginData
@@ -136,13 +142,30 @@ class Player
         if ($packet instanceof StartGamePacket) {
             $this->sendDefaultChunkRadius();
             $this->backendRuntimeId = $packet->actorRuntimeId;
-			$packet->actorRuntimeId = $this->proxyRuntimeId;
+            $this->proxyRuntimeId = $packet->actorRuntimeId;
+            $this->sendDataPacket($packet);
+            return;
+        }
+
+        if ($packet instanceof AddPlayerPacket) {
+            $this->sendDataPacket($packet);
+            return;
+        }
+
+        if ($packet instanceof AddActorPacket) {
+            $this->sendDataPacket($packet);
+            return;
+        }
+
+        if ($packet instanceof MoveActorDeltaPacket) {
             $this->sendDataPacket($packet);
             return;
         }
 
         if ($packet instanceof PlayStatusPacket) {
 			if ($packet->status === PlayStatusPacket::LOGIN_SUCCESS) {
+				$this->upstreamSession->debug('Forwarding LOGIN_SUCCESS from backend to client');
+				$this->sendDataPacket($packet);
 				return;
 			}
             if ($packet->status === PlayStatusPacket::PLAYER_SPAWN) {
