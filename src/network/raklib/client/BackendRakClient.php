@@ -30,6 +30,7 @@ use pocketmine\network\mcpe\protocol\DataPacket;
 use pocketmine\network\mcpe\protocol\ProtocolInfo;
 use raklib\client\ClientSocket;
 use raklib\protocol\ConnectionRequest;
+use raklib\protocol\DisconnectionNotification;
 use raklib\protocol\OpenConnectionReply1;
 use raklib\protocol\OpenConnectionReply2;
 use raklib\protocol\OpenConnectionRequest1;
@@ -390,4 +391,19 @@ final class BackendRakClient
     {
         $this->socket->writePacket($buf);
     }
+
+	public function disconnect(): void
+	{
+		if ($this->state < self::STATE_CONNECTED) {
+			$this->close();
+			return;
+		}
+
+		$pk = new DisconnectionNotification();
+		$this->sendEncapsulated($pk);
+
+		$this->state = self::STATE_UNCONNECTED;
+		$this->close();
+	}
+
 }

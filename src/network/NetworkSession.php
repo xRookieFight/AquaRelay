@@ -343,6 +343,7 @@ class NetworkSession
 
 		$player = $this->getPlayer();
 		if (!is_null($player)){
+			$player->getDownstream()->disconnect();
 			$this->server->getPlayerManager()->removePlayer($this);
 		}
 	}
