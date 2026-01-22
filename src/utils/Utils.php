@@ -22,6 +22,8 @@ declare(strict_types=1);
 
 namespace aquarelay\utils;
 
+use pocketmine\network\mcpe\protocol\ProtocolInfo;
+
 class Utils
 {
     public const OS_WINDOWS = 'win';
@@ -122,4 +124,19 @@ class Utils
     {
         return self::OS_WINDOWS === self::getOS();
     }
+
+	/**
+	 * A hacky way to turn protocol id to version network.
+	 */
+	public static function protocolIdToVersion(int $protocolId): ?string {
+		$ref = new \ReflectionClass(ProtocolInfo::class);
+
+		foreach ($ref->getConstants() as $name => $value) {
+			if ($value === $protocolId && str_starts_with($name, 'PROTOCOL_')) {
+				return str_replace('_', '.', substr($name, 9));
+			}
+		}
+
+		return null;
+	}
 }

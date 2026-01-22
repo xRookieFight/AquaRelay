@@ -21,14 +21,14 @@
 
 declare(strict_types=1);
 
-namespace aquarelay\network\handler;
+namespace aquarelay\network\handler\upstream;
 
 use aquarelay\network\NetworkSession;
 use aquarelay\utils\MainLogger;
 use pocketmine\network\mcpe\protocol\PacketHandlerDefaultImplTrait;
 use pocketmine\network\mcpe\protocol\PacketHandlerInterface;
 
-abstract class PacketHandler implements PacketHandlerInterface
+abstract class AbstractUpstreamPacketHandler implements PacketHandlerInterface
 {
     use PacketHandlerDefaultImplTrait;
 

@@ -25,7 +25,6 @@ namespace aquarelay\network\raklib\client;
 
 use aquarelay\network\compression\ZlibCompressor;
 use aquarelay\network\raklib\RakLibInterface;
-use aquarelay\ProxyServer;
 use pmmp\encoding\ByteBufferWriter;
 use pmmp\encoding\VarInt;
 use pocketmine\network\mcpe\protocol\DataPacket;
@@ -51,11 +50,9 @@ final class BackendRakClient
     private ConnectionState $state = ConnectionState::UNCONNECTED;
     private int $clientId;
     private int $mtu = 1492;
-
     private int $seqNumber = 0;
     private int $messageIndex = 0;
     private int $splitId = 0;
-
     private array $splitBuffer = [];
     private array $sendQueue = [];
 
@@ -286,7 +283,6 @@ final class BackendRakClient
 
         if (0x10 === $pid && ConnectionState::CONNECTING_3 === $this->state) {
             $this->state = ConnectionState::CONNECTED;
-            ProxyServer::getInstance()->getLogger()->debug('RakNet connected. Negotiating Protocol...');
 
             $this->sendNewIncomingConnection();
             $this->sendNetworkSettingsRequest();

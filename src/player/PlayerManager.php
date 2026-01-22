@@ -23,6 +23,7 @@ declare(strict_types=1);
 
 namespace aquarelay\player;
 
+use aquarelay\network\NetworkSession;
 use aquarelay\utils\LoginData;
 
 class PlayerManager
@@ -30,9 +31,9 @@ class PlayerManager
     /** @var Player[] */
     private array $players = [];
 
-    public function createPlayer($session, LoginData $data): Player
+    public function createPlayer(NetworkSession $session, LoginData $data): Player
     {
-        $player = new Player($session, $data);
+        $player = new Player($session->getServer(), $session, $data);
         $this->players[spl_object_hash($session)] = $player;
 
         return $player;

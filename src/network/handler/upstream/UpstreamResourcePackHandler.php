@@ -21,8 +21,10 @@
 
 declare(strict_types=1);
 
-namespace aquarelay\network\handler;
+namespace aquarelay\network\handler\upstream;
 
+use aquarelay\utils\Colors;
+use aquarelay\utils\Utils;
 use pocketmine\network\mcpe\protocol\ClientCacheStatusPacket;
 use pocketmine\network\mcpe\protocol\LevelChunkPacket;
 use pocketmine\network\mcpe\protocol\NetworkChunkPublisherUpdatePacket;
@@ -33,7 +35,7 @@ use pocketmine\network\mcpe\protocol\types\BlockPosition;
 use pocketmine\network\mcpe\protocol\types\ChunkPosition;
 use pocketmine\network\mcpe\protocol\types\Experiments;
 
-class ResourcePackHandler extends PacketHandler
+class UpstreamResourcePackHandler extends AbstractUpstreamPacketHandler
 {
     public function handleRequestChunkRadius(RequestChunkRadiusPacket $packet): bool
     {
@@ -79,9 +81,11 @@ class ResourcePackHandler extends PacketHandler
                 );
                 $this->session->sendDataPacket($chunkPk, false);
 
+				$this->logger->info(Colors::AQUA . $this->session->getPlayer()?->getName() . Colors::WHITE . "[" . $this->session->getAddress() . ":" . $this->session->getPort() . "] logged in with v" . (Utils::protocolIdToVersion($this->session->getProtocolId()) ?? "unknown version") . " (" . $this->session->getProtocolId() . ")");
+
                 $this->session->flushGamePacketQueue();
                 $this->session->connectToBackend();
-                $this->session->setHandler(new InGamePacketHandler($this->session, $this->logger));
+                $this->session->setHandler(new UpstreamInGameHandler($this->session, $this->logger));
 
                 return true;
 

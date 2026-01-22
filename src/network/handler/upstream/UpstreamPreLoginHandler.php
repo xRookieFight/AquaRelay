@@ -21,7 +21,7 @@
 
 declare(strict_types=1);
 
-namespace aquarelay\network\handler;
+namespace aquarelay\network\handler\upstream;
 
 use pocketmine\network\mcpe\protocol\NetworkSettingsPacket;
 use pocketmine\network\mcpe\protocol\PlayStatusPacket;
@@ -29,7 +29,7 @@ use pocketmine\network\mcpe\protocol\ProtocolInfo;
 use pocketmine\network\mcpe\protocol\RequestNetworkSettingsPacket;
 use pocketmine\network\mcpe\protocol\types\CompressionAlgorithm;
 
-class PreLoginHandler extends PacketHandler
+class UpstreamPreLoginHandler extends AbstractUpstreamPacketHandler
 {
     public function handleRequestNetworkSettings(RequestNetworkSettingsPacket $packet): bool
     {

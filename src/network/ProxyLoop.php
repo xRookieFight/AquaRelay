@@ -124,7 +124,6 @@ class ProxyLoop
 
     private function handleConnect(int $sessionId, string $ip, int $port): void
     {
-        $this->server->getLogger()->info("Client connected: {$ip}:{$port} (ID: {$sessionId})");
 
         $session = new NetworkSession(
             $this->server,
@@ -132,8 +131,11 @@ class ProxyLoop
             PacketPool::getInstance(),
             new RakLibPacketSender($sessionId, $this->server->interface),
             $ip,
-            $port
+            $port,
+			$sessionId
         );
+
+		$session->info("Session opened");
 
         $this->sessions[$sessionId] = $session;
     }

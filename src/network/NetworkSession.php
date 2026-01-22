@@ -24,10 +24,10 @@ declare(strict_types=1);
 namespace aquarelay\network;
 
 use aquarelay\network\compression\ZlibCompressor;
-use aquarelay\network\handler\LoginHandler;
-use aquarelay\network\handler\PacketHandler;
-use aquarelay\network\handler\PreLoginHandler;
-use aquarelay\network\handler\ResourcePackHandler;
+use aquarelay\network\handler\upstream\UpstreamLoginHandler;
+use aquarelay\network\handler\upstream\AbstractUpstreamPacketHandler;
+use aquarelay\network\handler\upstream\UpstreamPreLoginHandler;
+use aquarelay\network\handler\upstream\UpstreamResourcePackHandler;
 use aquarelay\network\raklib\client\BackendRakClient;
 use aquarelay\player\Player;
 use aquarelay\ProxyServer;
@@ -59,7 +59,7 @@ class NetworkSession
     private ?int $ping = null;
     private bool $connected = true;
     private bool $logged = false;
-    private ?PacketHandler $handler;
+    private ?AbstractUpstreamPacketHandler $handler;
     private ?Player $player = null;
 
     public function __construct(
@@ -68,12 +68,33 @@ class NetworkSession
         private PacketPool $packetPool,
         private PacketSender $sender,
         private string $ip,
-        private int $port
+        private int $port,
+		private int $sessionId
     ) {
         $this->manager->add($this);
         $this->lastUsed = time();
-        $this->setHandler(new PreLoginHandler($this, $this->server->getLogger()));
+        $this->setHandler(new UpstreamPreLoginHandler($this, $this->server->getLogger()));
     }
+
+	public function getServer() : ProxyServer
+	{
+		return $this->server;
+	}
+
+	public function getAddress() : string
+	{
+		return $this->ip;
+	}
+
+	public function getPort() : int
+	{
+		return $this->port;
+	}
+
+	public function getSessionId() : int
+	{
+		return $this->sessionId;
+	}
 
     public function handleEncodedPacket(string $payload): void
     {
@@ -112,12 +133,11 @@ class NetworkSession
         $targetIp = $this->server->getConfig()->getNetworkSettings()->getBackendAddress();
         $targetPort = $this->server->getConfig()->getNetworkSettings()->getBackendPort();
 
-        $this->server->getLogger()->debug('Connecting '.$player->getName()." to {$targetIp}:{$targetPort}...");
+        $this->debug("Connecting to $targetIp:$targetPort...");
 
         $backend = new BackendRakClient(new InternetAddress($targetIp, $targetPort, 4));
 
         $player->setDownstream($backend);
-
         $player->sendLoginToBackend();
 
         $backend->connect();
@@ -189,7 +209,7 @@ class NetworkSession
 
     public function onNetworkSettingsSuccess(): void
     {
-        $this->setHandler(new LoginHandler($this, $this->server->getLogger()));
+        $this->setHandler(new UpstreamLoginHandler($this, $this->server->getLogger()));
     }
 
     public function onClientLoginSuccess(): void
@@ -213,7 +233,7 @@ class NetworkSession
 
         $this->sendDataPacket($infoPacket, true);
 
-        $this->setHandler(new ResourcePackHandler($this, $this->server->getLogger()));
+        $this->setHandler(new UpstreamResourcePackHandler($this, $this->server->getLogger()));
     }
 
     public function setPlayer(Player $player): void
@@ -261,12 +281,7 @@ class NetworkSession
         return $this->logged;
     }
 
-    public function getHandler(): ?PacketHandler
-    {
-        return $this->handler;
-    }
-
-    public function setHandler(?PacketHandler $handler): void
+    public function setHandler(?AbstractUpstreamPacketHandler $handler): void
     {
         if ($this->connected) {
             $this->handler = $handler;
@@ -321,8 +336,15 @@ class NetworkSession
 
     public function debug(string $message): void
     {
-        $this->server->getLogger()->debug("[NetworkSession - {$this->ip}:{$this->port}]: {$message}");
+		$format = $this->username ?? "$this->ip:$this->port";
+        $this->server->getLogger()->debug("[NetworkSession - $format]: $message");
     }
+
+	public function info(string $message): void
+	{
+		$format = $this->username ?? "$this->ip:$this->port";
+		$this->server->getLogger()->info("[NetworkSession - $format]: $message");
+	}
 
     private function processSinglePacket(string $buffer): void
     {

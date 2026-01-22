@@ -21,11 +21,12 @@
 
 declare(strict_types=1);
 
-namespace aquarelay\network\handler;
+namespace aquarelay\network\handler\upstream;
 
 use aquarelay\lang\TranslationFactory;
 use aquarelay\network\PacketHandlingException;
 use aquarelay\ProxyServer;
+use aquarelay\utils\Colors;
 use aquarelay\utils\JWTException;
 use aquarelay\utils\JWTUtils;
 use aquarelay\utils\LoginData;
@@ -40,7 +41,7 @@ use pocketmine\network\mcpe\protocol\types\login\openid\XboxAuthJwtBody;
 use Ramsey\Uuid\Uuid;
 use Ramsey\Uuid\UuidInterface;
 
-class LoginHandler extends PacketHandler
+class UpstreamLoginHandler extends AbstractUpstreamPacketHandler
 {
     public function handleLogin(LoginPacket $packet): bool
     {
@@ -76,12 +77,12 @@ class LoginHandler extends PacketHandler
                     protocolVersion: $packet->protocol
                 );
 
+				$this->session->info("Player: " . Colors::AQUA . $clientData->xname);
                 $this->session->setUsername($clientData->xname);
 
                 $player = ProxyServer::getInstance()->getPlayerManager()->createPlayer($this->session, $loginData);
                 $this->session->setPlayer($player);
 
-                $this->logger->info('Player login received: '.$this->session->getUsername());
             } catch (\Exception $e) {
                 $this->session->disconnect('Login decode error: '.$e->getMessage());
 
@@ -231,7 +232,7 @@ class LoginHandler extends PacketHandler
 
     private static function calculateUuidFromXuid(string $xuid): UuidInterface
     {
-        $hash = md5('pocket-auth-1-xuid:'.$xuid, binary: true);
+        $hash = md5('pocket-auth-1-xuid:'.$xuid, true);
         $hash[6] = chr((ord($hash[6]) & 0x0F) | 0x30);
         $hash[8] = chr((ord($hash[8]) & 0x3F) | 0x80);
 

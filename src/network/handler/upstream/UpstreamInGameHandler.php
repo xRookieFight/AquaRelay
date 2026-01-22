@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace aquarelay\network\handler;
+namespace aquarelay\network\handler\upstream;
 
 use pocketmine\network\mcpe\protocol\AnimatePacket;
 use pocketmine\network\mcpe\protocol\BlockActorDataPacket;
@@ -28,15 +28,10 @@ use pocketmine\network\mcpe\protocol\SetLocalPlayerAsInitializedPacket;
 use pocketmine\network\mcpe\protocol\SettingsCommandPacket;
 use pocketmine\network\mcpe\protocol\TextPacket;
 
-class InGamePacketHandler extends PacketHandler
+class UpstreamInGameHandler extends AbstractUpstreamPacketHandler
 {
-    public function handleDataPacket(DataPacket $packet): bool
-    {
-        $this->forward($packet);
-        return true;
-    }
 
-    public function handleItemStackRequest(ItemStackRequestPacket $packet): bool
+	public function handleItemStackRequest(ItemStackRequestPacket $packet): bool
     {
         $this->forward($packet);
         return true;
