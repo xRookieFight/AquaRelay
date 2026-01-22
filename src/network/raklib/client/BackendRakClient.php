@@ -23,36 +23,32 @@ declare(strict_types=1);
 
 namespace aquarelay\network\raklib\client;
 
+use aquarelay\network\compression\ZlibCompressor;
 use aquarelay\network\raklib\RakLibInterface;
 use aquarelay\ProxyServer;
 use pmmp\encoding\ByteBufferWriter;
+use pmmp\encoding\VarInt;
 use pocketmine\network\mcpe\protocol\DataPacket;
 use pocketmine\network\mcpe\protocol\ProtocolInfo;
+use pocketmine\network\mcpe\protocol\RequestNetworkSettingsPacket;
+use pocketmine\utils\Binary;
 use raklib\client\ClientSocket;
 use raklib\protocol\ConnectionRequest;
 use raklib\protocol\DisconnectionNotification;
+use raklib\protocol\NewIncomingConnection;
 use raklib\protocol\OpenConnectionReply1;
 use raklib\protocol\OpenConnectionReply2;
 use raklib\protocol\OpenConnectionRequest1;
+use raklib\protocol\OpenConnectionRequest2;
 use raklib\protocol\Packet;
-use raklib\protocol\PacketSerializer as Stream;
+use raklib\protocol\PacketSerializer;
 use raklib\protocol\UnconnectedPing;
 use raklib\utils\InternetAddress;
 
 final class BackendRakClient
 {
-    private const STATE_UNCONNECTED = 0;
-    private const STATE_CONNECTING_1 = 1;
-    private const STATE_CONNECTING_2 = 2;
-    private const STATE_CONNECTING_3 = 3;
-    private const STATE_CONNECTED = 4;
-    private const STATE_GAME_HANDSHAKE = 5;
-    private const STATE_LOGGED_IN = 6;
-
-    private const MAGIC = "\x00\xff\xff\x00\xfe\xfe\xfe\xfe\xfd\xfd\xfd\xfd\x12\x34\x56\x78";
-
     private ClientSocket $socket;
-    private int $state = self::STATE_UNCONNECTED;
+    private ConnectionState $state = ConnectionState::UNCONNECTED;
     private int $clientId;
     private int $mtu = 1492;
 
@@ -77,7 +73,7 @@ final class BackendRakClient
 
     public function sendGamePacket(DataPacket $packet): void
     {
-        if ($this->state < self::STATE_LOGGED_IN) {
+        if ($this->state->value < ConnectionState::LOGGED_IN->value) {
             $this->sendQueue[] = $packet;
 
             return;
@@ -119,24 +115,17 @@ final class BackendRakClient
         $pk->protocol = RakLibInterface::RAKNET_PROTOCOL_VERSION;
         $pk->mtuSize = $this->mtu;
         $this->sendRawPacket($pk);
-        $this->state = self::STATE_CONNECTING_1;
+        $this->state = ConnectionState::CONNECTING_1;
     }
 
     private function sendRequest2(): void
     {
-        $s = new Stream();
-        $s->putByte(0x07);
-        $s->put(self::MAGIC);
-        $s->putByte(4);
-        $s->putByte(127);
-        $s->putByte(0);
-        $s->putByte(0);
-        $s->putByte(1);
-        $s->putShort(0);
-        $s->putShort($this->mtu);
-        $s->putLong($this->clientId);
-        $this->sendRaw($s->getBuffer());
-        $this->state = self::STATE_CONNECTING_2;
+		$pk = new OpenConnectionRequest2();
+		$pk->serverAddress = new InternetAddress($this->address->getIp(), 0, 4);
+		$pk->clientID = $this->clientId;
+		$pk->mtuSize = $this->mtu;
+        $this->sendRawPacket($pk);
+        $this->state = ConnectionState::CONNECTING_2;
     }
 
     private function sendConnectionRequest(): void
@@ -146,45 +135,36 @@ final class BackendRakClient
         $pk->sendPingTime = (int) (microtime(true) * 1000);
         $pk->useSecurity = false;
         $this->sendEncapsulated($pk);
-        $this->state = self::STATE_CONNECTING_3;
+        $this->state = ConnectionState::CONNECTING_3;
     }
 
     private function sendNewIncomingConnection(): void
     {
-        $s = new Stream();
-        $s->putByte(0x13);
-        $s->putByte(4);
-        $s->putByte(127);
-        $s->putByte(0);
-        $s->putByte(0);
-        $s->putByte(1);
-        $s->putShort(0);
+		$pk = new NewIncomingConnection();
+		$pk->address = new InternetAddress($this->address->getIp(), 0, 4);
         for ($i = 0; $i < 10; ++$i) {
-            $s->putByte(4);
-            $s->putByte(127);
-            $s->putByte(0);
-            $s->putByte(0);
-            $s->putByte(1);
-            $s->putShort(0);
+			$pk->systemAddresses[] = new InternetAddress($this->address->getIp(), 0, 4);
         }
-        $t = (int) (microtime(true) * 1000);
-        $s->putLong($t);
-        $s->putLong($t);
-        $this->sendEncapsulatedRaw($s->getBuffer());
+        $pk->sendPingTime = (int) (microtime(true) * 1000);
+        $pk->sendPongTime = (int) (microtime(true) * 1000);
+        $this->sendEncapsulated($pk);
     }
 
-    private function sendNetworkSettingsRequest(): void
-    {
-        $pid = "\xC1\x01";
-        $pver = pack('N', ProtocolInfo::CURRENT_PROTOCOL);
-        $payload = $pid.$pver;
+	private function sendNetworkSettingsRequest(): void
+	{
+		$packet = RequestNetworkSettingsPacket::create(ProtocolInfo::CURRENT_PROTOCOL);
+		$writer = new ByteBufferWriter();
+		$packet->encode($writer, ProtocolInfo::CURRENT_PROTOCOL);
 
-        $header = $this->writeVarInt(strlen($payload));
-        $batch = $header.$payload;
-        $final = RakLibInterface::MCPE_RAKNET_PACKET_ID.$batch;
+		$payload = $writer->getData();
 
-        $this->sendEncapsulatedRaw($final);
-    }
+		$header = Binary::writeUnsignedVarInt(strlen($payload));
+		$batch = $header.$payload;
+
+		$final = RakLibInterface::MCPE_RAKNET_PACKET_ID . $batch;
+
+		$this->sendEncapsulatedRaw($final);
+	}
 
     private function encodeAndSend(DataPacket $packet): void
     {
@@ -195,37 +175,20 @@ final class BackendRakClient
 
     private function sendBatch(string $payload): void
     {
-        if ('' === $payload) {
-            return;
-        }
+        if (empty($payload)) return;
 
-        $header = $this->writeVarInt(strlen($payload));
+		$header = Binary::writeUnsignedVarInt(strlen($payload));
         $batch = $header.$payload;
 
-        $compressed = @zlib_encode($batch, ZLIB_ENCODING_DEFLATE, 7);
-        if (false === $compressed) {
-            return;
-        }
-
-        $final = RakLibInterface::MCPE_RAKNET_PACKET_ID. "\x00".$compressed;
+		$finalPayload = "\x00".ZlibCompressor::getInstance()->compress($batch);
+        $final = RakLibInterface::MCPE_RAKNET_PACKET_ID . $finalPayload;
 
         $this->sendEncapsulatedRaw($final);
     }
 
-    private function writeVarInt(int $v): string
-    {
-        $out = '';
-        while (($v & 0xFFFFFF80) !== 0) {
-            $out .= chr(($v & 0x7F) | 0x80);
-            $v >>= 7;
-        }
-
-        return $out.chr($v & 0x7F);
-    }
-
     private function sendEncapsulated(Packet $packet): void
     {
-        $s = new Stream();
+        $s = new PacketSerializer();
         $packet->encode($s);
         $this->sendEncapsulatedRaw($s->getBuffer());
     }
@@ -235,7 +198,7 @@ final class BackendRakClient
         $limit = $this->mtu - 60;
 
         if (strlen($payload) <= $limit) {
-            $s = new Stream();
+            $s = new PacketSerializer();
             $s->putByte(0x84);
             $s->putLTriad($this->seqNumber++);
             $s->putByte(0x40);
@@ -252,7 +215,7 @@ final class BackendRakClient
         $splitId = $this->splitId++ & 0xFFFF;
 
         foreach ($chunks as $index => $chunk) {
-            $s = new Stream();
+            $s = new PacketSerializer();
             $s->putByte(0x84);
             $s->putLTriad($this->seqNumber++);
             $s->putByte(0x50);
@@ -268,7 +231,7 @@ final class BackendRakClient
 
     private function handleDatagram(string $buf, callable $onPacket): void
     {
-        $s = new Stream($buf);
+        $s = new PacketSerializer($buf);
         $s->getByte();
         $s->getLTriad();
 
@@ -321,20 +284,20 @@ final class BackendRakClient
 
         $pid = ord($payload[0]);
 
-        if (0x10 === $pid && self::STATE_CONNECTING_3 === $this->state) {
-            $this->state = self::STATE_CONNECTED;
+        if (0x10 === $pid && ConnectionState::CONNECTING_3 === $this->state) {
+            $this->state = ConnectionState::CONNECTED;
             ProxyServer::getInstance()->getLogger()->debug('RakNet connected. Negotiating Protocol...');
 
             $this->sendNewIncomingConnection();
             $this->sendNetworkSettingsRequest();
-            $this->state = self::STATE_GAME_HANDSHAKE;
+            $this->state = ConnectionState::GAME_HANDSHAKE;
 
             return;
         }
 
         if (0xFE === $pid) {
-            if (self::STATE_GAME_HANDSHAKE === $this->state) {
-                $this->state = self::STATE_LOGGED_IN;
+            if (ConnectionState::GAME_HANDSHAKE === $this->state) {
+                $this->state = ConnectionState::LOGGED_IN;
 
                 foreach ($this->sendQueue as $p) {
                     $this->encodeAndSend($p);
@@ -347,7 +310,7 @@ final class BackendRakClient
 
     private function handleInternalPacket(string $buf): void
     {
-        $s = new Stream($buf);
+        $s = new PacketSerializer($buf);
 
         switch (ord($buf[0])) {
             case 0x06:
@@ -371,7 +334,7 @@ final class BackendRakClient
     private function sendAck(string $buf): void
     {
         $seq = unpack('V', substr($buf, 1, 3)."\x00")[1];
-        $s = new Stream();
+        $s = new PacketSerializer();
         $s->putByte(0xC0);
         $s->putShort(1);
         $s->putByte(1);
@@ -382,7 +345,7 @@ final class BackendRakClient
 
     private function sendRawPacket(Packet $packet): void
     {
-        $s = new Stream();
+        $s = new PacketSerializer();
         $packet->encode($s);
         $this->sendRaw($s->getBuffer());
     }
@@ -394,7 +357,7 @@ final class BackendRakClient
 
 	public function disconnect(): void
 	{
-		if ($this->state < self::STATE_CONNECTED) {
+		if ($this->state->value < ConnectionState::CONNECTED->value) {
 			$this->close();
 			return;
 		}
@@ -402,7 +365,7 @@ final class BackendRakClient
 		$pk = new DisconnectionNotification();
 		$this->sendEncapsulated($pk);
 
-		$this->state = self::STATE_UNCONNECTED;
+		$this->state = ConnectionState::UNCONNECTED;
 		$this->close();
 	}
 
