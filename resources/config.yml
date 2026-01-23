@@ -1,6 +1,5 @@
 # Main configuration file for AquaRelay proxy
 # Be careful, these settings may break your server.
-# New settings/defaults won't appear automatically in this file when upgrading.
 
 # Network-related settings
 network-settings:

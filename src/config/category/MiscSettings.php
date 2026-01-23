@@ -1,13 +1,14 @@
 <?php
 
 /*
- *                            _____      _
+ *
+ *                              _____      _
  *     /\                    |  __ \    | |
  *    /  \   __ _ _   _  __ _| |__) |___| | __ _ _   _
  *   / /\ \ / _` | | | |/ _` |  _  // _ \ |/ _` | | | |
  *  / ____ \ (_| | |_| | (_| | | \ \  __/ | (_| | |_| |
  * /_/    \_\__, |\__,_|\__,_|_|  \_\___|_|\__,_|\__, |
- *             |_|                                |___/
+ *               |_|                                |___/
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -25,39 +26,39 @@ namespace aquarelay\config\category;
 
 final class MiscSettings
 {
-    public function __construct(
-        private bool $debugMode,
-        private string $logName,
-        private string $selectedLanguage
-    ) {}
+	public function __construct(
+		private bool $debugMode,
+		private string $logName,
+		private string $selectedLanguage
+	) {}
 
-    public function isDebugMode(): bool
-    {
-        return $this->debugMode;
-    }
+	public function isDebugMode() : bool
+	{
+		return $this->debugMode;
+	}
 
-    public function setDebugMode(bool $debugMode): void
-    {
-        $this->debugMode = $debugMode;
-    }
+	public function setDebugMode(bool $debugMode) : void
+	{
+		$this->debugMode = $debugMode;
+	}
 
-    public function getLogName(): string
-    {
-        return $this->logName;
-    }
+	public function getLogName() : string
+	{
+		return $this->logName;
+	}
 
-    public function setLogName(string $logName): void
-    {
-        $this->logName = $logName;
-    }
+	public function setLogName(string $logName) : void
+	{
+		$this->logName = $logName;
+	}
 
-    public function getSelectedLanguage(): string
-    {
-        return $this->selectedLanguage;
-    }
+	public function getSelectedLanguage() : string
+	{
+		return $this->selectedLanguage;
+	}
 
-    public function setSelectedLanguage(string $selectedLanguage): void
-    {
-        $this->selectedLanguage = $selectedLanguage;
-    }
+	public function setSelectedLanguage(string $selectedLanguage) : void
+	{
+		$this->selectedLanguage = $selectedLanguage;
+	}
 }

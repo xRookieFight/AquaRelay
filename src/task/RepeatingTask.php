@@ -1,13 +1,14 @@
 <?php
 
 /*
- *                            _____      _
+ *
+ *                              _____      _
  *     /\                    |  __ \    | |
  *    /  \   __ _ _   _  __ _| |__) |___| | __ _ _   _
  *   / /\ \ / _` | | | |/ _` |  _  // _ \ |/ _` | | | |
  *  / ____ \ (_| | |_| | (_| | | \ \  __/ | (_| | |_| |
  * /_/    \_\__, |\__,_|\__,_|_|  \_\___|_|\__,_|\__, |
- *             |_|                                |___/
+ *               |_|                                |___/
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -25,41 +26,41 @@ namespace aquarelay\task;
 
 class RepeatingTask extends Task
 {
-    private int $period;
-    private int $delay;
-    private int $elapsedTicks = 0;
+	private int $period;
+	private int $delay;
+	private int $elapsedTicks = 0;
 
-    public function __construct(
-        private Task $task,
-        int $period,
-        int $delay = 0
-    ) {
-        parent::__construct();
-        $this->period = $period;
-        $this->delay = $delay;
-    }
+	public function __construct(
+		private Task $task,
+		int $period,
+		int $delay = 0
+	) {
+		parent::__construct();
+		$this->period = $period;
+		$this->delay = $delay;
+	}
 
-    public function getPeriod(): int
-    {
-        return $this->period;
-    }
+	public function getPeriod() : int
+	{
+		return $this->period;
+	}
 
-    public function getDelay(): int
-    {
-        return $this->delay;
-    }
+	public function getDelay() : int
+	{
+		return $this->delay;
+	}
 
-    public function getElapsedTicks(): int
-    {
-        return $this->elapsedTicks;
-    }
+	public function getElapsedTicks() : int
+	{
+		return $this->elapsedTicks;
+	}
 
-    public function onRun(): void
-    {
-        ++$this->elapsedTicks;
+	public function onRun() : void
+	{
+		++$this->elapsedTicks;
 
-        if ($this->elapsedTicks >= $this->delay && ($this->elapsedTicks - $this->delay) % $this->period === 0 && !$this->task->isCancelled() && !$this->isCancelled()) {
-            $this->task->onRun();
-        }
-    }
+		if ($this->elapsedTicks >= $this->delay && 0 === ($this->elapsedTicks - $this->delay) % $this->period && !$this->task->isCancelled() && !$this->isCancelled()) {
+			$this->task->onRun();
+		}
+	}
 }

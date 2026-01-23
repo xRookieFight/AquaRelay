@@ -1,13 +1,14 @@
 <?php
 
 /*
- *                            _____      _
+ *
+ *                              _____      _
  *     /\                    |  __ \    | |
  *    /  \   __ _ _   _  __ _| |__) |___| | __ _ _   _
  *   / /\ \ / _` | | | |/ _` |  _  // _ \ |/ _` | | | |
  *  / ____ \ (_| | |_| | (_| | | \ \  __/ | (_| | |_| |
  * /_/    \_\__, |\__,_|\__,_|_|  \_\___|_|\__,_|\__, |
- *             |_|                                |___/
+ *               |_|                                |___/
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -28,118 +29,105 @@ namespace aquarelay\utils;
 use pmmp\thread\Thread;
 use pmmp\thread\ThreadSafeArray;
 
-use function clearstatcache;
-use function date;
-use function fclose;
-use function fopen;
-use function fstat;
-use function fwrite;
-use function is_dir;
-use function mkdir;
-use function pathinfo;
-use function rename;
-use function strlen;
-use function touch;
-
 use const PATHINFO_EXTENSION;
 use const PATHINFO_FILENAME;
 
 class MainLoggerThread extends Thread
 {
-    private ThreadSafeArray $buffer;
-    private bool $shutdown = false;
+	private ThreadSafeArray $buffer;
+	private bool $shutdown = false;
 
-    private int $currentSize = 0;
+	private int $currentSize = 0;
 
-    public function __construct(
-        private string $logFile,
-        private ?string $archiveDir = null,
-        private int $maxFileSize = 32 * 1024 * 1024
-    ) {
-        $this->buffer = new ThreadSafeArray();
+	public function __construct(
+		private string $logFile,
+		private ?string $archiveDir = null,
+		private int $maxFileSize = 32 * 1024 * 1024
+	) {
+		$this->buffer = new ThreadSafeArray();
 
-        touch($this->logFile);
+		\touch($this->logFile);
 
-        if (null !== $this->archiveDir && !@mkdir($this->archiveDir) && !is_dir($this->archiveDir)) {
-            throw new \RuntimeException('Unable to create archive directory');
-        }
-    }
+		if ($this->archiveDir !== null && !@\mkdir($this->archiveDir) && !\is_dir($this->archiveDir)) {
+			throw new \RuntimeException('Unable to create archive directory');
+		}
+	}
 
-    public function write(string $line): void
-    {
-        $this->synchronized(function () use ($line): void {
-            $this->buffer[] = $line;
-            $this->notify();
-        });
-    }
+	public function write(string $line) : void
+	{
+		$this->synchronized(function () use ($line) : void {
+			$this->buffer[] = $line;
+			$this->notify();
+		});
+	}
 
-    public function shutdown(): void
-    {
-        $this->synchronized(function (): void {
-            $this->shutdown = true;
-            $this->notify();
-        });
-        $this->join();
-    }
+	public function shutdown() : void
+	{
+		$this->synchronized(function () : void {
+			$this->shutdown = true;
+			$this->notify();
+		});
+		$this->join();
+	}
 
-    public function run(): void
-    {
-        $handle = $this->openLogFile();
+	public function run() : void
+	{
+		$handle = $this->openLogFile();
 
-        while (!$this->shutdown) {
-            $this->synchronized(function (): void {
-                if (0 === count($this->buffer) && !$this->shutdown) {
-                    $this->wait();
-                }
-            });
+		while (!$this->shutdown) {
+			$this->synchronized(function () : void {
+				if (\count($this->buffer) === 0 && !$this->shutdown) {
+					$this->wait();
+				}
+			});
 
-            while (($line = $this->buffer->shift()) !== null) {
-                echo $line;
+			while (null !== ($line = $this->buffer->shift())) {
+				echo $line;
 
-                $clean = preg_replace('/\x1b\[[0-9;]*m/', '', $line);
-                fwrite($handle, $clean);
-                $this->currentSize += strlen($clean);
+				$clean = \preg_replace('/\x1b\[[0-9;]*m/', '', $line);
+				\fwrite($handle, $clean);
+				$this->currentSize += \strlen($clean);
 
-                $this->archiveIfNeeded($handle);
-            }
-        }
+				$this->archiveIfNeeded($handle);
+			}
+		}
 
-        fclose($handle);
-    }
+		\fclose($handle);
+	}
 
-    private function openLogFile()
-    {
-        $handle = fopen($this->logFile, 'ab');
-        $stat = fstat($handle);
-        $this->currentSize = false !== $stat ? $stat['size'] : 0;
+	private function openLogFile()
+	{
+		$handle = \fopen($this->logFile, 'ab');
+		$stat = \fstat($handle);
+		$this->currentSize = $stat !== false ? $stat['size'] : 0;
 
-        return $handle;
-    }
+		return $handle;
+	}
 
-    private function archiveIfNeeded(&$handle): void
-    {
-        if (is_null($this->archiveDir) || $this->currentSize < $this->maxFileSize) {
-            return;
-        }
+	private function archiveIfNeeded(&$handle) : void
+	{
+		if (\is_null($this->archiveDir) || $this->currentSize < $this->maxFileSize) {
+			return;
+		}
 
-        fclose($handle);
-        clearstatcache();
+		\fclose($handle);
+		\clearstatcache();
 
-        $date = date('Y-m-d\\TH.i.s');
-        $base = pathinfo($this->logFile, PATHINFO_FILENAME);
-        $ext = pathinfo($this->logFile, PATHINFO_EXTENSION);
+		$date = \date('Y-m-d\\TH.i.s');
+		$base = \pathinfo($this->logFile, PATHINFO_FILENAME);
+		$ext = \pathinfo($this->logFile, PATHINFO_EXTENSION);
 
-        $i = 0;
-        do {
-            $name = "{$base}.{$date}.{$i}.{$ext}";
-            $target = $this->archiveDir.'/'.$name;
-            ++$i;
-        } while (file_exists($target));
+		$i = 0;
+		do {
+			$name = "{$base}.{$date}.{$i}.{$ext}";
+			$target = $this->archiveDir . '/' . $name;
+			++$i;
+		} while (\file_exists($target));
 
-        @mkdir($this->archiveDir);
-        rename($this->logFile, $target);
+		@\mkdir($this->archiveDir);
+		\rename($this->logFile, $target);
 
-        $handle = $this->openLogFile();
-        fwrite($handle, "--- Log archived, previous file archived as {$name} ---\n");
-    }
+		$handle = $this->openLogFile();
+		\fwrite($handle, "--- Log archived, previous file archived as {$name} ---\n");
+	}
 }

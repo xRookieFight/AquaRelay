@@ -1,13 +1,14 @@
 <?php
 
 /*
- *                            _____      _
+ *
+ *                              _____      _
  *     /\                    |  __ \    | |
  *    /  \   __ _ _   _  __ _| |__) |___| | __ _ _   _
  *   / /\ \ / _` | | | |/ _` |  _  // _ \ |/ _` | | | |
  *  / ____ \ (_| | |_| | (_| | | \ \  __/ | (_| | |_| |
  * /_/    \_\__, |\__,_|\__,_|_|  \_\___|_|\__,_|\__, |
- *             |_|                                |___/
+ *               |_|                                |___/
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -28,37 +29,38 @@ use pocketmine\network\mcpe\protocol\PlayStatusPacket;
 use pocketmine\network\mcpe\protocol\ProtocolInfo;
 use pocketmine\network\mcpe\protocol\RequestNetworkSettingsPacket;
 use pocketmine\network\mcpe\protocol\types\CompressionAlgorithm;
+use function in_array;
 
 class UpstreamPreLoginHandler extends AbstractUpstreamPacketHandler
 {
-    public function handleRequestNetworkSettings(RequestNetworkSettingsPacket $packet): bool
-    {
-        $protocolVersion = $packet->getProtocolVersion();
-        if (!$this->isCompatibleProtocol($protocolVersion)) {
-            $this->session->sendDataPacket(PlayStatusPacket::create(PlayStatusPacket::LOGIN_FAILED_SERVER));
+	public function handleRequestNetworkSettings(RequestNetworkSettingsPacket $packet) : bool
+	{
+		$protocolVersion = $packet->getProtocolVersion();
+		if (!$this->isCompatibleProtocol($protocolVersion)) {
+			$this->session->sendDataPacket(PlayStatusPacket::create(PlayStatusPacket::LOGIN_FAILED_SERVER));
 
-            return true;
-        }
+			return true;
+		}
 
-        $this->session->setProtocolId($packet->getProtocolVersion());
+		$this->session->setProtocolId($packet->getProtocolVersion());
 
-        $pk = NetworkSettingsPacket::create(
-            NetworkSettingsPacket::COMPRESS_EVERYTHING,
-            CompressionAlgorithm::ZLIB,
-            false,
-            0,
-            0
-        );
-        $this->session->sendDataPacket($pk, true);
-        $this->session->enableCompression();
+		$pk = NetworkSettingsPacket::create(
+			NetworkSettingsPacket::COMPRESS_EVERYTHING,
+			CompressionAlgorithm::ZLIB,
+			false,
+			0,
+			0
+		);
+		$this->session->sendDataPacket($pk, true);
+		$this->session->enableCompression();
 
-        $this->session->onNetworkSettingsSuccess();
+		$this->session->onNetworkSettingsSuccess();
 
-        return true;
-    }
+		return true;
+	}
 
-    protected function isCompatibleProtocol(int $protocolVersion): bool
-    {
-        return in_array($protocolVersion, ProtocolInfo::ACCEPTED_PROTOCOL, true);
-    }
+	protected function isCompatibleProtocol(int $protocolVersion) : bool
+	{
+		return in_array($protocolVersion, ProtocolInfo::ACCEPTED_PROTOCOL, true);
+	}
 }

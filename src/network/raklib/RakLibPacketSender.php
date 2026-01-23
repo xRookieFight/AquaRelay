@@ -1,13 +1,14 @@
 <?php
 
 /*
- *                            _____      _
+ *
+ *                              _____      _
  *     /\                    |  __ \    | |
  *    /  \   __ _ _   _  __ _| |__) |___| | __ _ _   _
  *   / /\ \ / _` | | | |/ _` |  _  // _ \ |/ _` | | | |
  *  / ____ \ (_| | |_| | (_| | | \ \  __/ | (_| | |_| |
  * /_/    \_\__, |\__,_|\__,_|_|  \_\___|_|\__,_|\__, |
- *             |_|                                |___/
+ *               |_|                                |___/
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -27,32 +28,32 @@ use aquarelay\network\PacketSender;
 
 class RakLibPacketSender implements PacketSender
 {
-    private bool $isClosed = false;
+	private bool $isClosed = false;
 
-    public function __construct(
-        private int $sessionId,
-        private RakLibInterface $interface
-    ) {}
+	public function __construct(
+		private int $sessionId,
+		private RakLibInterface $interface
+	) {}
 
-    public function sendPacket(string $payload, bool $immediate, ?int $receiptId): void
-    {
-        if (!$this->isClosed) {
-            $this->interface->sendPacket($this->sessionId, $payload, $immediate, $receiptId);
-        }
-    }
+	public function sendPacket(string $payload, bool $immediate, ?int $receiptId) : void
+	{
+		if (!$this->isClosed) {
+			$this->interface->sendPacket($this->sessionId, $payload, $immediate, $receiptId);
+		}
+	}
 
-    public function sendRawPacket(string $buffer): void
-    {
-        if (!$this->isClosed) {
-            $this->interface->sendPacket($this->sessionId, $buffer);
-        }
-    }
+	public function sendRawPacket(string $buffer) : void
+	{
+		if (!$this->isClosed) {
+			$this->interface->sendPacket($this->sessionId, $buffer);
+		}
+	}
 
-    public function close(): void
-    {
-        if (!$this->isClosed) {
-            $this->isClosed = true;
-            $this->interface->close($this->sessionId);
-        }
-    }
+	public function close() : void
+	{
+		if (!$this->isClosed) {
+			$this->isClosed = true;
+			$this->interface->close($this->sessionId);
+		}
+	}
 }

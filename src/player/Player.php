@@ -1,13 +1,14 @@
 <?php
 
 /*
- *                            _____      _
+ *
+ *                              _____      _
  *     /\                    |  __ \    | |
  *    /  \   __ _ _   _  __ _| |__) |___| | __ _ _   _
  *   / /\ \ / _` | | | |/ _` |  _  // _ \ |/ _` | | | |
  *  / ____ \ (_| | |_| | (_| | | \ \  __/ | (_| | |_| |
  * /_/    \_\__, |\__,_|\__,_|_|  \_\___|_|\__,_|\__, |
- *             |_|                                |___/
+ *               |_|                                |___/
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -33,152 +34,154 @@ use pocketmine\network\mcpe\protocol\ClientboundPacket;
 use pocketmine\network\mcpe\protocol\DataPacket;
 use pocketmine\network\mcpe\protocol\LoginPacket;
 use Ramsey\Uuid\UuidInterface;
+use function is_null;
+use function json_encode;
 
 class Player
 {
-    public ?int $backendRuntimeId = null;
-    protected UuidInterface $uuid;
-    protected string $xuid = '';
-    private ?BackendRakClient $downstreamConnection = null;
+	public ?int $backendRuntimeId = null;
+	protected UuidInterface $uuid;
+	protected string $xuid = '';
+	private ?BackendRakClient $downstreamConnection = null;
 	private ?AbstractDownstreamPacketHandler $handler = null;
 
-    public function __construct(
+	public function __construct(
 		private ProxyServer $proxyServer,
 		private NetworkSession $upstreamSession,
 		private LoginData $loginData
 	)
-    {
-        $this->xuid = $loginData->xuid;
-        $this->uuid = $loginData->uuid;
+	{
+		$this->xuid = $loginData->xuid;
+		$this->uuid = $loginData->uuid;
 
 		$this->setHandler(new DownstreamResourcePackHandler($this, $this->proxyServer->getLogger()));
-    }
+	}
 
-    public function sendDataPacket(ClientboundPacket $packet): void
-    {
-        $this->upstreamSession->sendDataPacket($packet);
-    }
+	public function sendDataPacket(ClientboundPacket $packet) : void
+	{
+		$this->upstreamSession->sendDataPacket($packet);
+	}
 
-    public function sendToBackend(DataPacket $packet): void
-    {
-        if (is_null($this->downstreamConnection)) {
-            $this->upstreamSession->debug('Cannot send packet to backend: downstream connection is null');
-            return;
-        }
-        $this->downstreamConnection->sendGamePacket($packet);
-    }
+	public function sendToBackend(DataPacket $packet) : void
+	{
+		if (is_null($this->downstreamConnection)) {
+			$this->upstreamSession->debug('Cannot send packet to backend: downstream connection is null');
+			return;
+		}
+		$this->downstreamConnection->sendGamePacket($packet);
+	}
 
 	public function getNetworkSession() : NetworkSession
 	{
 		return $this->upstreamSession;
 	}
 
-    public function getLoginData(): LoginData
-    {
-        return $this->loginData;
-    }
+	public function getLoginData() : LoginData
+	{
+		return $this->loginData;
+	}
 
-    public function getName(): string
-    {
-        return $this->loginData->username;
-    }
+	public function getName() : string
+	{
+		return $this->loginData->username;
+	}
 
-    public function setDownstream(BackendRakClient $client): void
-    {
-        $this->downstreamConnection = $client;
-    }
+	public function setDownstream(BackendRakClient $client) : void
+	{
+		$this->downstreamConnection = $client;
+	}
 
-    public function getDownstream(): ?BackendRakClient
-    {
-        return $this->downstreamConnection;
-    }
+	public function getDownstream() : ?BackendRakClient
+	{
+		return $this->downstreamConnection;
+	}
 
-    public function getUuid(): UuidInterface
-    {
-        return $this->uuid;
-    }
+	public function getUuid() : UuidInterface
+	{
+		return $this->uuid;
+	}
 
-    public function getXuid(): string
-    {
-        return $this->xuid;
-    }
+	public function getXuid() : string
+	{
+		return $this->xuid;
+	}
 
-    public function sendLoginToBackend(): void
-    {
-        if (is_null($this->downstreamConnection)) {
-            return;
-        }
+	public function sendLoginToBackend() : void
+	{
+		if (is_null($this->downstreamConnection)) {
+			return;
+		}
 
-        $pk = LoginPacket::create(
-            $this->loginData->protocolVersion,
-            json_encode($this->loginData->chainData),
-            $this->loginData->clientData
-        );
+		$pk = LoginPacket::create(
+			$this->loginData->protocolVersion,
+			json_encode($this->loginData->chainData),
+			$this->loginData->clientData
+		);
 
-        $this->sendToBackend($pk);
-    }
+		$this->sendToBackend($pk);
+	}
 
-	public function setHandler(AbstractDownstreamPacketHandler $handler): void
+	public function setHandler(AbstractDownstreamPacketHandler $handler) : void
 	{
 		$this->handler = $handler;
 	}
 
-    public function handleBackendPacket(DataPacket $packet): void
-    {
+	public function handleBackendPacket(DataPacket $packet) : void
+	{
 		if (!is_null($this->handler)) {
 			$packet->handle($this->handler);
 		}
 
-        $this->sendDataPacket($packet);
-    }
+		$this->sendDataPacket($packet);
+	}
 
-    public function sendMessage(string $message): void
-    {
-        $this->upstreamSession->onMessage($message);
-    }
+	public function sendMessage(string $message) : void
+	{
+		$this->upstreamSession->onMessage($message);
+	}
 
-    public function sendPopup(string $message): void
-    {
-        $this->upstreamSession->onPopup($message);
-    }
+	public function sendPopup(string $message) : void
+	{
+		$this->upstreamSession->onPopup($message);
+	}
 
-    public function sendTip(string $message): void
-    {
-        $this->upstreamSession->onTip($message);
-    }
+	public function sendTip(string $message) : void
+	{
+		$this->upstreamSession->onTip($message);
+	}
 
-    public function sendJukeboxPopup(string $message): void
-    {
-        $this->upstreamSession->onJukeboxPopup($message);
-    }
+	public function sendJukeboxPopup(string $message) : void
+	{
+		$this->upstreamSession->onJukeboxPopup($message);
+	}
 
-    public function sendTitle(string $title, string $subtitle = '', int $fadeIn = 0, int $stay = 0, int $fadeOut = 0): void
-    {
-        if ($fadeIn >= 0 && $stay >= 0 && $fadeOut >= 0) {
-            $this->upstreamSession->onTitleDuration($fadeIn, $stay, $fadeOut);
-        }
+	public function sendTitle(string $title, string $subtitle = '', int $fadeIn = 0, int $stay = 0, int $fadeOut = 0) : void
+	{
+		if ($fadeIn >= 0 && $stay >= 0 && $fadeOut >= 0) {
+			$this->upstreamSession->onTitleDuration($fadeIn, $stay, $fadeOut);
+		}
 
-        if ('' !== $subtitle) {
-            $this->upstreamSession->onSubTitle($subtitle);
-        }
+		if ($subtitle !== '') {
+			$this->upstreamSession->onSubTitle($subtitle);
+		}
 
-        $this->upstreamSession->onTitle($title);
-    }
+		$this->upstreamSession->onTitle($title);
+	}
 
-    public function sendToastNotification(string $title, string $body): void
-    {
-        $this->upstreamSession->onToastNotification($title, $body);
-    }
+	public function sendToastNotification(string $title, string $body) : void
+	{
+		$this->upstreamSession->onToastNotification($title, $body);
+	}
 
-    public function sendActionBar(string $actionBar): void
-    {
-        $this->upstreamSession->onActionBar($actionBar);
-    }
+	public function sendActionBar(string $actionBar) : void
+	{
+		$this->upstreamSession->onActionBar($actionBar);
+	}
 
-    public function disconnect(string $reason = 'Disconnected from proxy'): void
-    {
-        $this->upstreamSession->disconnect($reason);
-    }
+	public function disconnect(string $reason = 'Disconnected from proxy') : void
+	{
+		$this->upstreamSession->disconnect($reason);
+	}
 
 	public function getServer() : ProxyServer
 	{

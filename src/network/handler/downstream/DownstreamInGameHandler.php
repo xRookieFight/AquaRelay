@@ -1,13 +1,14 @@
 <?php
 
 /*
- *                            _____      _
+ *
+ *                              _____      _
  *     /\                    |  __ \    | |
  *    /  \   __ _ _   _  __ _| |__) |___| | __ _ _   _
  *   / /\ \ / _` | | | |/ _` |  _  // _ \ |/ _` | | | |
  *  / ____ \ (_| | |_| | (_| | | \ \  __/ | (_| | |_| |
  * /_/    \_\__, |\__,_|\__,_|_|  \_\___|_|\__,_|\__, |
- *             |_|                                |___/
+ *               |_|                                |___/
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -27,11 +28,12 @@ use pocketmine\network\mcpe\protocol\PlayStatusPacket;
 use pocketmine\network\mcpe\protocol\RequestChunkRadiusPacket;
 use pocketmine\network\mcpe\protocol\SetLocalPlayerAsInitializedPacket;
 use pocketmine\network\mcpe\protocol\StartGamePacket;
+use function is_null;
 
 class DownstreamInGameHandler extends AbstractDownstreamPacketHandler
 {
 
-	public function handleStartGame(StartGamePacket $packet): bool
+	public function handleStartGame(StartGamePacket $packet) : bool
 	{
 		$chunkRadiusPacket = new RequestChunkRadiusPacket();
 		$chunkRadiusPacket->radius = 8;
@@ -42,7 +44,7 @@ class DownstreamInGameHandler extends AbstractDownstreamPacketHandler
 		return true;
 	}
 
-	public function handlePlayStatus(PlayStatusPacket $packet): bool
+	public function handlePlayStatus(PlayStatusPacket $packet) : bool
 	{
 		if ($packet->status === PlayStatusPacket::LOGIN_SUCCESS) {
 			$this->getPlayer()->getNetworkSession()->debug('Forwarding LOGIN_SUCCESS from backend to client');

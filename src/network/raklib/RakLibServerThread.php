@@ -1,13 +1,14 @@
 <?php
 
 /*
- *                            _____      _
+ *
+ *                              _____      _
  *     /\                    |  __ \    | |
  *    /  \   __ _ _   _  __ _| |__) |___| | __ _ _   _
  *   / /\ \ / _` | | | |/ _` |  _  // _ \ |/ _` | | | |
  *  / ____ \ (_| | |_| | (_| | | \ \  __/ | (_| | |_| |
  * /_/    \_\__, |\__,_|\__,_|_|  \_\___|_|\__,_|\__, |
- *             |_|                                |___/
+ *               |_|                                |___/
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -36,74 +37,78 @@ use raklib\server\ServerSocket;
 use raklib\server\SimpleProtocolAcceptor;
 use raklib\utils\ExceptionTraceCleaner;
 use raklib\utils\InternetAddress;
+use function dirname;
+use function gc_disable;
+use function random_int;
+use function usleep;
 
 class RakLibServerThread extends Thread
 {
-    private bool $running = false;
-    private ThreadSafeArray $mainToThread;
-    private ThreadSafeArray $threadToMain;
+	private bool $running = false;
+	private ThreadSafeArray $mainToThread;
+	private ThreadSafeArray $threadToMain;
 
-    public function __construct(
-        private string $mainPath,
-        private MainLogger $logger,
-        private string $address,
-        private int $port,
-        private int $maxMtu,
-        private int $protocolVersion,
-        private int $rakServerId
-    ) {
-        $this->mainToThread = new ThreadSafeArray();
-        $this->threadToMain = new ThreadSafeArray();
-    }
+	public function __construct(
+		private string $mainPath,
+		private MainLogger $logger,
+		private string $address,
+		private int $port,
+		private int $maxMtu,
+		private int $protocolVersion,
+		private int $rakServerId
+	) {
+		$this->mainToThread = new ThreadSafeArray();
+		$this->threadToMain = new ThreadSafeArray();
+	}
 
-    public function getReadBuffer(): ThreadSafeArray
-    {
-        return $this->threadToMain;
-    }
+	public function getReadBuffer() : ThreadSafeArray
+	{
+		return $this->threadToMain;
+	}
 
-    public function getWriteBuffer(): ThreadSafeArray
-    {
-        return $this->mainToThread;
-    }
+	public function getWriteBuffer() : ThreadSafeArray
+	{
+		return $this->mainToThread;
+	}
 
-    public function stop(): void
-    {
-        $this->running = false;
-    }
+	public function stop() : void
+	{
+		$this->running = false;
+	}
 
-    public function run(): void
-    {
-        gc_disable();
-        $this->running = true;
+	public function run() : void
+	{
+		gc_disable();
+		$this->running = true;
 
-        require dirname(__DIR__, 3).'/vendor/autoload.php';
+		require dirname(__DIR__, 3) . '/vendor/autoload.php';
 
-        try {
-            $socket = new ServerSocket(new InternetAddress($this->address, $this->port, 4)); // IPV6 = 6 so we aren't using it for now
-        } catch (SocketException $e) {
-            $this->logger->error('Socket bind failed: '.$e->getMessage());
+		try {
+			$socket = new ServerSocket(new InternetAddress($this->address, $this->port, 4)); // IPV6 = 6 so we aren't using it for now
+		} catch (SocketException $e) {
+			$this->logger->error('Socket bind failed: ' . $e->getMessage());
 
-            return;
-        }
+			return;
+		}
 
-        \GlobalLogger::set($this->logger);
-        $server = new Server(
-            random_int(0, 1000000),
-            $this->logger,
-            $socket,
-            $this->maxMtu,
-            new SimpleProtocolAcceptor($this->protocolVersion),
-            new UserToRakLibThreadMessageReceiver(new PthreadsChannelReader($this->mainToThread)),
-            new RakLibToUserThreadMessageSender(new PthreadsChannelWriter($this->threadToMain)),
-            new ExceptionTraceCleaner($this->mainPath),
-            recvMaxSplitParts: 512
-        );
+		\GlobalLogger::set($this->logger);
+		$server = new Server(
+			random_int(0, 1000000),
+			$this->logger,
+			$socket,
+			$this->maxMtu,
+			new SimpleProtocolAcceptor($this->protocolVersion),
+			new UserToRakLibThreadMessageReceiver(new PthreadsChannelReader($this->mainToThread)),
+			new RakLibToUserThreadMessageSender(new PthreadsChannelWriter($this->threadToMain)),
+			new ExceptionTraceCleaner($this->mainPath),
+			recvMaxSplitParts: 512
+		);
 
-        while ($this->running) {
-            $server->tickProcessor();
-            usleep(5000);
-        }
+		while ($this->running) {
+			$server->tickProcessor();
+			usleep(5000);
+		}
 
-        $server->waitShutdown();
-    }
+		$server->waitShutdown();
+	}
 }

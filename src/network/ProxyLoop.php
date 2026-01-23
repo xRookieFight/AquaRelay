@@ -1,13 +1,14 @@
 <?php
 
 /*
- *                            _____      _
+ *
+ *                              _____      _
  *     /\                    |  __ \    | |
  *    /  \   __ _ _   _  __ _| |__) |___| | __ _ _   _
  *   / /\ \ / _` | | | |/ _` |  _  // _ \ |/ _` | | | |
  *  / ____ \ (_| | |_| | (_| | | \ \  __/ | (_| | |_| |
  * /_/    \_\__, |\__,_|\__,_|_|  \_\___|_|\__,_|\__, |
- *             |_|                                |___/
+ *               |_|                                |___/
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -33,142 +34,145 @@ use pocketmine\network\mcpe\protocol\ProtocolInfo;
 use pocketmine\network\mcpe\protocol\serializer\PacketBatch;
 use pocketmine\network\mcpe\protocol\types\CompressionAlgorithm;
 use pocketmine\snooze\SleeperHandler;
+use function microtime;
+use function ord;
+use function substr;
 
 class ProxyLoop
 {
-    public const TICK_INTERVAL = 0.05;
+	public const TICK_INTERVAL = 0.05;
 
-    /** @var NetworkSession[] */
-    private array $sessions = [];
+	/** @var NetworkSession[] */
+	private array $sessions = [];
 
-    private SleeperHandler $sleeper;
+	private SleeperHandler $sleeper;
 
-    public function __construct(
-        private ProxyServer $server
-    ) {
-        $this->sleeper = new SleeperHandler();
-        $this->server->interface->setHandlers(
-            $this->handleConnect(...),
-            $this->handlePacket(...),
-            $this->handleDisconnect(...),
-            $this->handlePing(...)
-        );
-    }
+	public function __construct(
+		private ProxyServer $server
+	) {
+		$this->sleeper = new SleeperHandler();
+		$this->server->interface->setHandlers(
+			$this->handleConnect(...),
+			$this->handlePacket(...),
+			$this->handleDisconnect(...),
+			$this->handlePing(...)
+		);
+	}
 
-    public function run(): void
-    {
-        $nextTick = microtime(true);
+	public function run() : void
+	{
+		$nextTick = microtime(true);
 
-        while (true) {
-            $now = microtime(true);
+		while (true) {
+			$now = microtime(true);
 
-            $this->server->interface->tick();
+			$this->server->interface->tick();
 
-            if ($now >= $nextTick) {
-                $this->tick();
-                $nextTick += self::TICK_INTERVAL;
-            }
+			if ($now >= $nextTick) {
+				$this->tick();
+				$nextTick += self::TICK_INTERVAL;
+			}
 
-            $this->sleeper->sleepUntil($nextTick);
-        }
-    }
+			$this->sleeper->sleepUntil($nextTick);
+		}
+	}
 
-    private function tick(): void
-    {
-        $this->server->getScheduler()->processAll();
+	private function tick() : void
+	{
+		$this->server->getScheduler()->processAll();
 
-        foreach ($this->sessions as $session) {
-            $player = $session->getPlayer();
+		foreach ($this->sessions as $session) {
+			$player = $session->getPlayer();
 
-            if (null !== $player && null !== $player->getDownstream()) {
-                $player->getDownstream()->tick(function ($payload) use ($player): void {
-                    $this->handleBackendPayload($player, $payload);
-                });
-            }
-        }
-    }
+			if ($player !== null && $player->getDownstream() !== null) {
+				$player->getDownstream()->tick(function ($payload) use ($player) : void {
+					$this->handleBackendPayload($player, $payload);
+				});
+			}
+		}
+	}
 
-    private function handleBackendPayload(Player $player, string $payload): void
-    {
-        $pid = \ord($payload[0]);
-        if (0xFE !== $pid) {
-            return;
-        }
+	private function handleBackendPayload(Player $player, string $payload) : void
+	{
+		$pid = ord($payload[0]);
+		if ($pid !== 0xFE) {
+			return;
+		}
 
-        $compression = \ord($payload[1]);
-        $buffer = substr($payload, 2);
+		$compression = ord($payload[1]);
+		$buffer = substr($payload, 2);
 
-        if (CompressionAlgorithm::ZLIB === $compression) {
-            try {
-                $buffer = ZlibCompressor::getInstance()->decompress($buffer);
-            } catch (\Exception $e) {
-                return;
-            }
-        }
+		if ($compression === CompressionAlgorithm::ZLIB) {
+			try {
+				$buffer = ZlibCompressor::getInstance()->decompress($buffer);
+			} catch (\Exception $e) {
+				return;
+			}
+		}
 
-        try {
-            $stream = new ByteBufferReader($buffer);
-            $packets = PacketBatch::decodeRaw($stream);
+		try {
+			$stream = new ByteBufferReader($buffer);
+			$packets = PacketBatch::decodeRaw($stream);
 
-            foreach ($packets as $pktBuffer) {
-                $packet = PacketPool::getInstance()->getPacket($pktBuffer);
-                if (null !== $packet) {
-                    $packet->decode(new ByteBufferReader($pktBuffer), ProtocolInfo::CURRENT_PROTOCOL);
-                    $player->handleBackendPacket($packet);
-                }
-            }
-        } catch (\Exception $e) {
-            // Log error if needed
-        }
-    }
+			foreach ($packets as $pktBuffer) {
+				$packet = PacketPool::getInstance()->getPacket($pktBuffer);
+				if ($packet !== null) {
+					$packet->decode(new ByteBufferReader($pktBuffer), ProtocolInfo::CURRENT_PROTOCOL);
+					$player->handleBackendPacket($packet);
+				}
+			}
+		} catch (\Exception $e) {
+			// Log error if needed
+		}
+	}
 
-    private function handleConnect(int $sessionId, string $ip, int $port): void
-    {
+	private function handleConnect(int $sessionId, string $ip, int $port) : void
+	{
 
-        $session = new NetworkSession(
-            $this->server,
-            NetworkSessionManager::getInstance(),
-            PacketPool::getInstance(),
-            new RakLibPacketSender($sessionId, $this->server->interface),
-            $ip,
-            $port,
+		$session = new NetworkSession(
+			$this->server,
+			NetworkSessionManager::getInstance(),
+			PacketPool::getInstance(),
+			new RakLibPacketSender($sessionId, $this->server->interface),
+			$ip,
+			$port,
 			$sessionId
-        );
+		);
 
 		$session->info("Session opened");
 
-        $this->sessions[$sessionId] = $session;
-    }
+		$this->sessions[$sessionId] = $session;
+	}
 
-    private function handlePacket(int $sessionId, string $payload): void
-    {
-        $firstByte = ord($payload[0]);
+	private function handlePacket(int $sessionId, string $payload) : void
+	{
+		$firstByte = ord($payload[0]);
 
-        if (0xFE !== $firstByte) {
-            // Ignore non-game packets
-            return;
-        }
+		if ($firstByte !== 0xFE) {
+			// Ignore non-game packets
+			return;
+		}
 
-        if (!isset($this->sessions[$sessionId])) {
-            return;
-        }
+		if (!isset($this->sessions[$sessionId])) {
+			return;
+		}
 
-        $this->sessions[$sessionId]->handleEncodedPacket(substr($payload, 1));
-    }
+		$this->sessions[$sessionId]->handleEncodedPacket(substr($payload, 1));
+	}
 
-    private function handleDisconnect(int $sessionId, string $reason): void
-    {
-        if (isset($this->sessions[$sessionId])) {
+	private function handleDisconnect(int $sessionId, string $reason) : void
+	{
+		if (isset($this->sessions[$sessionId])) {
 			$session = $this->sessions[$sessionId];
 			$session->onDisconnect();
-            unset($this->sessions[$sessionId]);
-        }
-    }
+			unset($this->sessions[$sessionId]);
+		}
+	}
 
-    private function handlePing(int $sessionId, int $ping): void
-    {
-        if (isset($this->sessions[$sessionId])) {
-            $this->sessions[$sessionId]->setPing($ping);
-        }
-    }
+	private function handlePing(int $sessionId, int $ping) : void
+	{
+		if (isset($this->sessions[$sessionId])) {
+			$this->sessions[$sessionId]->setPing($ping);
+		}
+	}
 }

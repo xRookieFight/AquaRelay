@@ -1,13 +1,14 @@
 <?php
 
 /*
- *                            _____      _
+ *
+ *                              _____      _
  *     /\                    |  __ \    | |
  *    /  \   __ _ _   _  __ _| |__) |___| | __ _ _   _
  *   / /\ \ / _` | | | |/ _` |  _  // _ \ |/ _` | | | |
  *  / ____ \ (_| | |_| | (_| | | \ \  __/ | (_| | |_| |
  * /_/    \_\__, |\__,_|\__,_|_|  \_\___|_|\__,_|\__, |
- *             |_|                                |___/
+ *               |_|                                |___/
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -26,115 +27,121 @@ namespace aquarelay\utils;
 use pmmp\thread\Thread as NativeThread;
 use pmmp\thread\ThreadSafe;
 use Symfony\Component\Filesystem\Path;
+use function date;
+use function is_null;
+use function sprintf;
+use function strtolower;
+use function strtoupper;
+use const PHP_EOL;
 
 class MainLogger extends ThreadSafe implements \Logger
 {
-    private string $format = Colors::AQUA.'%s '.Colors::RESET.'[%s] [%s%s'.Colors::RESET.']'.Colors::WHITE.' %s'.Colors::RESET;
-    private MainLoggerThread $writerThread;
+	private string $format = Colors::AQUA . '%s ' . Colors::RESET . '[%s] [%s%s' . Colors::RESET . ']' . Colors::WHITE . ' %s' . Colors::RESET;
+	private MainLoggerThread $writerThread;
 
-    public function __construct(private string $mainThreadName, string $logFile = 'proxy.log', private bool $debugMode = false)
-    {
-        $this->writerThread = new MainLoggerThread($logFile, Path::join(\aquarelay\DATA_PATH, 'logs'));
-        $this->writerThread->start(NativeThread::INHERIT_NONE);
-    }
+	public function __construct(private string $mainThreadName, string $logFile = 'proxy.log', private bool $debugMode = false)
+	{
+		$this->writerThread = new MainLoggerThread($logFile, Path::join(\aquarelay\DATA_PATH, 'logs'));
+		$this->writerThread->start(NativeThread::INHERIT_NONE);
+	}
 
-    public function info($message): void
-    {
-        $this->send('INFO', Colors::GREEN, (string) $message);
-    }
+	public function info($message) : void
+	{
+		$this->send('INFO', Colors::GREEN, (string) $message);
+	}
 
-    public function warning($message): void
-    {
-        $this->send('WARN', Colors::YELLOW, (string) $message);
-    }
+	public function warning($message) : void
+	{
+		$this->send('WARN', Colors::YELLOW, (string) $message);
+	}
 
-    public function error($message): void
-    {
-        $this->send('ERROR', Colors::RED, (string) $message);
-    }
+	public function error($message) : void
+	{
+		$this->send('ERROR', Colors::RED, (string) $message);
+	}
 
-    public function debug($message): void
-    {
-        if ($this->debugMode) {
-            $this->send('DEBUG', Colors::GRAY, (string) $message);
-        }
-    }
+	public function debug($message) : void
+	{
+		if ($this->debugMode) {
+			$this->send('DEBUG', Colors::GRAY, (string) $message);
+		}
+	}
 
-    public function emergency($message): void
-    {
-        $this->send('EMERGENCY', Colors::DARK_RED, (string) $message);
-    }
+	public function emergency($message) : void
+	{
+		$this->send('EMERGENCY', Colors::DARK_RED, (string) $message);
+	}
 
-    public function alert($message): void
-    {
-        $this->send('ALERT', Colors::DARK_RED, (string) $message);
-    }
+	public function alert($message) : void
+	{
+		$this->send('ALERT', Colors::DARK_RED, (string) $message);
+	}
 
-    public function critical($message): void
-    {
-        $this->send('CRITICAL', Colors::RED, (string) $message);
-    }
+	public function critical($message) : void
+	{
+		$this->send('CRITICAL', Colors::RED, (string) $message);
+	}
 
-    public function notice($message): void
-    {
-        $this->send('NOTICE', Colors::BLUE, (string) $message);
-    }
+	public function notice($message) : void
+	{
+		$this->send('NOTICE', Colors::BLUE, (string) $message);
+	}
 
-    public function log($level, $message): void
-    {
-        $level = strtolower((string) $level);
+	public function log($level, $message) : void
+	{
+		$level = strtolower((string) $level);
 
-        switch ($level) {
-            case 'debug':
-                $this->debug($message);
+		switch ($level) {
+			case 'debug':
+				$this->debug($message);
 
-                break;
+				break;
 
-            case 'warning':
-            case 'warn':
-                $this->warning($message);
+			case 'warning':
+			case 'warn':
+				$this->warning($message);
 
-                break;
+				break;
 
-            case 'error':
-            case 'critical':
-            case 'alert':
-            case 'emergency':
-                $this->error($message);
+			case 'error':
+			case 'critical':
+			case 'alert':
+			case 'emergency':
+				$this->error($message);
 
-                break;
+				break;
 
-            case 'info':
-                $this->info($message);
+			case 'info':
+				$this->info($message);
 
-                break;
+				break;
 
-            default:
-                $this->info('['.strtoupper($level).'] '.$message);
+			default:
+				$this->info('[' . strtoupper($level) . '] ' . $message);
 
-                break;
-        }
-    }
+				break;
+		}
+	}
 
-    public function logException(\Throwable $e, $trace = null): void
-    {
-        $this->critical('Uncaught exception: '.$e->getMessage());
-    }
+	public function logException(\Throwable $e, $trace = null) : void
+	{
+		$this->critical('Uncaught exception: ' . $e->getMessage());
+	}
 
-    public function shutdown(): void
-    {
-        $this->writerThread->shutdown();
-    }
+	public function shutdown() : void
+	{
+		$this->writerThread->shutdown();
+	}
 
-    private function send(string $level, string $color, string $message): void
-    {
-        $time = date('H:i:s');
+	private function send(string $level, string $color, string $message) : void
+	{
+		$time = date('H:i:s');
 
-        $currentThread = NativeThread::getCurrentThread();
-        $threadName = is_null($currentThread) ? $this->mainThreadName : (new \ReflectionClass($currentThread))->getShortName();
+		$currentThread = NativeThread::getCurrentThread();
+		$threadName = is_null($currentThread) ? $this->mainThreadName : (new \ReflectionClass($currentThread))->getShortName();
 
-        $formatted = sprintf($this->format, $time, $threadName, $color, $level, $message);
+		$formatted = sprintf($this->format, $time, $threadName, $color, $level, $message);
 
-        $this->writerThread->write($formatted.PHP_EOL);
-    }
+		$this->writerThread->write($formatted . PHP_EOL);
+	}
 }

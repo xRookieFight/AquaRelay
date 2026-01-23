@@ -1,13 +1,14 @@
 <?php
 
 /*
- *                            _____      _
+ *
+ *                              _____      _
  *     /\                    |  __ \    | |
  *    /  \   __ _ _   _  __ _| |__) |___| | __ _ _   _
  *   / /\ \ / _` | | | |/ _` |  _  // _ \ |/ _` | | | |
  *  / ____ \ (_| | |_| | (_| | | \ \  __/ | (_| | |_| |
  * /_/    \_\__, |\__,_|\__,_|_|  \_\___|_|\__,_|\__, |
- *             |_|                                |___/
+ *               |_|                                |___/
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -25,48 +26,48 @@ namespace aquarelay\task;
 
 abstract class Task
 {
-    private int $taskId;
-    private bool $cancelled = false;
+	private int $taskId;
+	private bool $cancelled = false;
 
-    public function __construct(int $taskId = 0)
-    {
-        $this->taskId = $taskId;
-    }
+	public function __construct(int $taskId = 0)
+	{
+		$this->taskId = $taskId;
+	}
 
-    /**
-     * Called when the task is executed.
-     */
-    abstract public function onRun(): void;
+	/**
+	 * Called when the task is executed.
+	 */
+	abstract public function onRun() : void;
 
-    /**
-     * Get the task ID.
-     */
-    final public function getTaskId(): int
-    {
-        return $this->taskId;
-    }
+	/**
+	 * Get the task ID.
+	 */
+	final public function getTaskId() : int
+	{
+		return $this->taskId;
+	}
 
-    /**
-     * Set the task ID.
-     */
-    final public function setTaskId(int $id): void
-    {
-        $this->taskId = $id;
-    }
+	/**
+	 * Set the task ID.
+	 */
+	final public function setTaskId(int $id) : void
+	{
+		$this->taskId = $id;
+	}
 
-    /**
-     * Check if the task is cancelled.
-     */
-    final public function isCancelled(): bool
-    {
-        return $this->cancelled;
-    }
+	/**
+	 * Check if the task is cancelled.
+	 */
+	final public function isCancelled() : bool
+	{
+		return $this->cancelled;
+	}
 
-    /**
-     * Cancel the task.
-     */
-    final public function cancel(): void
-    {
-        $this->cancelled = true;
-    }
+	/**
+	 * Cancel the task.
+	 */
+	final public function cancel() : void
+	{
+		$this->cancelled = true;
+	}
 }

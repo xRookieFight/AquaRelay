@@ -1,13 +1,14 @@
 <?php
 
 /*
- *                            _____      _
+ *
+ *                              _____      _
  *     /\                    |  __ \    | |
  *    /  \   __ _ _   _  __ _| |__) |___| | __ _ _   _
  *   / /\ \ / _` | | | |/ _` |  _  // _ \ |/ _` | | | |
  *  / ____ \ (_| | |_| | (_| | | \ \  __/ | (_| | |_| |
  * /_/    \_\__, |\__,_|\__,_|_|  \_\___|_|\__,_|\__, |
- *             |_|                                |___/
+ *               |_|                                |___/
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -30,14 +31,14 @@ use pocketmine\network\mcpe\protocol\PacketHandlerInterface;
 
 abstract class AbstractUpstreamPacketHandler implements PacketHandlerInterface
 {
-    use PacketHandlerDefaultImplTrait;
+	use PacketHandlerDefaultImplTrait;
 
-    public function __construct(
-        protected NetworkSession $session,
-        protected MainLogger $logger
-    ) {
-        // NOOP
-    }
+	public function __construct(
+		protected NetworkSession $session,
+		protected MainLogger $logger
+	) {
+		// NOOP
+	}
 
-    public function setUp(): void {}
+	public function setUp() : void {}
 }

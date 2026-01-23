@@ -1,13 +1,14 @@
 <?php
 
 /*
- *                            _____      _
+ *
+ *                              _____      _
  *     /\                    |  __ \    | |
  *    /  \   __ _ _   _  __ _| |__) |___| | __ _ _   _
  *   / /\ \ / _` | | | |/ _` |  _  // _ \ |/ _` | | | |
  *  / ____ \ (_| | |_| | (_| | | \ \  __/ | (_| | |_| |
  * /_/    \_\__, |\__,_|\__,_|_|  \_\___|_|\__,_|\__, |
- *             |_|                                |___/
+ *               |_|                                |___/
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -25,71 +26,77 @@ namespace aquarelay\network\compression;
 
 use aquarelay\utils\InstanceTrait;
 use pocketmine\network\mcpe\protocol\types\CompressionAlgorithm;
+use function function_exists;
+use function libdeflate_deflate_compress;
+use function strlen;
+use function zlib_decode;
+use function zlib_encode;
+use const ZLIB_ENCODING_RAW;
 
 /**
  * @author PocketMine-MP Team
  */
 final class ZlibCompressor implements Compressor
 {
-    use InstanceTrait;
+	use InstanceTrait;
 
-    public const DEFAULT_LEVEL = 7;
-    public const DEFAULT_THRESHOLD = 256;
-    public const DEFAULT_MAX_DECOMPRESSION_SIZE = 8 * 1024 * 1024;
+	public const DEFAULT_LEVEL = 7;
+	public const DEFAULT_THRESHOLD = 256;
+	public const DEFAULT_MAX_DECOMPRESSION_SIZE = 8 * 1024 * 1024;
 
-    public function __construct(
-        private int $level,
-        private ?int $minCompressionSize,
-        private int $maxDecompressionSize
-    ) {}
+	public function __construct(
+		private int $level,
+		private ?int $minCompressionSize,
+		private int $maxDecompressionSize
+	) {}
 
-    public function getCompressionThreshold(): ?int
-    {
-        return $this->minCompressionSize;
-    }
+	public function getCompressionThreshold() : ?int
+	{
+		return $this->minCompressionSize;
+	}
 
-    /**
-     * @throws DecompressionException
-     */
-    public function decompress(string $payload): string
-    {
-        $result = @\zlib_decode($payload, $this->maxDecompressionSize);
+	/**
+	 * @throws DecompressionException
+	 */
+	public function decompress(string $payload) : string
+	{
+		$result = @zlib_decode($payload, $this->maxDecompressionSize);
 
-        if (false === $result) {
-            $result = @\zlib_decode($payload);
-        }
+		if ($result === false) {
+			$result = @zlib_decode($payload);
+		}
 
-        if (false === $result) {
-            throw new DecompressionException('Failed to decompress data');
-        }
+		if ($result === false) {
+			throw new DecompressionException('Failed to decompress data');
+		}
 
-        return $result;
-    }
+		return $result;
+	}
 
-    public function compress(string $payload): string
-    {
-        $compressible = null !== $this->minCompressionSize && \strlen($payload) >= $this->minCompressionSize;
-        $level = $compressible ? $this->level : 0;
+	public function compress(string $payload) : string
+	{
+		$compressible = $this->minCompressionSize !== null && strlen($payload) >= $this->minCompressionSize;
+		$level = $compressible ? $this->level : 0;
 
-        if (\function_exists('libdeflate_deflate_compress')) {
-            return \libdeflate_deflate_compress($payload, $level);
-        }
+		if (function_exists('libdeflate_deflate_compress')) {
+			return libdeflate_deflate_compress($payload, $level);
+		}
 
-        $result = \zlib_encode($payload, \ZLIB_ENCODING_RAW, $level);
-        if (false === $result) {
-            throw new CompressionException('ZLIB compression failed');
-        }
+		$result = zlib_encode($payload, ZLIB_ENCODING_RAW, $level);
+		if ($result === false) {
+			throw new CompressionException('ZLIB compression failed');
+		}
 
-        return $result;
-    }
+		return $result;
+	}
 
-    public function getNetworkId(): int
-    {
-        return CompressionAlgorithm::ZLIB;
-    }
+	public function getNetworkId() : int
+	{
+		return CompressionAlgorithm::ZLIB;
+	}
 
-    private static function make(): self
-    {
-        return new self(self::DEFAULT_LEVEL, self::DEFAULT_THRESHOLD, self::DEFAULT_MAX_DECOMPRESSION_SIZE);
-    }
+	private static function make() : self
+	{
+		return new self(self::DEFAULT_LEVEL, self::DEFAULT_THRESHOLD, self::DEFAULT_MAX_DECOMPRESSION_SIZE);
+	}
 }
