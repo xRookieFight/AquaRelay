@@ -364,9 +364,11 @@ class NetworkSession
 		}
 	}
 
-	public function onDisconnect() : void
+	public function onDisconnect(string $reason) : void
 	{
 		$this->connected = false;
+		$this->info("Session disconnected: $reason");
+
 		NetworkSessionManager::getInstance()->remove($this);
 
 		$player = $this->getPlayer();

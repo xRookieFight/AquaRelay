@@ -145,7 +145,7 @@ abstract class AsyncTask extends Runnable
 	{
 		$progressUpdates = $this->progressUpdates;
 		if ($progressUpdates !== null) {
-			while (null !== ($progress = $progressUpdates->shift())) {
+			while (!is_null($progress = $progressUpdates->shift())) {
 				$this->onProgressUpdate(igbinary_unserialize($progress));
 			}
 		}

@@ -81,7 +81,7 @@ class MainLoggerThread extends Thread
 				}
 			});
 
-			while (null !== ($line = $this->buffer->shift())) {
+			while (!is_null($line = $this->buffer->shift())) {
 				echo $line;
 
 				$clean = \preg_replace('/\x1b\[[0-9;]*m/', '', $line);

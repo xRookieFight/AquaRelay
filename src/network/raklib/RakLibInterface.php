@@ -140,7 +140,7 @@ class RakLibInterface implements ServerEventListener
 
 	public function onClientDisconnect(int $sessionId, int $reason) : void
 	{
-		($this->onDisconnect)($sessionId, "Reason: {$reason}");
+		($this->onDisconnect)($sessionId, $reason);
 	}
 
 	public function close(int $sessionId) : void

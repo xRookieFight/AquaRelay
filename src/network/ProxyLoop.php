@@ -34,6 +34,7 @@ use pocketmine\network\mcpe\protocol\ProtocolInfo;
 use pocketmine\network\mcpe\protocol\serializer\PacketBatch;
 use pocketmine\network\mcpe\protocol\types\CompressionAlgorithm;
 use pocketmine\snooze\SleeperHandler;
+use raklib\generic\DisconnectReason;
 use function microtime;
 use function ord;
 use function substr;
@@ -160,11 +161,16 @@ class ProxyLoop
 		$this->sessions[$sessionId]->handleEncodedPacket(substr($payload, 1));
 	}
 
-	private function handleDisconnect(int $sessionId, string $reason) : void
+	private function handleDisconnect(int $sessionId, int $reason) : void
 	{
 		if (isset($this->sessions[$sessionId])) {
 			$session = $this->sessions[$sessionId];
-			$session->onDisconnect();
+			$reason = match ($reason){
+				DisconnectReason::CLIENT_DISCONNECT => "Client disconnected",
+				DisconnectReason::PEER_TIMEOUT => "Session timed out",
+				DisconnectReason::CLIENT_RECONNECT => "New session established on same IP and port"
+			};
+			$session->onDisconnect($reason);
 			unset($this->sessions[$sessionId]);
 		}
 	}

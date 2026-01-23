@@ -32,6 +32,7 @@ use pocketmine\network\mcpe\protocol\ProtocolInfo;
 use pocketmine\network\mcpe\protocol\RequestNetworkSettingsPacket;
 use pocketmine\utils\Binary;
 use raklib\client\ClientSocket;
+use raklib\generic\SocketException;
 use raklib\protocol\ConnectionRequest;
 use raklib\protocol\DisconnectionNotification;
 use raklib\protocol\NewIncomingConnection;
@@ -94,15 +95,19 @@ final class BackendRakClient
 
 	public function tick(callable $onPacket) : void
 	{
-		while (null !== ($buf = $this->socket->readPacket())) {
-			$pid = ord($buf[0]);
+		try {
+			while (!is_null($buf = $this->socket->readPacket())) {
+				$pid = ord($buf[0]);
 
-			if ($pid < 0x80) {
-				$this->handleInternalPacket($buf);
-			} else {
-				$this->sendAck($buf);
-				$this->handleDatagram($buf, $onPacket);
+				if ($pid < 0x80) {
+					$this->handleInternalPacket($buf);
+				} else {
+					$this->sendAck($buf);
+					$this->handleDatagram($buf, $onPacket);
+				}
 			}
+		} catch (SocketException) {
+			// Ignore, we do not care about backend issues just don't connect
 		}
 	}
 
