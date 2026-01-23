@@ -141,7 +141,7 @@ class NetworkSession
 
 		$this->debug("Connecting to $targetIp:$targetPort...");
 
-		$backend = new BackendRakClient(new InternetAddress($targetIp, $targetPort, 4));
+		$backend = new BackendRakClient(new InternetAddress($targetIp, $targetPort, 4), $player);
 
 		$player->setDownstream($backend);
 		$player->sendLoginToBackend();

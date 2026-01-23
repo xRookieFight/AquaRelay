@@ -26,6 +26,7 @@ namespace aquarelay\network\raklib\client;
 
 use aquarelay\network\compression\ZlibCompressor;
 use aquarelay\network\raklib\RakLibInterface;
+use aquarelay\player\Player;
 use pmmp\encoding\ByteBufferWriter;
 use pocketmine\network\mcpe\protocol\DataPacket;
 use pocketmine\network\mcpe\protocol\ProtocolInfo;
@@ -44,6 +45,7 @@ use raklib\protocol\Packet;
 use raklib\protocol\PacketSerializer;
 use raklib\protocol\UnconnectedPing;
 use raklib\utils\InternetAddress;
+use Ramsey\Uuid\Uuid;
 use function ceil;
 use function count;
 use function implode;
@@ -71,7 +73,10 @@ final class BackendRakClient
 	private array $splitBuffer = [];
 	private array $sendQueue = [];
 
-	public function __construct(private InternetAddress $address)
+	public function __construct(
+		private InternetAddress $address,
+		private Player $player
+	)
 	{
 		$this->clientId = random_int(1, PHP_INT_MAX);
 		$this->socket = new ClientSocket($address);
@@ -106,8 +111,9 @@ final class BackendRakClient
 					$this->handleDatagram($buf, $onPacket);
 				}
 			}
-		} catch (SocketException) {
-			// Ignore, we do not care about backend issues just don't connect
+		} catch (SocketException $e) {
+			$this->player->disconnect("Couldn't read packets from backend (" . Uuid::uuid4()->toString() . ")");
+			$this->player->getNetworkSession()->debug("Backend packet reading error: " . $e->getMessage());
 		}
 	}
 
