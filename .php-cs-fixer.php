@@ -47,13 +47,13 @@ return (new Config())
 			'comment_type' => 'comment',
 			'header' => <<<BODY
 
-                             _____      _
+                           _____      _
     /\                    |  __ \    | |
    /  \   __ _ _   _  __ _| |__) |___| | __ _ _   _
   / /\ \ / _` | | | |/ _` |  _  // _ \ |/ _` | | | |
  / ____ \ (_| | |_| | (_| | | \ \  __/ | (_| | |_| |
 /_/    \_\__, |\__,_|\__,_|_|  \_\___|_|\__,_|\__, |
-              |_|                                |___/
+              |_|                              |___/
  
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU Lesser General Public License as published by
