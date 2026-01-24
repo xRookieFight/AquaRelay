@@ -163,7 +163,7 @@ class NetworkSession
 	{
 		$writer = new ByteBufferWriter();
 
-		$packet->encode($writer, ProtocolInfo::CURRENT_PROTOCOL);
+		$packet->encode($writer, $this->getProtocolId());
 		$payload = $writer->getData();
 
 		$this->addToSendBuffer($payload);
@@ -356,7 +356,7 @@ class NetworkSession
 	{
 		$packet = $this->packetPool->getPacket($buffer);
 		if (!is_null($packet)) {
-			$packet->decode(new ByteBufferReader($buffer), ProtocolInfo::CURRENT_PROTOCOL);
+			$packet->decode(new ByteBufferReader($buffer), $this->getProtocolId());
 
 			if (!is_null($this->handler)) {
 				$packet->handle($this->handler);
@@ -372,9 +372,8 @@ class NetworkSession
 		NetworkSessionManager::getInstance()->remove($this);
 
 		$player = $this->getPlayer();
-		if (!is_null($player)){
-			$player->getDownstream()->disconnect();
-			$this->server->getPlayerManager()->removePlayer($this);
-		}
+		$player?->getDownstream()?->disconnect();
+
+		$this->server->getPlayerManager()->removePlayer($this);
 	}
 }

@@ -82,7 +82,7 @@ class UpstreamResourcePackHandler extends AbstractUpstreamPacketHandler
 				);
 				$this->session->sendDataPacket($chunkPk, false);
 
-				$this->logger->info(Colors::AQUA . $this->session->getPlayer()?->getName() . Colors::WHITE . "[" . $this->session->getAddress() . ":" . $this->session->getPort() . "] logged in with v" . (Utils::protocolIdToVersion($this->session->getProtocolId()) ?? "unknown version") . " (" . $this->session->getProtocolId() . ")");
+				$this->logger->info(Colors::AQUA . $this->session->getPlayer()?->getName() . Colors::WHITE . "[" . $this->session->getAddress() . ":" . $this->session->getPort() . "] logged in with v" . $this->session->getPlayer()?->getMinecraftVersion() . " (" . $this->session->getProtocolId() . ")");
 
 				$this->session->flushGamePacketQueue();
 				$this->session->connectToBackend();

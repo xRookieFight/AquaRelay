@@ -93,7 +93,7 @@ class RakLibServerThread extends Thread
 
 		\GlobalLogger::set($this->logger);
 		$server = new Server(
-			random_int(0, 1000000),
+			$this->rakServerId,
 			$this->logger,
 			$socket,
 			$this->maxMtu,

@@ -178,9 +178,9 @@ final class BackendRakClient
 
 	private function sendNetworkSettingsRequest() : void
 	{
-		$packet = RequestNetworkSettingsPacket::create(ProtocolInfo::CURRENT_PROTOCOL);
+		$packet = RequestNetworkSettingsPacket::create($this->player->getProtocol());
 		$writer = new ByteBufferWriter();
-		$packet->encode($writer, ProtocolInfo::CURRENT_PROTOCOL);
+		$packet->encode($writer, $this->player->getProtocol());
 
 		$payload = $writer->getData();
 
@@ -195,7 +195,7 @@ final class BackendRakClient
 	private function encodeAndSend(DataPacket $packet) : void
 	{
 		$writer = new ByteBufferWriter();
-		$packet->encode($writer, ProtocolInfo::CURRENT_PROTOCOL);
+		$packet->encode($writer, $this->player->getProtocol());
 		$this->sendBatch($writer->getData());
 	}
 

@@ -30,9 +30,11 @@ use aquarelay\network\NetworkSession;
 use aquarelay\network\raklib\client\BackendRakClient;
 use aquarelay\ProxyServer;
 use aquarelay\utils\LoginData;
+use aquarelay\utils\Utils;
 use pocketmine\network\mcpe\protocol\ClientboundPacket;
 use pocketmine\network\mcpe\protocol\DataPacket;
 use pocketmine\network\mcpe\protocol\LoginPacket;
+use pocketmine\network\mcpe\protocol\ProtocolInfo;
 use Ramsey\Uuid\UuidInterface;
 use function is_null;
 use function json_encode;
@@ -186,5 +188,23 @@ class Player
 	public function getServer() : ProxyServer
 	{
 		return $this->proxyServer;
+	}
+
+	/**
+	 * Returns the protocol id of player.
+	 * @return int
+	 */
+	public function getProtocol() : int
+	{
+		return $this->upstreamSession->getProtocolId();
+	}
+
+	/**
+	 * Returns the Minecraft version of player.
+	 * @return string
+	 */
+	public function getMinecraftVersion() : string
+	{
+		return Utils::protocolIdToVersion($this->getProtocol()) ?? "unknown";
 	}
 }

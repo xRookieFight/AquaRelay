@@ -118,7 +118,7 @@ class ProxyLoop
 			foreach ($packets as $pktBuffer) {
 				$packet = PacketPool::getInstance()->getPacket($pktBuffer);
 				if ($packet !== null) {
-					$packet->decode(new ByteBufferReader($pktBuffer), ProtocolInfo::CURRENT_PROTOCOL);
+					$packet->decode(new ByteBufferReader($pktBuffer), $player->getProtocol());
 					$player->handleBackendPacket($packet);
 				}
 			}
