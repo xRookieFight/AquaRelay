@@ -72,7 +72,7 @@ final class BackendRakClient
 	private int $splitId = 0;
 	private array $splitBuffer = [];
 	private array $sendQueue = [];
-	private int $rakCookie;
+	private ?int $rakCookie;
 
 	public function __construct(
 		private InternetAddress $address,
@@ -147,7 +147,9 @@ final class BackendRakClient
 		$pk->serverAddress = new InternetAddress($this->address->getIp(), 0, 4);
 		$pk->clientID = $this->clientId;
 		$pk->mtuSize = $this->mtu;
-		$pk->cookie = $this->rakCookie;
+		if (!is_null($this->rakCookie)){
+			$pk->cookie = $this->rakCookie;
+		}
 		$this->sendRawPacket($pk);
 		$this->state = ConnectionState::CONNECTING_2;
 	}
