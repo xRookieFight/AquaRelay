@@ -34,7 +34,6 @@ use aquarelay\utils\Utils;
 use pocketmine\network\mcpe\protocol\ClientboundPacket;
 use pocketmine\network\mcpe\protocol\DataPacket;
 use pocketmine\network\mcpe\protocol\LoginPacket;
-use pocketmine\network\mcpe\protocol\ProtocolInfo;
 use Ramsey\Uuid\UuidInterface;
 use function is_null;
 use function json_encode;

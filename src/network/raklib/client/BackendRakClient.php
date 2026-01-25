@@ -29,18 +29,15 @@ use aquarelay\network\raklib\RakLibInterface;
 use aquarelay\player\Player;
 use pmmp\encoding\ByteBufferWriter;
 use pocketmine\network\mcpe\protocol\DataPacket;
-use pocketmine\network\mcpe\protocol\ProtocolInfo;
 use pocketmine\network\mcpe\protocol\RequestNetworkSettingsPacket;
 use pocketmine\utils\Binary;
 use raklib\client\ClientSocket;
 use raklib\generic\SocketException;
 use raklib\protocol\ConnectionRequest;
 use raklib\protocol\DisconnectionNotification;
-use raklib\protocol\NewIncomingConnection;
 use raklib\protocol\OpenConnectionReply1;
 use raklib\protocol\OpenConnectionReply2;
 use raklib\protocol\OpenConnectionRequest1;
-use raklib\protocol\OpenConnectionRequest2;
 use raklib\protocol\Packet;
 use raklib\protocol\PacketSerializer;
 use raklib\protocol\UnconnectedPing;
@@ -143,15 +140,22 @@ final class BackendRakClient
 
 	private function sendRequest2() : void
 	{
-		$pk = new OpenConnectionRequest2();
-		$pk->serverAddress = new InternetAddress($this->address->getIp(), 0, 4);
-		$pk->clientID = $this->clientId;
-		$pk->mtuSize = $this->mtu;
-		if (!is_null($this->rakCookie)){
-			$pk->cookie = $this->rakCookie;
-		}
-		$this->sendRawPacket($pk);
-		$this->state = ConnectionState::CONNECTING_2;
+		$stream = new PacketSerializer();
+        $stream->putByte(0x07);
+        $stream->put("\x00\xff\xff\x00\xfe\xfe\xfe\xfe\xfd\xfd\xfd\xfd\x12\x34\x56\x78");
+        $stream->put("\x04\x7f\x00\x00\x01\x4a\xbc");
+        $stream->putShort($this->mtu);
+        $stream->putLong($this->clientId);
+        
+        if ($this->rakCookie !== null) {
+            $stream->putByte(1); 
+            $stream->putInt($this->rakCookie);
+        } else {
+            $stream->putByte(0);
+        }
+        
+        $this->sendRaw($stream->getBuffer());
+        $this->state = ConnectionState::CONNECTING_2;
 	}
 
 	private function sendConnectionRequest() : void
@@ -166,14 +170,15 @@ final class BackendRakClient
 
 	private function sendNewIncomingConnection() : void
 	{
-		$pk = new NewIncomingConnection();
-		$pk->address = new InternetAddress($this->address->getIp(), 0, 4);
-		for ($i = 0; $i < 10; ++$i) {
-			$pk->systemAddresses[] = new InternetAddress($this->address->getIp(), 0, 4);
-		}
-		$pk->sendPingTime = (int) (microtime(true) * 1000);
-		$pk->sendPongTime = (int) (microtime(true) * 1000);
-		$this->sendEncapsulated($pk);
+		$stream = new PacketSerializer();
+        $stream->putByte(0x13);
+        $stream->put("\x04\x7f\x00\x00\x01\x00\x00");
+        for ($i = 0; $i < 10; ++$i) {
+            $stream->put("\x04\x7f\x00\x00\x01\x00\x00");
+        }
+        $stream->putLong((int)(microtime(true) * 1000));
+        $stream->putLong((int)(microtime(true) * 1000));
+        $this->sendEncapsulatedRaw($stream->getBuffer());
 	}
 
 	private function sendNetworkSettingsRequest() : void
