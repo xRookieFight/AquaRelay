@@ -25,8 +25,6 @@ declare(strict_types=1);
 namespace aquarelay\network\raklib\client;
 
 use aquarelay\network\compression\ZlibCompressor;
-use aquarelay\network\raklib\client\Connections\AquaNewIncomingConnection;
-use aquarelay\network\raklib\client\Connections\AquaOpenConnectionRequest2;
 use aquarelay\network\raklib\RakLibInterface;
 use aquarelay\player\Player;
 use pmmp\encoding\ByteBufferWriter;
@@ -37,9 +35,11 @@ use raklib\client\ClientSocket;
 use raklib\generic\SocketException;
 use raklib\protocol\ConnectionRequest;
 use raklib\protocol\DisconnectionNotification;
+use raklib\protocol\NewIncomingConnection;
 use raklib\protocol\OpenConnectionReply1;
 use raklib\protocol\OpenConnectionReply2;
 use raklib\protocol\OpenConnectionRequest1;
+use raklib\protocol\OpenConnectionRequest2;
 use raklib\protocol\Packet;
 use raklib\protocol\PacketSerializer;
 use raklib\protocol\UnconnectedPing;
@@ -142,42 +142,49 @@ final class BackendRakClient
 
 	private function sendRequest2() : void
 	{
-		$packet = new AquaOpenConnectionRequest2();
-        $packet->clientID = $this->clientId;
-        $packet->serverAddress = new InternetAddress($this->address->getIp(), $this->address->getPort(), 4);
-        $packet->mtuSize = $this->mtu;
-        $packet->cookie = $this->rakCookie;
+		$packet = new OpenConnectionRequest2();
+		$packet->clientID = $this->clientId;
+		$packet->serverAddress = new InternetAddress($this->address->getIp(), $this->address->getPort(), 4);
+		$packet->mtuSize = $this->mtu;
 
-        $this->sendRawPacket($packet);
-        $this->state = ConnectionState::CONNECTING_2;
+		$s = new PacketSerializer();
+		$packet->encode($s);
+
+		if ($this->rakCookie !== null) {
+			$s->putByte(1);
+			$s->putInt($this->rakCookie);
+		} else {
+			$s->putByte(0);
+		}
+
+		$this->sendRaw($s->getBuffer());
+		$this->state = ConnectionState::CONNECTING_2;
 	}
 
 	private function sendNewIncomingConnection() : void
-    {
-      $address = $this->player->getServer()->getAddress();
-      if (empty($address) || $address === "0.0.0.0") {
-         $address = "127.0.0.1";
-      }
+	{
+		$address = $this->player->getServer()->getAddress();
+		if (empty($address) || $address === "0.0.0.0") {
+			$address = "127.0.0.1";
+		}
 
-      $port = $this->player->getServer()->getPort();
+		$port = $this->player->getServer()->getPort();
 
-      $packet = new AquaNewIncomingConnection();
-    
-      $packet->address = new InternetAddress($address, $port, 4);
+		$packet = new NewIncomingConnection();
+		$packet->address = new InternetAddress($address, $port, 4);
 
-      $internalAddr = new InternetAddress("127.0.0.1", 0, 4);
-      $packet->systemAddresses = [];
-      
-      for ($i = 0; $i < 10; ++$i) {
-          $packet->systemAddresses[] = $internalAddr;
-      }
+		$internalAddr = new InternetAddress("127.0.0.1", 0, 4);
+		$packet->systemAddresses = [];
+		for ($i = 0; $i < 10; ++$i) {
+			$packet->systemAddresses[] = $internalAddr;
+		}
 
-      $ping = (int) (microtime(true) * 1000);
-      $packet->sendPingTime = $ping;
-      $packet->sendPongTime = $ping;
+		$ping = (int) (microtime(true) * 1000);
+		$packet->sendPingTime = $ping;
+		$packet->sendPongTime = $ping;
 
-      $this->sendEncapsulated($packet);
-    }
+		$this->sendEncapsulated($packet);
+	}
 
 	private function sendConnectionRequest() : void
 	{
