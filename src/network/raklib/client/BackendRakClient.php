@@ -25,6 +25,8 @@ declare(strict_types=1);
 namespace aquarelay\network\raklib\client;
 
 use aquarelay\network\compression\ZlibCompressor;
+use aquarelay\network\raklib\client\Connections\AquaNewIncomingConnection;
+use aquarelay\network\raklib\client\Connections\AquaOpenConnectionRequest2;
 use aquarelay\network\raklib\RakLibInterface;
 use aquarelay\player\Player;
 use pmmp\encoding\ByteBufferWriter;
@@ -35,11 +37,9 @@ use raklib\client\ClientSocket;
 use raklib\generic\SocketException;
 use raklib\protocol\ConnectionRequest;
 use raklib\protocol\DisconnectionNotification;
-use raklib\protocol\NewIncomingConnection;
 use raklib\protocol\OpenConnectionReply1;
 use raklib\protocol\OpenConnectionReply2;
 use raklib\protocol\OpenConnectionRequest1;
-use raklib\protocol\OpenConnectionRequest2;
 use raklib\protocol\Packet;
 use raklib\protocol\PacketSerializer;
 use raklib\protocol\UnconnectedPing;
@@ -142,17 +142,42 @@ final class BackendRakClient
 
 	private function sendRequest2() : void
 	{
-		$packet = new OpenConnectionRequest2();
-		$packet->clientID = $this->clientId;
-		if (!is_null($this->rakCookie)){
-			$packet->cookie = $this->rakCookie;
-		}
-		$packet->mtuSize = $this->mtu;
-		$packet->serverAddress = $this->address;
+		$packet = new AquaOpenConnectionRequest2();
+        $packet->clientID = $this->clientId;
+        $packet->serverAddress = new InternetAddress($this->address->getIp(), $this->address->getPort(), 4);
+        $packet->mtuSize = $this->mtu;
+        $packet->cookie = $this->rakCookie;
 
-		$this->sendRawPacket($packet);
+        $this->sendRawPacket($packet);
         $this->state = ConnectionState::CONNECTING_2;
 	}
+
+	private function sendNewIncomingConnection() : void
+    {
+      $address = $this->player->getServer()->getAddress();
+      if (empty($address) || $address === "0.0.0.0") {
+         $address = "127.0.0.1";
+      }
+
+      $port = $this->player->getServer()->getPort();
+
+      $packet = new AquaNewIncomingConnection();
+    
+      $packet->address = new InternetAddress($address, $port, 4);
+
+      $internalAddr = new InternetAddress("127.0.0.1", 0, 4);
+      $packet->systemAddresses = [];
+      
+      for ($i = 0; $i < 10; ++$i) {
+          $packet->systemAddresses[] = $internalAddr;
+      }
+
+      $ping = (int) (microtime(true) * 1000);
+      $packet->sendPingTime = $ping;
+      $packet->sendPongTime = $ping;
+
+      $this->sendEncapsulated($packet);
+    }
 
 	private function sendConnectionRequest() : void
 	{
@@ -162,25 +187,6 @@ final class BackendRakClient
 		$pk->useSecurity = true;
 		$this->sendEncapsulated($pk);
 		$this->state = ConnectionState::CONNECTING_3;
-	}
-
-	private function sendNewIncomingConnection() : void
-	{
-		$address = $this->player->getServer()->getAddress();
-		$port = $this->player->getServer()->getPort();
-
-		$packet = new NewIncomingConnection();
-		$packet->address = new InternetAddress($address, $port, 4);
-
-		for ($i = 0; $i < 10; ++$i) {
-			$packet->systemAddresses[] = new InternetAddress($address, $port, 4);
-		}
-
-		$ping = (int) (microtime(true) * 1000);
-		$packet->sendPingTime =  $ping;
-		$packet->sendPongTime = $ping;
-
-		$this->sendEncapsulated($packet);
 	}
 
 	private function sendNetworkSettingsRequest() : void
