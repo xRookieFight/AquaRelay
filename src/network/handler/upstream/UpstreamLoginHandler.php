@@ -96,7 +96,7 @@ class UpstreamLoginHandler extends AbstractUpstreamPacketHandler
 				$this->session->setPlayer($player);
 
 			} catch (\Exception $e) {
-				$this->session->disconnect('Login decode error: ' . $e->getMessage());
+				$this->session->disconnect(TranslationFactory::translate('session.login.decode_error', [$e->getMessage()]));
 
 				return false;
 			}

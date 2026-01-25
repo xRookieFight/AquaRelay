@@ -280,7 +280,7 @@ class ProxyServer
 
 		foreach ($this->getOnlinePlayers() as $player) {
 			// @var Player $player
-			$player->disconnect('Proxy is shutting down');
+			$player->disconnect(TranslationFactory::translate('proxy.shutdown'));
 		}
 
 		foreach ($this->pluginManager->getPlugins() as $plugin) {
