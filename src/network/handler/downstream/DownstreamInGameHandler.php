@@ -24,14 +24,22 @@ declare(strict_types=1);
 
 namespace aquarelay\network\handler\downstream;
 
+use pocketmine\network\mcpe\protocol\AvailableCommandsPacket;
 use pocketmine\network\mcpe\protocol\PlayStatusPacket;
 use pocketmine\network\mcpe\protocol\RequestChunkRadiusPacket;
-use pocketmine\network\mcpe\protocol\SetLocalPlayerAsInitializedPacket;
 use pocketmine\network\mcpe\protocol\StartGamePacket;
 use function is_null;
 
 class DownstreamInGameHandler extends AbstractDownstreamPacketHandler
 {
+
+	public function handleAvailableCommands(AvailableCommandsPacket $packet): bool
+	{
+		// TODO: Command injection system
+		// EXAMPLE: $packet->commandData[] = new CommandRawData("test", "Test command for AquaRelay", 0, "any", -1, [], []);
+		$this->getPlayer()->setHandler(new DownstreamInGameHandler($this->getPlayer(), $this->logger));
+		return true;
+	}
 
 	public function handleStartGame(StartGamePacket $packet) : bool
 	{
@@ -41,6 +49,7 @@ class DownstreamInGameHandler extends AbstractDownstreamPacketHandler
 
 		$this->getPlayer()->getDownstream()->sendGamePacket($chunkRadiusPacket);
 		$this->getPlayer()->backendRuntimeId = $packet->actorRuntimeId;
+
 		return true;
 	}
 
@@ -48,7 +57,6 @@ class DownstreamInGameHandler extends AbstractDownstreamPacketHandler
 	{
 		if ($packet->status === PlayStatusPacket::LOGIN_SUCCESS) {
 			$this->getPlayer()->getNetworkSession()->debug('Forwarding LOGIN_SUCCESS from backend to client');
-			$this->getPlayer()->sendDataPacket($packet);
 			return true;
 		}
 		if ($packet->status === PlayStatusPacket::PLAYER_SPAWN) {
@@ -56,12 +64,9 @@ class DownstreamInGameHandler extends AbstractDownstreamPacketHandler
 				$this->getPlayer()->getNetworkSession()->debug('Cannot send spawn notification: backendRuntimeId is null.');
 			} else {
 				$this->getPlayer()->getNetworkSession()->debug('Sending spawn notification, waiting for spawn response');
-				$init = SetLocalPlayerAsInitializedPacket::create($this->getPlayer()->backendRuntimeId);
-				$this->getPlayer()->getDownstream()->sendGamePacket($init);
 			}
 		}
 
-		$this->getPlayer()->sendDataPacket($packet);
 		return true;
 	}
 }

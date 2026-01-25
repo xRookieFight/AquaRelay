@@ -38,7 +38,6 @@ class UpstreamPreLoginHandler extends AbstractUpstreamPacketHandler
 		$protocolVersion = $packet->getProtocolVersion();
 		if (!$this->isCompatibleProtocol($protocolVersion)) {
 			$this->session->sendDataPacket(PlayStatusPacket::create(PlayStatusPacket::LOGIN_FAILED_SERVER));
-
 			return true;
 		}
 

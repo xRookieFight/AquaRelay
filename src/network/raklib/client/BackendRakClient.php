@@ -35,9 +35,11 @@ use raklib\client\ClientSocket;
 use raklib\generic\SocketException;
 use raklib\protocol\ConnectionRequest;
 use raklib\protocol\DisconnectionNotification;
+use raklib\protocol\NewIncomingConnection;
 use raklib\protocol\OpenConnectionReply1;
 use raklib\protocol\OpenConnectionReply2;
 use raklib\protocol\OpenConnectionRequest1;
+use raklib\protocol\OpenConnectionRequest2;
 use raklib\protocol\Packet;
 use raklib\protocol\PacketSerializer;
 use raklib\protocol\UnconnectedPing;
@@ -140,21 +142,15 @@ final class BackendRakClient
 
 	private function sendRequest2() : void
 	{
-		$stream = new PacketSerializer();
-        $stream->putByte(0x07);
-        $stream->put("\x00\xff\xff\x00\xfe\xfe\xfe\xfe\xfd\xfd\xfd\xfd\x12\x34\x56\x78");
-        $stream->put("\x04\x7f\x00\x00\x01\x4a\xbc");
-        $stream->putShort($this->mtu);
-        $stream->putLong($this->clientId);
-        
-        if ($this->rakCookie !== null) {
-            $stream->putByte(1); 
-            $stream->putInt($this->rakCookie);
-        } else {
-            $stream->putByte(0);
-        }
-        
-        $this->sendRaw($stream->getBuffer());
+		$packet = new OpenConnectionRequest2();
+		$packet->clientID = $this->clientId;
+		if (!is_null($this->rakCookie)){
+			$packet->cookie = $this->rakCookie;
+		}
+		$packet->mtuSize = $this->mtu;
+		$packet->serverAddress = $this->address;
+
+		$this->sendRawPacket($packet);
         $this->state = ConnectionState::CONNECTING_2;
 	}
 
@@ -170,15 +166,21 @@ final class BackendRakClient
 
 	private function sendNewIncomingConnection() : void
 	{
-		$stream = new PacketSerializer();
-        $stream->putByte(0x13);
-        $stream->put("\x04\x7f\x00\x00\x01\x00\x00");
-        for ($i = 0; $i < 10; ++$i) {
-            $stream->put("\x04\x7f\x00\x00\x01\x00\x00");
-        }
-        $stream->putLong((int)(microtime(true) * 1000));
-        $stream->putLong((int)(microtime(true) * 1000));
-        $this->sendEncapsulatedRaw($stream->getBuffer());
+		$address = $this->player->getServer()->getAddress();
+		$port = $this->player->getServer()->getPort();
+
+		$packet = new NewIncomingConnection();
+		$packet->address = new InternetAddress($address, $port, 4);
+
+		for ($i = 0; $i < 10; ++$i) {
+			$packet->systemAddresses[] = new InternetAddress($address, $port, 4);
+		}
+
+		$ping = (int) (microtime(true) * 1000);
+		$packet->sendPingTime =  $ping;
+		$packet->sendPongTime = $ping;
+
+		$this->sendEncapsulated($packet);
 	}
 
 	private function sendNetworkSettingsRequest() : void

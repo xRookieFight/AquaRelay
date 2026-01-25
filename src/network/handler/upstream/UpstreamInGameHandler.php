@@ -142,12 +142,6 @@ class UpstreamInGameHandler extends AbstractUpstreamPacketHandler
 		return true;
 	}
 
-	public function handleMobEquipment(MobEquipmentPacket $packet) : bool
-	{
-		$this->forward($packet);
-		return true;
-	}
-
 	public function handleAnimate(AnimatePacket $packet) : bool
 	{
 		$this->forward($packet);
@@ -161,12 +155,6 @@ class UpstreamInGameHandler extends AbstractUpstreamPacketHandler
 	}
 
 	public function handleLevelSoundEvent(LevelSoundEventPacket $packet) : bool
-	{
-		$this->forward($packet);
-		return true;
-	}
-
-	public function handleServerboundLoadingScreen(ServerboundLoadingScreenPacket $packet) : bool
 	{
 		$this->forward($packet);
 		return true;
