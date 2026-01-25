@@ -24,20 +24,17 @@ declare(strict_types=1);
 
 namespace aquarelay\network\handler\downstream;
 
-use pocketmine\network\mcpe\protocol\ResourcePackClientResponsePacket;
-use pocketmine\network\mcpe\protocol\ResourcePacksInfoPacket;
+use pocketmine\network\mcpe\protocol\AvailableCommandsPacket;
+use pocketmine\network\mcpe\protocol\types\command\raw\CommandRawData;
 
-class DownstreamResourcePackHandler extends AbstractDownstreamPacketHandler
+class DownstreamCommandHandler extends AbstractDownstreamPacketHandler
 {
-	public function handleResourcePacksInfo(ResourcePacksInfoPacket $packet) : bool
-	{
-		$pk = ResourcePackClientResponsePacket::create(
-			ResourcePackClientResponsePacket::STATUS_COMPLETED,
-			[]
-		);
-		$this->getPlayer()->sendToBackend($pk);
 
-		$this->getPlayer()->setHandler(new DownstreamCommandHandler($this->getPlayer(), $this->logger));
+	public function handleAvailableCommands(AvailableCommandsPacket $packet): bool
+	{
+		// TODO: Command injection system
+		// EXAMPLE: $packet->commandData[] = new CommandRawData("test", "Test command for AquaRelay", 0, "any", -1, [], []);
+		$this->getPlayer()->setHandler(new DownstreamInGameHandler($this->getPlayer(), $this->logger));
 		return true;
 	}
 }
