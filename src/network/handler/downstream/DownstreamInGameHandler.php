@@ -73,13 +73,21 @@ class DownstreamInGameHandler extends AbstractDownstreamPacketHandler
 
     public function handleTransfer(TransferPacket $packet): bool
     {
+		$serverManager = $this->getPlayer()->getServer()->getServerManager();
         $ipAddress = $packet->address;
+
+		$server = $serverManager->get($ipAddress);
+		if ($server !== null){
+			$this->getPlayer()->transferToBackend($server);
+			return true;
+		}
+
         $port = $packet->port;
-        $serverManager = $this->getPlayer()->getServer()->getServerManager();
 
         foreach ($serverManager->getAll() as $data) {
             if ($data->getAddress() === $ipAddress && $data->getPort() === $port) {
                 $this->getPlayer()->transferToBackend($serverManager->get($data->getName()));
+				break;
             }
         }
 
