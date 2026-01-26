@@ -138,8 +138,10 @@ class NetworkSession
 		$player = $this->player;
 		if ($player === null) return;
 
-		$targetIp = $this->server->getConfig()->getNetworkSettings()->getBackendAddress();
-		$targetPort = $this->server->getConfig()->getNetworkSettings()->getBackendPort();
+		$backend = $this->server->getServerManager()->select();
+
+		$targetIp = $backend->getAddress();
+		$targetPort = $backend->getPort();
 
 		$this->debug("Connecting to $targetIp:$targetPort...");
 

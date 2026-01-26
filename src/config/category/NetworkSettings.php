@@ -29,8 +29,6 @@ final class NetworkSettings
 	public function __construct(
 		private string $bindAddress,
 		private int $bindPort,
-		private string $backendAddress,
-		private int $backendPort,
 		private int $batchThreshold,
 		private int $compressionLevel,
 		private int $maxMtu
@@ -54,26 +52,6 @@ final class NetworkSettings
 	public function setBindPort(int $bindPort) : void
 	{
 		$this->bindPort = $bindPort;
-	}
-
-	public function getBackendAddress() : string
-	{
-		return $this->backendAddress;
-	}
-
-	public function setBackendAddress(string $backendAddress) : void
-	{
-		$this->backendAddress = $backendAddress;
-	}
-
-	public function getBackendPort() : int
-	{
-		return $this->backendPort;
-	}
-
-	public function setBackendPort(int $backendPort) : void
-	{
-		$this->backendPort = $backendPort;
 	}
 
 	public function getBatchThreshold() : int

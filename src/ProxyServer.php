@@ -34,6 +34,7 @@ use aquarelay\player\Player;
 use aquarelay\player\PlayerManager;
 use aquarelay\plugin\PluginLoader;
 use aquarelay\plugin\PluginManager;
+use aquarelay\server\ServerManager;
 use aquarelay\task\TaskScheduler;
 use aquarelay\utils\Colors;
 use aquarelay\utils\MainLogger;
@@ -64,6 +65,7 @@ class ProxyServer
 	private PluginManager $pluginManager;
 	private TaskScheduler $taskScheduler;
 	private ProxyLoop $proxyLoop;
+	private ServerManager $serverManager;
 
 	private float $startProcessTime;
 
@@ -142,6 +144,8 @@ class ProxyServer
 		$this->logger->info("Listening on {$this->getAddress()}:{$this->getPort()}");
 
 		$this->interface->start();
+
+		$this->serverManager = new ServerManager($this->getConfig()->getServerSettings());
 
 		$this->logger->info('Proxy started! (' . round(microtime(true) - $this->startProcessTime, 3) . 's)');
 
@@ -267,6 +271,10 @@ class ProxyServer
 	public function getProxyLoop() : ProxyLoop
 	{
 		return $this->proxyLoop;
+	}
+
+	public function getServerManager() : ServerManager {
+		return $this->serverManager;
 	}
 
 	/**

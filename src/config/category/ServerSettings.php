@@ -22,43 +22,22 @@
 
 declare(strict_types=1);
 
-namespace aquarelay\config;
+namespace aquarelay\config\category;
 
-use aquarelay\utils\InstanceTrait;
-use function array_key_exists;
-use function is_array;
-
-class ConfigUpdater
+final class ServerSettings
 {
-	use InstanceTrait;
+	public function __construct(
+		private array $servers,
+		private string $selectionStrategy
+	) {}
 
-	public const CONFIG_VERSION = 3;
-
-	public function isUpToDate(int $configVersion) : bool
+	public function getServers() : array
 	{
-		return $configVersion >= self::CONFIG_VERSION;
+		return $this->servers;
 	}
 
-	public function update(array $current, array $config) : array
+	public function getSelectionStrategy() : string
 	{
-		foreach ($config as $key => $value) {
-			if (!array_key_exists($key, $current)) {
-				$current[$key] = $value;
-
-				continue;
-			}
-
-			if (is_array($value) && is_array($current[$key])) {
-				$current[$key] = self::update($current[$key], $value);
-			}
-		}
-
-		foreach ($current as $key => $_) {
-			if (!array_key_exists($key, $config)) {
-				unset($current[$key]);
-			}
-		}
-
-		return $current;
+		return $this->selectionStrategy;
 	}
 }

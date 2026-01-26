@@ -7,10 +7,6 @@ network-settings:
     address: 0.0.0.0 # IP address the proxy will bind to (0.0.0.0 = all interfaces)
     port: 19132 # Port that players will connect to
 
-  backend:
-    address: 127.0.0.1 # IP address of the backend (target) server
-    port: 19133 # Port of the backend server
-
   batch-threshold: 256 # Packet batch size threshold for enabling compression (-1 to disable)
   compression-level: 6 # Compression level used for network packets (higher = more compression)
   max-mtu: 1492 # Maximum MTU size for RakNet packets
@@ -19,6 +15,19 @@ misc-settings:
   debug-mode: false # Enables debug logging for development and troubleshooting
   log-name: proxy.log # File name used for proxy log output
   language: eng # Selected language for the runtime process
+
+server-settings:
+  servers:
+    lobby-1:
+      address: 127.0.0.1 # IP address of the server
+      port: 19133 # Port of the server
+      priority: 1 # Priority of the server
+    lobby-2:
+      address: 127.0.0.1
+      port: 19134
+      priority: 2 # It will join into lobby-1 which has more priority
+
+  selection-strategy: priority # priority | round-robin | random
 
 game-settings:
   max-players: 50 # Maximum number of players allowed to connect
