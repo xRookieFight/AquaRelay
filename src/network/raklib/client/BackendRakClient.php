@@ -48,7 +48,6 @@ use raklib\protocol\PacketSerializer;
 use raklib\protocol\UnconnectedPing;
 use raklib\utils\InternetAddress;
 use Ramsey\Uuid\Uuid;
-use Random\RandomException;
 use function ceil;
 use function count;
 use function implode;
@@ -94,9 +93,6 @@ final class BackendRakClient
 	private array $sendQueue = [];
 	private ?int $rakCookie;
 
-	/**
-	 * @throws RandomException
-	 */
 	public function __construct(
 		private InternetAddress $address,
 		private Player $player
@@ -121,7 +117,7 @@ final class BackendRakClient
 		$this->encodeAndSend($packet);
 	}
 
-	public function tick(callable $onPacket) : void
+	public function tick() : void
 	{
 		try {
 			while (($buf = $this->socket->readPacket()) !== null) {
@@ -131,7 +127,7 @@ final class BackendRakClient
 					$this->handleInternalPacket($buf);
 				} else {
 					$this->sendAck($buf);
-					$this->handleDatagram($buf, $onPacket);
+					$this->handleDatagram($buf);
 				}
 			}
 		} catch (SocketException $e) {
@@ -169,18 +165,11 @@ final class BackendRakClient
 		$packet->clientID = $this->clientId;
 		$packet->serverAddress = new InternetAddress($this->address->getIp(), $this->address->getPort(), 4);
 		$packet->mtuSize = $this->mtu;
-
-		$s = new PacketSerializer();
-		$packet->encode($s);
-
 		if ($this->rakCookie !== null) {
-			$s->putByte(1);
-			$s->putInt($this->rakCookie);
-		} else {
-			$s->putByte(0);
+			$packet->cookie = $this->rakCookie;
 		}
 
-		$this->sendRaw($s->getBuffer());
+		$this->sendRawPacket($packet);
 		$this->state = ConnectionState::CONNECTING_2;
 	}
 
@@ -302,7 +291,7 @@ final class BackendRakClient
 		}
 	}
 
-	private function handleDatagram(string $buf, callable $onPacket) : void
+	private function handleDatagram(string $buf) : void
 	{
 		$s = new PacketSerializer($buf);
 		$s->getByte();
@@ -327,9 +316,9 @@ final class BackendRakClient
 					$count = $s->getInt();
 					$id = $s->getShort();
 					$index = $s->getInt();
-					$this->handleSplit($id, $index, $count, $s->get($length), $onPacket);
+					$this->handleSplit($id, $index, $count, $s->get($length));
 				} else {
-					$this->processPayload($s->get($length), $onPacket);
+					$this->processPayload($s->get($length));
 				}
 			} catch (\Throwable $e) {
 				break;
@@ -337,19 +326,19 @@ final class BackendRakClient
 		}
 	}
 
-	private function handleSplit(int $id, int $index, int $count, string $chunk, callable $onPacket) : void
+	private function handleSplit(int $id, int $index, int $count, string $chunk) : void
 	{
 		$this->splitBuffer[$id] ??= ['total' => $count, 'chunks' => []];
 		$this->splitBuffer[$id]['chunks'][$index] = $chunk;
 
 		if (count($this->splitBuffer[$id]['chunks']) === $count) {
 			ksort($this->splitBuffer[$id]['chunks']);
-			$this->processPayload(implode('', $this->splitBuffer[$id]['chunks']), $onPacket);
+			$this->processPayload(implode('', $this->splitBuffer[$id]['chunks']));
 			unset($this->splitBuffer[$id]);
 		}
 	}
 
-	private function processPayload(string $payload, callable $onPacket) : void
+	private function processPayload(string $payload) : void
 	{
 		if ($payload === '') {
 			return;
@@ -381,7 +370,7 @@ final class BackendRakClient
 				}
 				$this->sendQueue = [];
 			}
-			$onPacket($payload);
+			$this->player->getServer()->getProxyLoop()->handleBackendPayload($this->player, $payload);
 		}
 	}
 

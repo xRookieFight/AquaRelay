@@ -63,6 +63,7 @@ class ProxyServer
 	private PlayerManager $playerManager;
 	private PluginManager $pluginManager;
 	private TaskScheduler $taskScheduler;
+	private ProxyLoop $proxyLoop;
 
 	private float $startProcessTime;
 
@@ -144,8 +145,8 @@ class ProxyServer
 
 		$this->logger->info('Proxy started! (' . round(microtime(true) - $this->startProcessTime, 3) . 's)');
 
-		$loop = new ProxyLoop($this);
-		$loop->run();
+		$this->proxyLoop = new ProxyLoop($this); // TODO: We can merge this into ProxyServer class
+		$this->getProxyLoop()->run();
 	}
 
 	/**
@@ -263,19 +264,12 @@ class ProxyServer
 		return $this->taskScheduler;
 	}
 
-	/**
-	 * Summary of broadcastMessage.
-	 */
-	public function broadcastMessage(string $message) : void
+	public function getProxyLoop() : ProxyLoop
 	{
-		foreach ($this->getOnlinePlayers() as $player) {
-			// @var Player $player
-			$player->sendMessage($message);
-		}
+		return $this->proxyLoop;
 	}
 
 	/**
-	 * Summary of broadcastMessage
 	 * @param string $message
 	 * @return void
 	 */
@@ -292,7 +286,7 @@ class ProxyServer
 		$shutdownStart = microtime(true);
 
 		foreach ($this->getOnlinePlayers() as $player) {
-			// @var Player $player
+			/** @var Player $player */
 			$player->disconnect(TranslationFactory::translate('proxy.shutdown'));
 		}
 
