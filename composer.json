@@ -7,7 +7,7 @@
 		"php": ">=8.2",
 		"pocketmine/raklib": "dev-stable",
 		"pocketmine/snooze": "^0.5.0",
-		"aqaquarelay/raklib-ipc": "dev-master",
+		"aquarelay/raklib-ipc": "dev-master",
 		"ext-pmmpthread": "^6.1.0",
 		"ext-encoding": "~1.0.0",
 		"ext-zlib": ">=1.2.11",
