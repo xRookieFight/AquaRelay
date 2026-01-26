@@ -34,10 +34,10 @@ use function file_put_contents;
 class ProxyConfig
 {
 	public function __construct(
-		private readonly NetworkSettings $networkSettings,
-		private readonly MiscSettings $miscSettings,
+		private readonly GameSettings $gameSettings,
 		private readonly ServerSettings $serverSettings,
-		private readonly GameSettings $gameSettings
+		private readonly MiscSettings $miscSettings,
+		private readonly NetworkSettings $networkSettings
 	) {}
 
 	public static function load(string $file) : self
@@ -54,45 +54,40 @@ class ProxyConfig
 			file_put_contents($file, Yaml::dump($data, 4, 2));
 		}
 
-		$networkSettings = $data['network-settings'];
-		$miscSettings = $data['misc-settings'];
-		$serverSettings = $data['server-settings'];
 		$gameSettings = $data['game-settings'];
+		$serverSettings = $data['server-settings'];
+		$miscSettings = $data['misc-settings'];
+		$networkSettings = $data['network-settings'];
 
 		return new self(
-			new NetworkSettings(
-				$networkSettings['bind']['address'],
-				(int) $networkSettings['bind']['port'],
-				(int) $networkSettings['batch-threshold'],
-				(int) $networkSettings['compression-level'],
-				(int) $networkSettings['max-mtu']
-			),
-			new MiscSettings(
-				(bool) $miscSettings['debug-mode'],
-				$miscSettings['log-name'],
-				$miscSettings['language']
-			),
-			new ServerSettings(
-				(array) $serverSettings["servers"],
-				$serverSettings['selection-strategy']
-			),
 			new GameSettings(
 				(int) $gameSettings['max-players'],
 				$gameSettings['motd'],
 				$gameSettings['sub-motd'],
 				(bool) $gameSettings['xbox-auth']
 			),
+			new ServerSettings(
+				(array) $serverSettings["servers"],
+				$serverSettings['selection-strategy']
+			),
+			new MiscSettings(
+				(bool) $miscSettings['debug-mode'],
+				$miscSettings['log-name'],
+				$miscSettings['language']
+			),
+			new NetworkSettings(
+				$networkSettings['bind']['address'],
+				(int) $networkSettings['bind']['port'],
+				(int) $networkSettings['batch-threshold'],
+				(int) $networkSettings['compression-level'],
+				(int) $networkSettings['max-mtu']
+			)
 		);
 	}
 
-	public function getNetworkSettings() : NetworkSettings
+	public function getGameSettings() : GameSettings
 	{
-		return $this->networkSettings;
-	}
-
-	public function getMiscSettings() : MiscSettings
-	{
-		return $this->miscSettings;
+		return $this->gameSettings;
 	}
 
 	public function getServerSettings() : ServerSettings
@@ -100,8 +95,13 @@ class ProxyConfig
 		return $this->serverSettings;
 	}
 
-	public function getGameSettings() : GameSettings
+	public function getMiscSettings() : MiscSettings
 	{
-		return $this->gameSettings;
+		return $this->miscSettings;
+	}
+
+	public function getNetworkSettings() : NetworkSettings
+	{
+		return $this->networkSettings;
 	}
 }
