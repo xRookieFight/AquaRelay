@@ -1,13 +1,14 @@
 <?php
 
 /*
+ *
  *                            _____      _
  *     /\                    |  __ \    | |
  *    /  \   __ _ _   _  __ _| |__) |___| | __ _ _   _
  *   / /\ \ / _` | | | |/ _` |  _  // _ \ |/ _` | | | |
  *  / ____ \ (_| | |_| | (_| | | \ \  __/ | (_| | |_| |
  * /_/    \_\__, |\__,_|\__,_|_|  \_\___|_|\__,_|\__, |
- *             |_|                                |___/
+ *               |_|                              |___/
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -26,17 +27,15 @@ namespace aquarelay\plugin;
 use aquarelay\config\Config;
 use aquarelay\ProxyServer;
 use aquarelay\task\TaskScheduler;
-use Symfony\Component\Yaml\Yaml;
-
-use function file_exists;
 use function is_dir;
 use function mkdir;
+use const DIRECTORY_SEPARATOR;
 
 /**
- * Base class for all AquaRelay plugins
+ * Base class for all AquaRelay plugins.
  */
-abstract class Plugin {
-
+abstract class Plugin
+{
 	private PluginDescription $description;
 	private ProxyServer $server;
 	private bool $enabled = false;
@@ -44,28 +43,22 @@ abstract class Plugin {
 	private ?Config $config = null;
 
 	/**
-	 * Called when the plugin is loaded
+	 * Called when the plugin is loaded.
 	 */
-	public function onLoad() : void
-	{
-	}
+	public function onLoad() : void {}
 
 	/**
-	 * Called when the plugin is enabled
+	 * Called when the plugin is enabled.
 	 */
-	public function onEnable() : void
-	{
-	}
+	public function onEnable() : void {}
 
 	/**
-	 * Called when the plugin is disabled
+	 * Called when the plugin is disabled.
 	 */
-	public function onDisable() : void
-	{
-	}
+	public function onDisable() : void {}
 
 	/**
-	 * Sets the plugin description
+	 * Sets the plugin description.
 	 */
 	public function setDescription(PluginDescription $description) : void
 	{
@@ -73,7 +66,7 @@ abstract class Plugin {
 	}
 
 	/**
-	 * Gets the plugin description
+	 * Gets the plugin description.
 	 */
 	public function getDescription() : PluginDescription
 	{
@@ -81,7 +74,7 @@ abstract class Plugin {
 	}
 
 	/**
-	 * Sets the server instance
+	 * Sets the server instance.
 	 */
 	public function setServer(ProxyServer $server) : void
 	{
@@ -89,7 +82,7 @@ abstract class Plugin {
 	}
 
 	/**
-	 * Gets the server instance
+	 * Gets the server instance.
 	 */
 	public function getServer() : ProxyServer
 	{
@@ -97,7 +90,7 @@ abstract class Plugin {
 	}
 
 	/**
-	 * Gets the plugin name
+	 * Gets the plugin name.
 	 */
 	public function getName() : string
 	{
@@ -105,7 +98,7 @@ abstract class Plugin {
 	}
 
 	/**
-	 * Gets the plugin version
+	 * Gets the plugin version.
 	 */
 	public function getVersion() : string
 	{
@@ -113,7 +106,7 @@ abstract class Plugin {
 	}
 
 	/**
-	 * Gets the plugin authors
+	 * Gets the plugin authors.
 	 */
 	public function getAuthors() : array
 	{
@@ -121,7 +114,7 @@ abstract class Plugin {
 	}
 
 	/**
-	 * Checks if the plugin is enabled
+	 * Checks if the plugin is enabled.
 	 */
 	public function isEnabled() : bool
 	{
@@ -129,7 +122,7 @@ abstract class Plugin {
 	}
 
 	/**
-	 * Sets the enabled state
+	 * Sets the enabled state.
 	 */
 	public function setEnabled(bool $enabled) : void
 	{
@@ -137,8 +130,7 @@ abstract class Plugin {
 	}
 
 	/**
-	 * Returns task scheduler, alias of ProxyServer#getScheduler
-	 * @return TaskScheduler
+	 * Returns task scheduler, alias of ProxyServer#getScheduler.
 	 */
 	public function getScheduler() : TaskScheduler
 	{
@@ -146,18 +138,18 @@ abstract class Plugin {
 	}
 
 	/**
-	 * Sets the data folder for the plugin
+	 * Sets the data folder for the plugin.
 	 */
 	public function setDataFolder(string $dataFolder) : void
 	{
 		$this->dataFolder = $dataFolder;
 		if (!is_dir($this->dataFolder)) {
-			mkdir($this->dataFolder, 0755, true);
+			mkdir($this->dataFolder, 0o755, true);
 		}
 	}
 
 	/**
-	 * Gets the data folder for the plugin
+	 * Gets the data folder for the plugin.
 	 */
 	public function getDataFolder() : string
 	{
@@ -165,7 +157,7 @@ abstract class Plugin {
 	}
 
 	/**
-	 * Gets the config object
+	 * Gets the config object.
 	 */
 	public function getConfig() : Config
 	{
@@ -173,6 +165,7 @@ abstract class Plugin {
 			$configPath = $this->dataFolder . DIRECTORY_SEPARATOR . 'config.yml';
 			$this->config = new Config($configPath);
 		}
+
 		return $this->config;
 	}
 }

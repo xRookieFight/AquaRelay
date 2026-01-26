@@ -1,13 +1,14 @@
 <?php
 
 /*
+ *
  *                            _____      _
  *     /\                    |  __ \    | |
  *    /  \   __ _ _   _  __ _| |__) |___| | __ _ _   _
  *   / /\ \ / _` | | | |/ _` |  _  // _ \ |/ _` | | | |
  *  / ____ \ (_| | |_| | (_| | | \ \  __/ | (_| | |_| |
  * /_/    \_\__, |\__,_|\__,_|_|  \_\___|_|\__,_|\__, |
- *             |_|                                |___/
+ *               |_|                              |___/
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -24,9 +25,11 @@ declare(strict_types=1);
 namespace aquarelay\config;
 
 use aquarelay\utils\InstanceTrait;
+use function array_key_exists;
+use function is_array;
 
-class ConfigUpdater {
-
+class ConfigUpdater
+{
 	use InstanceTrait;
 
 	public const CONFIG_VERSION = 2;
@@ -36,10 +39,12 @@ class ConfigUpdater {
 		return $configVersion >= self::CONFIG_VERSION;
 	}
 
-	public function update(array $current, array $config) : array {
+	public function update(array $current, array $config) : array
+	{
 		foreach ($config as $key => $value) {
 			if (!array_key_exists($key, $current)) {
 				$current[$key] = $value;
+
 				continue;
 			}
 

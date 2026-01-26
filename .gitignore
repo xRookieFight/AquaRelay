@@ -1,8 +1,10 @@
+# Jetbrains & Netbeams
 .idea/*
 !.idea/codeStyles/
 !.idea/fileTemplates/
 nbproject/*
 
+# Garbage stuff
 Thumbs.db
 
 Desktop.ini
@@ -10,7 +12,11 @@ Desktop.ini
 .DS_Store
 /nbproject/private/
 
+# Composer
 vendor/*
+
+# PHPCSFixer
+.php-cs-fixer.cache
 
 # AquaRelay files
 config.yml

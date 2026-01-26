@@ -22,42 +22,22 @@
 
 declare(strict_types=1);
 
-namespace aquarelay\task;
+namespace aquarelay\network\handler\downstream;
 
-class DelayedTask extends Task
+use pocketmine\network\mcpe\protocol\ResourcePackClientResponsePacket;
+use pocketmine\network\mcpe\protocol\ResourcePacksInfoPacket;
+
+class DownstreamResourcePackHandler extends AbstractDownstreamPacketHandler
 {
-	private int $delay;
-	private int $elapsedTicks = 0;
-
-	public function __construct(
-		private Task $task,
-		int $delay
-	) {
-		parent::__construct();
-		$this->delay = $delay;
-	}
-
-	public function getDelay() : int
+	public function handleResourcePacksInfo(ResourcePacksInfoPacket $packet) : bool
 	{
-		return $this->delay;
-	}
+		$pk = ResourcePackClientResponsePacket::create(
+			ResourcePackClientResponsePacket::STATUS_COMPLETED,
+			[]
+		);
+		$this->getPlayer()->sendToBackend($pk);
 
-	public function getElapsedTicks() : int
-	{
-		return $this->elapsedTicks;
-	}
-
-	public function onRun() : void
-	{
-		++$this->elapsedTicks;
-
-		if ($this->elapsedTicks >= $this->delay && !$this->task->isCancelled() && !$this->isCancelled()) {
-			$this->task->onRun();
-		}
-	}
-
-	public function isReady() : bool
-	{
-		return $this->elapsedTicks >= $this->delay;
+		$this->getPlayer()->setHandler(new DownstreamInGameHandler($this->getPlayer(), $this->logger));
+		return true;
 	}
 }

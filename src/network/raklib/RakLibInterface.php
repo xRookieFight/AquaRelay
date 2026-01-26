@@ -1,13 +1,14 @@
 <?php
 
 /*
+ *
  *                            _____      _
  *     /\                    |  __ \    | |
  *    /  \   __ _ _   _  __ _| |__) |___| | __ _ _   _
  *   / /\ \ / _` | | | |/ _` |  _  // _ \ |/ _` | | | |
  *  / ____ \ (_| | |_| | (_| | | \ \  __/ | (_| | |_| |
  * /_/    \_\__, |\__,_|\__,_|_|  \_\___|_|\__,_|\__, |
- *             |_|                                |___/
+ *               |_|                              |___/
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -34,13 +35,17 @@ use raklib\protocol\PacketReliability;
 use raklib\server\ipc\RakLibToUserThreadMessageReceiver;
 use raklib\server\ipc\UserToRakLibThreadMessageSender;
 use raklib\server\ServerEventListener;
+use function addcslashes;
+use function implode;
+use function random_int;
+use function rtrim;
 
-class RakLibInterface implements ServerEventListener {
+class RakLibInterface implements ServerEventListener
+{
+	public const MCPE_RAKNET_PACKET_ID = "\xfe";
+	public const RAKNET_PROTOCOL_VERSION = 11;
 
 	private int $tickCounter = 0;
-
-	const MCPE_RAKNET_PACKET_ID = "\xfe";
-	const RAKNET_PROTOCOL_VERSION = 11;
 
 	private RakLibServerThread $thread;
 	private RakLibToUserThreadMessageReceiver $eventReceiver;
@@ -48,22 +53,20 @@ class RakLibInterface implements ServerEventListener {
 
 	/** @var callable(int, string, int, int): void */
 	private $onConnect;
+
 	/** @var callable(int, string): void */
 	private $onPacket;
+
 	/** @var callable(int, string): void */
 	private $onDisconnect;
+
 	/** @var callable(int, string): void */
 	private $onPing;
-	/** @var int */
 	private int $rakServerId;
 
-	public function getInterface() : UserToRakLibThreadMessageSender
+	public function __construct(string $mainPath, MainLogger $logger, string $address, int $port, int $maxMtu)
 	{
-		return $this->interface;
-	}
-
-	public function __construct(string $mainPath, MainLogger $logger, string $address, int $port, int $maxMtu) {
-		$this->rakServerId = mt_rand(0, 1000000);
+		$this->rakServerId = random_int(0, 1000000);
 		$this->thread = new RakLibServerThread($mainPath, $logger, $address, $port, $maxMtu, self::RAKNET_PROTOCOL_VERSION, $this->rakServerId);
 
 		$this->eventReceiver = new RakLibToUserThreadMessageReceiver(
@@ -74,19 +77,27 @@ class RakLibInterface implements ServerEventListener {
 		);
 	}
 
-	public function setHandlers(callable $onConnect, callable $onPacket, callable $onDisconnect, callable $onPing): void {
+	public function getInterface() : UserToRakLibThreadMessageSender
+	{
+		return $this->interface;
+	}
+
+	public function setHandlers(callable $onConnect, callable $onPacket, callable $onDisconnect, callable $onPing) : void
+	{
 		$this->onConnect = $onConnect;
 		$this->onPacket = $onPacket;
 		$this->onDisconnect = $onDisconnect;
 		$this->onPing = $onPing;
 	}
 
-	public function start(): void {
+	public function start() : void
+	{
 		$this->thread->start(NativeThread::INHERIT_NONE);
 	}
 
-	public function tick() : void {
-		while($this->eventReceiver->handle($this));
+	public function tick() : void
+	{
+		while ($this->eventReceiver->handle($this));
 
 		if (++$this->tickCounter >= 20) {
 			$this->tickCounter = 0;
@@ -95,7 +106,8 @@ class RakLibInterface implements ServerEventListener {
 		}
 	}
 
-	public function sendPacket(int $sessionId, string $payload, bool $immediate = true, ?int $receiptId = null): void {
+	public function sendPacket(int $sessionId, string $payload, bool $immediate = true, ?int $receiptId = null) : void
+	{
 		$pk = new EncapsulatedPacket();
 		$pk->buffer = self::MCPE_RAKNET_PACKET_ID . $payload;
 		$pk->reliability = PacketReliability::RELIABLE_ORDERED;
@@ -105,39 +117,47 @@ class RakLibInterface implements ServerEventListener {
 		$this->interface->sendEncapsulated($sessionId, $pk, $immediate);
 	}
 
-	public function closeSession(int $sessionId): void {
+	public function closeSession(int $sessionId) : void
+	{
 		$this->interface->closeSession($sessionId);
 	}
 
-	public function shutdown(): void {
+	public function shutdown() : void
+	{
 		$this->thread->stop();
 		$this->thread->join();
 	}
 
-	public function onClientConnect(int $sessionId, string $address, int $port, int $clientID): void {
+	public function onClientConnect(int $sessionId, string $address, int $port, int $clientID) : void
+	{
 		($this->onConnect)($sessionId, $address, $port, $clientID);
 	}
 
-	public function onPacketReceive(int $sessionId, string $packet): void {
+	public function onPacketReceive(int $sessionId, string $packet) : void
+	{
 		($this->onPacket)($sessionId, $packet);
 	}
 
-	public function onClientDisconnect(int $sessionId, int $reason): void {
-		($this->onDisconnect)($sessionId, "Reason: $reason");
+	public function onClientDisconnect(int $sessionId, int $reason) : void
+	{
+		($this->onDisconnect)($sessionId, $reason);
 	}
 
-	public function close(int $sessionId) : void{
-		if(isset($this->sessions[$sessionId])){
+	public function close(int $sessionId) : void
+	{
+		if (isset($this->sessions[$sessionId])) {
 			unset($this->sessions[$sessionId]);
 			$this->interface->closeSession($sessionId);
 		}
 	}
 
-	public function setPacketLimit(int $limit) : void{
+	public function setPacketLimit(int $limit) : void
+	{
 		$this->interface->setPacketsPerTickLimit($limit);
 	}
 
-	public function setPortCheck(bool $check) : void{
+	public function setPortCheck(bool $check) : void
+	{
 		$this->interface->setPortCheck($check);
 	}
 
@@ -145,26 +165,32 @@ class RakLibInterface implements ServerEventListener {
 	{
 		$server = ProxyServer::getInstance();
 		$config = $server->getConfig();
-		$this->interface->setName(implode(";",
+		$this->interface->setName(
+			implode(
+				';',
 				[
-					"MCPE",
-					rtrim(addcslashes($name, ";"), '\\'),
+					'MCPE',
+					rtrim(addcslashes($name, ';'), '\\'),
 					ProtocolInfo::CURRENT_PROTOCOL,
 					ProtocolInfo::MINECRAFT_VERSION_NETWORK,
 					$server->getOnlinePlayerCount(),
 					$config->getGameSettings()->getMaxPlayers(),
 					$this->rakServerId,
 					$subMotd,
-					"Survival" // This shouldn't matter since we're a proxy
-				]) . ";"
+					'Survival', // This shouldn't matter since we're a proxy
+				]
+			) . ';'
 		);
 	}
 
-	public function onPingMeasure(int $sessionId, int $pingMS): void {
+	public function onPingMeasure(int $sessionId, int $pingMS) : void
+	{
 		($this->onPing)($sessionId, $pingMS);
 	}
 
-	public function onPacketAck(int $sessionId, int $identifierACK): void {}
-	public function onBandwidthStatsUpdate(int $bytesSentDiff, int $bytesReceivedDiff): void {}
-	public function onRawPacketReceive(string $address, int $port, string $payload): void {}
+	public function onPacketAck(int $sessionId, int $identifierACK) : void {}
+
+	public function onBandwidthStatsUpdate(int $bytesSentDiff, int $bytesReceivedDiff) : void {}
+
+	public function onRawPacketReceive(string $address, int $port, string $payload) : void {}
 }

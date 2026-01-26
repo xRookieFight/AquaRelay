@@ -1,13 +1,14 @@
 <?php
 
 /*
+ *
  *                            _____      _
  *     /\                    |  __ \    | |
  *    /  \   __ _ _   _  __ _| |__) |___| | __ _ _   _
  *   / /\ \ / _` | | | |/ _` |  _  // _ \ |/ _` | | | |
  *  / ____ \ (_| | |_| | (_| | | \ \  __/ | (_| | |_| |
  * /_/    \_\__, |\__,_|\__,_|_|  \_\___|_|\__,_|\__, |
- *             |_|                                |___/
+ *               |_|                              |___/
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -36,9 +37,12 @@ use raklib\server\ServerSocket;
 use raklib\server\SimpleProtocolAcceptor;
 use raklib\utils\ExceptionTraceCleaner;
 use raklib\utils\InternetAddress;
+use function dirname;
+use function gc_disable;
+use function usleep;
 
-class RakLibServerThread extends Thread {
-
+class RakLibServerThread extends Thread
+{
 	private bool $running = false;
 	private ThreadSafeArray $mainToThread;
 	private ThreadSafeArray $threadToMain;
@@ -51,38 +55,44 @@ class RakLibServerThread extends Thread {
 		private int $maxMtu,
 		private int $protocolVersion,
 		private int $rakServerId
-	){
+	) {
 		$this->mainToThread = new ThreadSafeArray();
 		$this->threadToMain = new ThreadSafeArray();
 	}
 
-	public function getReadBuffer() : ThreadSafeArray {
+	public function getReadBuffer() : ThreadSafeArray
+	{
 		return $this->threadToMain;
 	}
 
-	public function getWriteBuffer() : ThreadSafeArray {
+	public function getWriteBuffer() : ThreadSafeArray
+	{
 		return $this->mainToThread;
 	}
 
-	public function stop() : void {
+	public function stop() : void
+	{
 		$this->running = false;
 	}
 
-	public function run(): void {
+	public function run() : void
+	{
 		gc_disable();
 		$this->running = true;
+
 		require dirname(__DIR__, 3) . '/vendor/autoload.php';
 
 		try {
 			$socket = new ServerSocket(new InternetAddress($this->address, $this->port, 4)); // IPV6 = 6 so we aren't using it for now
 		} catch (SocketException $e) {
-			$this->logger->error("Socket bind failed: " . $e->getMessage());
+			$this->logger->error('Socket bind failed: ' . $e->getMessage());
+
 			return;
 		}
 
 		\GlobalLogger::set($this->logger);
 		$server = new Server(
-			mt_rand(0, 1000000),
+			$this->rakServerId,
 			$this->logger,
 			$socket,
 			$this->maxMtu,
@@ -100,5 +110,4 @@ class RakLibServerThread extends Thread {
 
 		$server->waitShutdown();
 	}
-
 }

@@ -1,13 +1,14 @@
 <?php
 
 /*
+ *
  *                            _____      _
  *     /\                    |  __ \    | |
  *    /  \   __ _ _   _  __ _| |__) |___| | __ _ _   _
  *   / /\ \ / _` | | | |/ _` |  _  // _ \ |/ _` | | | |
  *  / ____ \ (_| | |_| | (_| | | \ \  __/ | (_| | |_| |
  * /_/    \_\__, |\__,_|\__,_|_|  \_\___|_|\__,_|\__, |
- *             |_|                                |___/
+ *               |_|                              |___/
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -24,11 +25,28 @@ declare(strict_types=1);
 namespace aquarelay\build\server_phar;
 
 use Symfony\Component\Filesystem\Path;
+use function array_map;
+use function count;
+use function dirname;
+use function file_exists;
+use function file_get_contents;
+use function getcwd;
+use function getopt;
+use function implode;
+use function ini_get;
+use function preg_quote;
+use function realpath;
+use function rtrim;
+use function sprintf;
+use function str_replace;
+use function unlink;
+use const DIRECTORY_SEPARATOR;
 
 require dirname(__DIR__) . '/vendor/autoload.php';
 
-function preg_quote_array(array $strings, string $delim) : array{
-	return array_map(fn(string $str) => preg_quote($str, $delim), $strings);
+function preg_quote_array(array $strings, string $delim) : array
+{
+	return array_map(fn (string $str) => preg_quote($str, $delim), $strings);
 }
 
 function buildPhar(
@@ -39,14 +57,14 @@ function buildPhar(
 	string $stub,
 	int $signatureAlgo = \Phar::SHA1,
 	?int $compression = null
-){
-	$basePath = rtrim(str_replace("/", DIRECTORY_SEPARATOR, $basePath), DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
+) : void {
+	$basePath = rtrim(str_replace('/', DIRECTORY_SEPARATOR, $basePath), DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
 	$includedPaths = array_map(
-		fn(string $p) => rtrim(str_replace("/", DIRECTORY_SEPARATOR, $p), DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR,
+		fn (string $p) => rtrim(str_replace('/', DIRECTORY_SEPARATOR, $p), DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR,
 		$includedPaths
 	);
 
-	echo "Creating AquaRelay phar: $pharPath\n";
+	echo "Creating AquaRelay phar: {$pharPath}\n";
 
 	if (file_exists($pharPath)) {
 		try {
@@ -68,7 +86,7 @@ function buildPhar(
 
 	$folderPatterns = preg_quote_array([
 		DIRECTORY_SEPARATOR . 'tests' . DIRECTORY_SEPARATOR,
-		DIRECTORY_SEPARATOR . '.'
+		DIRECTORY_SEPARATOR . '.',
 	], '/');
 
 	$basePattern = preg_quote(rtrim($basePath, DIRECTORY_SEPARATOR), '/');
@@ -91,7 +109,7 @@ function buildPhar(
 	);
 
 	$count = count($phar->buildFromIterator(new \RegexIterator($it, $regex), $basePath));
-	echo "Added $count files\n";
+	echo "Added {$count} files\n";
 
 	if ($compression !== null) {
 		$phar->compressFiles($compression);
@@ -101,24 +119,26 @@ function buildPhar(
 	echo "AquaRelay build completed\n";
 }
 
-function main() : void{
-	if (ini_get("phar.readonly") === "1") {
+function main() : void
+{
+	if (ini_get('phar.readonly') === '1') {
 		echo "Run with -dphar.readonly=0\n";
+
 		exit(1);
 	}
 
-	$opts = getopt("", ["out:", "build:"]);
-	$build = isset($opts["build"]) ? (int)$opts["build"] : 0;
+	$opts = getopt('', ['out:', 'build:']);
+	$build = isset($opts['build']) ? (int) $opts['build'] : 0;
 
-	$out = $opts["out"] ?? (getcwd() . DIRECTORY_SEPARATOR . "AquaRelay.phar");
+	$out = $opts['out'] ?? (getcwd() . DIRECTORY_SEPARATOR . 'AquaRelay.phar');
 
 	buildPhar(
 		$out,
 		dirname(__DIR__) . DIRECTORY_SEPARATOR,
-		["src", "resources", "vendor"],
+		['src', 'resources', 'vendor'],
 		[
-			"name"  => "AquaRelay",
-			"build" => $build
+			'name' => 'AquaRelay',
+			'build' => $build,
 		],
 		file_get_contents(Path::join(__DIR__, 'phar-stub.php')) . "\n__HALT_COMPILER();",
 		\Phar::SHA1,
