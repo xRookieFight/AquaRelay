@@ -147,15 +147,6 @@ class ProxyServer
 
 		$this->logger->info('Proxy started! (' . round(microtime(true) - $this->startProcessTime, 3) . 's)');
 
-		$ev = new ServerStartEvent($this->startProcessTime);
-		$ev->call();
-
-		if ($ev->isCancelled()) {
-			$this->logger->warning('Server start cancelled by a plugin');
-			$this->shutdown();
-			return;
-		}
-
 		$this->proxyLoop = new ProxyLoop($this); // TODO: We can merge this into ProxyServer class
 		$this->getProxyLoop()->run();
 	}

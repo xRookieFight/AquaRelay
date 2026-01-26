@@ -24,6 +24,7 @@ declare(strict_types=1);
 
 namespace aquarelay\network;
 
+use aquarelay\lang\TranslationFactory;
 use aquarelay\network\compression\DecompressionException;
 use aquarelay\network\compression\ZlibCompressor;
 use aquarelay\network\raklib\RakLibPacketSender;
@@ -86,15 +87,11 @@ class ProxyLoop
 		foreach ($this->sessions as $session) {
 			$player = $session->getPlayer();
 
-			if (($player !== null) && ($player->getDownstream() !== null)) {
-				$player->getDownstream()->tick(function ($payload) use ($player) : void {
-					$this->handleBackendPayload($player, $payload);
-				});
-			}
+			$player?->getDownstream()?->tick();
 		}
 	}
 
-	private function handleBackendPayload(Player $player, string $payload) : void
+	public function handleBackendPayload(Player $player, string $payload) : void
 	{
 		$pid = ord($payload[0]);
 		if ($pid !== 0xFE) {
@@ -109,7 +106,7 @@ class ProxyLoop
 				$buffer = ZlibCompressor::getInstance()->decompress($buffer);
 			}  catch (DecompressionException $e) {
 				$this->server->getLogger()->critical("Backend decompression failed: " . $e->getMessage());
-			    $player->disconnect("Proxy Error: Corrupt Packet Data");
+			    $player->disconnect(TranslationFactory::translate("session.login.corrupt_packet"));
 			    return;
 		    }
 		}

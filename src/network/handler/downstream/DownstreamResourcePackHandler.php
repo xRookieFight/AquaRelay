@@ -35,6 +35,7 @@ class DownstreamResourcePackHandler extends AbstractDownstreamPacketHandler
 			ResourcePackClientResponsePacket::STATUS_COMPLETED,
 			[]
 		);
+
 		$this->getPlayer()->sendToBackend($pk);
 
 		$this->getPlayer()->setHandler(new DownstreamInGameHandler($this->getPlayer(), $this->logger));
