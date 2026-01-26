@@ -1,29 +1,38 @@
 # Main configuration file for AquaRelay proxy
 # Be careful, these settings may break your server.
 
-# Network-related settings
-network-settings:
-  bind:
-    address: 0.0.0.0 # IP address the proxy will bind to (0.0.0.0 = all interfaces)
-    port: 19132 # Port that players will connect to
-
-  backend:
-    address: 127.0.0.1 # IP address of the backend (target) server
-    port: 19133 # Port of the backend server
-
-  batch-threshold: 256 # Packet batch size threshold for enabling compression (-1 to disable)
-  compression-level: 6 # Compression level used for network packets (higher = more compression)
-  max-mtu: 1492 # Maximum MTU size for RakNet packets
-
-misc-settings:
-  debug-mode: false # Enables debug logging for development and troubleshooting
-  log-name: proxy.log # File name used for proxy log output
-  language: eng # Selected language for the runtime process
-
 game-settings:
   max-players: 50 # Maximum number of players allowed to connect
   motd: "§bAquaRelay Proxy" # Main MOTD shown in the server list
   sub-motd: "www.aquarelay.dev" # Secondary MOTD shown below the main one
   xbox-auth: true # If enabled, only players which are authenticated with XBOX Live can join. If disabled, anyone can connect with any name
 
-config-version: 2 # Do not change this.
+server-settings:
+  servers:
+    lobby-1:
+      address: 127.0.0.1 # IP address of the server
+      port: 19133 # Port of the server
+      priority: 1 # Priority of the server
+    lobby-2:
+      address: 127.0.0.1
+      port: 19134
+      priority: 2 # It will join into lobby-1 which has more priority
+
+  selection-strategy: priority # priority | round-robin | random
+
+misc-settings:
+  debug-mode: false # Enables debug logging for development and troubleshooting
+  log-name: proxy.log # File name used for proxy log output
+  language: eng # Selected language for the runtime process
+
+# Network-related settings
+network-settings:
+  bind:
+    address: 0.0.0.0 # IP address the proxy will bind to (0.0.0.0 = all interfaces)
+    port: 19132 # Port that players will connect to
+
+  batch-threshold: 256 # Packet batch size threshold for enabling compression (-1 to disable)
+  compression-level: 6 # Compression level used for network packets (higher = more compression)
+  max-mtu: 1492 # Maximum MTU size for RakNet packets
+
+config-version: 3 # Do not change this.

@@ -84,7 +84,10 @@ class UpstreamResourcePackHandler extends AbstractUpstreamPacketHandler
 				$this->logger->info(Colors::AQUA . $this->session->getPlayer()?->getName() . Colors::WHITE . "[" . $this->session->getAddress() . ":" . $this->session->getPort() . "] logged in with v" . $this->session->getPlayer()?->getMinecraftVersion() . " (" . $this->session->getProtocolId() . ")");
 
 				$this->session->flushGamePacketQueue();
-				$this->session->connectToBackend();
+
+                $backend = $this->session->getServer()->getServerManager()->select();
+
+				$this->session->getPlayer()->transferToBackend($backend);
 				$this->session->setHandler(new UpstreamInGameHandler($this->session, $this->logger));
 
 				return true;

@@ -24,6 +24,7 @@ declare(strict_types=1);
 
 namespace aquarelay\network\raklib\client;
 
+use aquarelay\lang\TranslationFactory;
 use aquarelay\network\compression\ZlibCompressor;
 use aquarelay\network\raklib\RakLibInterface;
 use aquarelay\player\Player;
@@ -131,8 +132,11 @@ final class BackendRakClient
 				}
 			}
 		} catch (SocketException $e) {
-			$this->player->disconnect("Couldn't read packets from backend (" . Uuid::uuid4()->toString() . ")");
+			$this->player->disconnect(TranslationFactory::translate("proxy.backend.read_error", [Uuid::uuid4()->toString()]));
 			$this->player->getNetworkSession()->debug("Backend packet reading error: " . $e->getMessage());
+
+			$this->player->getNetworkSession()->warning("Backend '{$this->player->getBackendServer()?->getName()}' down, redirecting to fallback");
+			$this->player->tryFallbackOrDisconnect();
 		}
 	}
 
@@ -320,7 +324,7 @@ final class BackendRakClient
 				} else {
 					$this->processPayload($s->get($length));
 				}
-			} catch (\Throwable $e) {
+			} catch (\Throwable) {
 				break;
 			}
 		}

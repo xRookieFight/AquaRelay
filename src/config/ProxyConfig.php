@@ -27,15 +27,17 @@ namespace aquarelay\config;
 use aquarelay\config\category\GameSettings;
 use aquarelay\config\category\MiscSettings;
 use aquarelay\config\category\NetworkSettings;
+use aquarelay\config\category\ServerSettings;
 use Symfony\Component\Yaml\Yaml;
 use function file_put_contents;
 
 class ProxyConfig
 {
 	public function __construct(
-		private readonly NetworkSettings $networkSettings,
+		private readonly GameSettings $gameSettings,
+		private readonly ServerSettings $serverSettings,
 		private readonly MiscSettings $miscSettings,
-		private readonly GameSettings $gameSettings
+		private readonly NetworkSettings $networkSettings
 	) {}
 
 	public static function load(string $file) : self
@@ -52,37 +54,45 @@ class ProxyConfig
 			file_put_contents($file, Yaml::dump($data, 4, 2));
 		}
 
-		$networkSettings = $data['network-settings'];
-		$miscSettings = $data['misc-settings'];
 		$gameSettings = $data['game-settings'];
+		$serverSettings = $data['server-settings'];
+		$miscSettings = $data['misc-settings'];
+		$networkSettings = $data['network-settings'];
 
 		return new self(
-			new NetworkSettings(
-				$networkSettings['bind']['address'],
-				(int) $networkSettings['bind']['port'],
-				$networkSettings['backend']['address'],
-				(int) $networkSettings['backend']['port'],
-				(int) $networkSettings['batch-threshold'],
-				(int) $networkSettings['compression-level'],
-				(int) $networkSettings['max-mtu']
-			),
-			new MiscSettings(
-				(bool) $miscSettings['debug-mode'],
-				$miscSettings['log-name'],
-				$miscSettings['language']
-			),
 			new GameSettings(
 				(int) $gameSettings['max-players'],
 				$gameSettings['motd'],
 				$gameSettings['sub-motd'],
 				(bool) $gameSettings['xbox-auth']
 			),
+			new ServerSettings(
+				(array) $serverSettings["servers"],
+				$serverSettings['selection-strategy']
+			),
+			new MiscSettings(
+				(bool) $miscSettings['debug-mode'],
+				$miscSettings['log-name'],
+				$miscSettings['language']
+			),
+			new NetworkSettings(
+				$networkSettings['bind']['address'],
+				(int) $networkSettings['bind']['port'],
+				(int) $networkSettings['batch-threshold'],
+				(int) $networkSettings['compression-level'],
+				(int) $networkSettings['max-mtu']
+			)
 		);
 	}
 
-	public function getNetworkSettings() : NetworkSettings
+	public function getGameSettings() : GameSettings
 	{
-		return $this->networkSettings;
+		return $this->gameSettings;
+	}
+
+	public function getServerSettings() : ServerSettings
+	{
+		return $this->serverSettings;
 	}
 
 	public function getMiscSettings() : MiscSettings
@@ -90,8 +100,8 @@ class ProxyConfig
 		return $this->miscSettings;
 	}
 
-	public function getGameSettings() : GameSettings
+	public function getNetworkSettings() : NetworkSettings
 	{
-		return $this->gameSettings;
+		return $this->networkSettings;
 	}
 }

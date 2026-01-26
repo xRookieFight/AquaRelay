@@ -25,9 +25,11 @@ declare(strict_types=1);
 namespace aquarelay\network\handler\downstream;
 
 use pocketmine\network\mcpe\protocol\AvailableCommandsPacket;
+use pocketmine\network\mcpe\protocol\DisconnectPacket;
 use pocketmine\network\mcpe\protocol\PlayStatusPacket;
 use pocketmine\network\mcpe\protocol\RequestChunkRadiusPacket;
 use pocketmine\network\mcpe\protocol\StartGamePacket;
+use pocketmine\network\mcpe\protocol\TransferPacket;
 
 class DownstreamInGameHandler extends AbstractDownstreamPacketHandler
 {
@@ -68,4 +70,33 @@ class DownstreamInGameHandler extends AbstractDownstreamPacketHandler
 
 		return true;
 	}
+
+    public function handleTransfer(TransferPacket $packet): bool
+    {
+		$serverManager = $this->getPlayer()->getServer()->getServerManager();
+        $ipAddress = $packet->address;
+
+		$server = $serverManager->get($ipAddress);
+		if ($server !== null){
+			$this->getPlayer()->transferToBackend($server);
+			return true;
+		}
+
+        $port = $packet->port;
+
+        foreach ($serverManager->getAll() as $data) {
+            if ($data->getAddress() === $ipAddress && $data->getPort() === $port) {
+                $this->getPlayer()->transferToBackend($serverManager->get($data->getName()));
+				break;
+            }
+        }
+
+        return true;
+    }
+
+    public function handleDisconnect(DisconnectPacket $packet): bool
+    {
+        $this->getPlayer()->tryFallbackOrDisconnect();
+        return true;
+    }
 }
