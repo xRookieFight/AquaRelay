@@ -1,13 +1,14 @@
 <?php
 
 /*
+ *
  *                            _____      _
  *     /\                    |  __ \    | |
  *    /  \   __ _ _   _  __ _| |__) |___| | __ _ _   _
  *   / /\ \ / _` | | | |/ _` |  _  // _ \ |/ _` | | | |
  *  / ____ \ (_| | |_| | (_| | | \ \  __/ | (_| | |_| |
  * /_/    \_\__, |\__,_|\__,_|_|  \_\___|_|\__,_|\__, |
- *             |_|                                |___/
+ *               |_|                              |___/
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -26,6 +27,7 @@ namespace aquarelay;
 use function define;
 use function defined;
 use function dirname;
+use function getcwd;
 
 if (defined('aquarelay\_CORE_CONSTANTS_INCLUDED')) {
 	return;

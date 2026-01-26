@@ -22,42 +22,28 @@
 
 declare(strict_types=1);
 
-namespace aquarelay\task;
+namespace aquarelay\network\handler\downstream;
 
-class DelayedTask extends Task
+use aquarelay\player\Player;
+use aquarelay\utils\MainLogger;
+use pocketmine\network\mcpe\protocol\PacketHandlerDefaultImplTrait;
+use pocketmine\network\mcpe\protocol\PacketHandlerInterface;
+
+abstract class AbstractDownstreamPacketHandler implements PacketHandlerInterface
 {
-	private int $delay;
-	private int $elapsedTicks = 0;
+	use PacketHandlerDefaultImplTrait;
 
 	public function __construct(
-		private Task $task,
-		int $delay
+		protected Player $player,
+		protected MainLogger $logger
 	) {
-		parent::__construct();
-		$this->delay = $delay;
+		// NOOP
 	}
 
-	public function getDelay() : int
+	public function getPlayer() : Player
 	{
-		return $this->delay;
+		return $this->player;
 	}
 
-	public function getElapsedTicks() : int
-	{
-		return $this->elapsedTicks;
-	}
-
-	public function onRun() : void
-	{
-		++$this->elapsedTicks;
-
-		if ($this->elapsedTicks >= $this->delay && !$this->task->isCancelled() && !$this->isCancelled()) {
-			$this->task->onRun();
-		}
-	}
-
-	public function isReady() : bool
-	{
-		return $this->elapsedTicks >= $this->delay;
-	}
+	public function setUp() : void {}
 }

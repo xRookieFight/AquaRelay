@@ -24,71 +24,71 @@ declare(strict_types=1);
 namespace aquarelay;
 
 use aquarelay\utils\Colors;
-use Throwable;
-use function extension_loaded;
-use function version_compare;
 
-require dirname(__DIR__) . '/vendor/autoload.php';
+require dirname(__DIR__).'/vendor/autoload.php';
 
-if (Colors::supportsColors()){
-	if (PHP_OS_FAMILY === "Windows" && function_exists('\sapi_windows_vt100_support')) {
-		@\sapi_windows_vt100_support(STDOUT, true);
-	}
+if (Colors::supportsColors()) {
+    if (PHP_OS_FAMILY === 'Windows' && function_exists('\sapi_windows_vt100_support')) {
+        @\sapi_windows_vt100_support(STDOUT, true);
+    }
 }
 
-function error(string $message) : void
+function error(string $message): void
 {
-	echo Colors::RED . "Error: $message" . Colors::RESET . "\n";
+    echo Colors::RED."Error: {$message}".Colors::RESET."\n";
 }
 
 function checkDependencies(): void
 {
-	if (version_compare("8.1.0", PHP_VERSION) > 0) {
-		error("PHP 8.1.0 or greater is required");
-		exit(1);
-	}
+    if (\version_compare('8.1.0', PHP_VERSION) > 0) {
+        error('PHP 8.1.0 or greater is required');
 
-	$required = [
-		"yaml",
-		"sockets",
-		"phar"
-	];
+        exit(1);
+    }
 
-	foreach ($required as $depend) {
-		if (!extension_loaded($depend)) {
-			error("$depend extension is not installed.");
-			exit(1);
-		}
-	}
+    $required = [
+        'yaml',
+        'sockets',
+        'phar',
+    ];
+
+    foreach ($required as $depend) {
+        if (!\extension_loaded($depend)) {
+            error("{$depend} extension is not installed.");
+
+            exit(1);
+        }
+    }
 }
 
-function setEntries() : void
+function setEntries(): void
 {
-	ini_set("display_errors", "1");
-	ini_set("display_startup_errors", "1");
-	ini_set("default_charset", "UTF-8");
-	ini_set("allow_url_fopen", "1");
+    ini_set('display_errors', '1');
+    ini_set('display_startup_errors', '1');
+    ini_set('default_charset', 'UTF-8');
+    ini_set('allow_url_fopen', '1');
 }
 
-function start() : void
+function start(): void
 {
-	checkDependencies();
-	setEntries();
-	error_reporting(E_ALL);
-	date_default_timezone_set("UTC");
+    checkDependencies();
+    setEntries();
+    error_reporting(E_ALL);
+    date_default_timezone_set('UTC');
 
-	$cwd = realpath(getcwd());
-	$dataPath = $cwd . DIRECTORY_SEPARATOR;
+    $cwd = realpath(getcwd());
+    $dataPath = $cwd.DIRECTORY_SEPARATOR;
 
-	try {
-		new ProxyServer(
-			$dataPath,
-			RESOURCE_PATH
-		);
-	} catch(Throwable $e) {
-		error($e->getMessage() . "\n" . $e->getTraceAsString());
-		exit(1);
-	}
+    try {
+        new ProxyServer(
+            $dataPath,
+            RESOURCE_PATH
+        );
+    } catch (\Throwable $e) {
+        error($e->getMessage()."\n".$e->getTraceAsString());
+
+        exit(1);
+    }
 }
 
 start();

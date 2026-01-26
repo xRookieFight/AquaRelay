@@ -1,13 +1,14 @@
 <?php
 
 /*
+ *
  *                            _____      _
  *     /\                    |  __ \    | |
  *    /  \   __ _ _   _  __ _| |__) |___| | __ _ _   _
  *   / /\ \ / _` | | | |/ _` |  _  // _ \ |/ _` | | | |
  *  / ____ \ (_| | |_| | (_| | | \ \  __/ | (_| | |_| |
  * /_/    \_\__, |\__,_|\__,_|_|  \_\___|_|\__,_|\__, |
- *             |_|                                |___/
+ *               |_|                              |___/
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -23,44 +24,61 @@ declare(strict_types=1);
 
 namespace aquarelay\utils;
 
+use function base64_decode;
+use function base64_encode;
+use function count;
+use function explode;
+use function is_array;
+use function json_decode;
+use function json_last_error_msg;
+use function rtrim;
+use function str_repeat;
+use function strlen;
+use function strtr;
+
 class JWTUtils
 {
-
-	private static function split(string $jwt) : array{
-		$v = explode(".", $jwt, limit: 4);
-		if(count($v) !== 3){
-			throw new JWTException("Expected exactly 3 JWT parts delimited by a period");
-		}
-		return [$v[0], $v[1], $v[2]];
-	}
-
-	public static function b64UrlEncode(string $str) : string{
+	public static function b64UrlEncode(string $str) : string
+	{
 		return rtrim(strtr(base64_encode($str), '+/', '-_'), '=');
 	}
 
-	public static function b64UrlDecode(string $str) : string{
-		if(($len = strlen($str) % 4) !== 0){
+	public static function b64UrlDecode(string $str) : string
+	{
+		if (0 !== ($len = strlen($str) % 4)) {
 			$str .= str_repeat('=', 4 - $len);
 		}
 		$decoded = base64_decode(strtr($str, '-_', '+/'), true);
-		if($decoded === false){
-			throw new JWTException("Malformed base64url encoded payload could not be decoded");
+		if ($decoded === false) {
+			throw new JWTException('Malformed base64url encoded payload could not be decoded');
 		}
+
 		return $decoded;
 	}
 
-	public static function parse(string $token) : array{
+	public static function parse(string $token) : array
+	{
 		$v = self::split($token);
 		$header = json_decode(self::b64UrlDecode($v[0]), true);
-		if(!is_array($header)){
-			throw new JwtException("Failed to decode JWT header JSON: " . json_last_error_msg());
+		if (!is_array($header)) {
+			throw new JwtException('Failed to decode JWT header JSON: ' . json_last_error_msg());
 		}
 		$body = json_decode(self::b64UrlDecode($v[1]), true);
-		if(!is_array($body)){
-			throw new JwtException("Failed to decode JWT payload JSON: " . json_last_error_msg());
+		if (!is_array($body)) {
+			throw new JwtException('Failed to decode JWT payload JSON: ' . json_last_error_msg());
 		}
 		$signature = self::b64UrlDecode($v[2]);
+
 		return [$header, $body, $signature];
 	}
 
+	private static function split(string $jwt) : array
+	{
+		$v = explode('.', $jwt, limit: 4);
+		if (count($v) !== 3) {
+			throw new JWTException('Expected exactly 3 JWT parts delimited by a period');
+		}
+
+		return [$v[0], $v[1], $v[2]];
+	}
 }

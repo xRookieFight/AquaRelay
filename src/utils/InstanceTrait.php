@@ -1,13 +1,14 @@
 <?php
 
 /*
+ *
  *                            _____      _
  *     /\                    |  __ \    | |
  *    /  \   __ _ _   _  __ _| |__) |___| | __ _ _   _
  *   / /\ \ / _` | | | |/ _` |  _  // _ \ |/ _` | | | |
  *  / ____ \ (_| | |_| | (_| | | \ \  __/ | (_| | |_| |
  * /_/    \_\__, |\__,_|\__,_|_|  \_\___|_|\__,_|\__, |
- *             |_|                                |___/
+ *               |_|                              |___/
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -26,22 +27,26 @@ namespace aquarelay\utils;
 /**
  * @author PocketMine-MP Team
  */
-trait InstanceTrait {
-
+trait InstanceTrait
+{
 	private static ?self $instance = null;
 
-	public static function getInstance() : self{
-		if(is_null(self::$instance)){
+	public static function getInstance() : self
+	{
+		if (self::$instance === null) {
 			self::$instance = new self();
 		}
+
 		return self::$instance;
 	}
 
-	public static function setInstance(self $instance) : void{
+	public static function setInstance(self $instance) : void
+	{
 		self::$instance = $instance;
 	}
 
-	public static function reset() : void{
+	public static function reset() : void
+	{
 		self::$instance = null;
 	}
 }

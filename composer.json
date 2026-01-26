@@ -4,23 +4,21 @@
 	"type": "project",
 	"license": "LGPL-3.0-only",
 	"require": {
-		"php": ">=8.1",
-		"pocketmine/raklib": "~1.2.0",
+		"php": ">=8.2",
+		"pocketmine/raklib": "dev-stable",
 		"pocketmine/snooze": "^0.5.0",
-		"pocketmine/raklib-ipc": "~1.0.0",
+		"aquarelay/raklib-ipc": "dev-master",
 		"ext-pmmpthread": "^6.1.0",
 		"ext-encoding": "~1.0.0",
 		"ext-zlib": ">=1.2.11",
 		"netresearch/jsonmapper": "~v5.0.0",
 		"pocketmine/color": "^0.3.0",
 		"pocketmine/log": "^0.4.0",
-		"pocketmine/bedrock-block-upgrade-schema": "~5.2.0+bedrock-1.21.110",
-		"nethergamesmc/bedrock-data": "dev-master",
-        "pocketmine/bedrock-item-upgrade-schema": "~1.16.0+bedrock-1.21.110",
         "nethergamesmc/bedrock-protocol": "dev-master",
 		"symfony/yaml": "^7.0",
 		"ramsey/uuid": "~4.9.0",
-		"symfony/filesystem": "~6.4.0"
+		"symfony/filesystem": "~6.4.0",
+		"ext-igbinary": "*"
 	},
 	"autoload": {
 		"psr-4": {
@@ -41,11 +39,14 @@
          "type": "vcs",
          "url":  "git@github.com:NetherGamesMC/BedrockProtocol.git"
       },
-      {
-         "type": "vcs",
-         "url":  "git@github.com:NetherGamesMC/BedrockData.git"
-      }
+	  {
+		 "type": "vcs",
+		 "url":  "https://github.com/AquaRelay/RakLibIpc"
+	  }
    ],
-   "minimum-stability": "stable",
-   "prefer-stable": true
+   "minimum-stability": "dev",
+   "prefer-stable": true,
+	"require-dev": {
+		"friendsofphp/php-cs-fixer": "^3.92"
+	}
 }

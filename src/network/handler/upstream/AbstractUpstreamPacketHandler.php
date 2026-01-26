@@ -1,13 +1,14 @@
 <?php
 
 /*
+ *
  *                            _____      _
  *     /\                    |  __ \    | |
  *    /  \   __ _ _   _  __ _| |__) |___| | __ _ _   _
  *   / /\ \ / _` | | | |/ _` |  _  // _ \ |/ _` | | | |
  *  / ____ \ (_| | |_| | (_| | | \ \  __/ | (_| | |_| |
  * /_/    \_\__, |\__,_|\__,_|_|  \_\___|_|\__,_|\__, |
- *             |_|                                |___/
+ *               |_|                              |___/
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -21,14 +22,15 @@
 
 declare(strict_types=1);
 
-namespace aquarelay\network\handler;
+namespace aquarelay\network\handler\upstream;
 
 use aquarelay\network\NetworkSession;
 use aquarelay\utils\MainLogger;
-use pocketmine\network\mcpe\protocol\PacketHandlerInterface;
 use pocketmine\network\mcpe\protocol\PacketHandlerDefaultImplTrait;
+use pocketmine\network\mcpe\protocol\PacketHandlerInterface;
 
-abstract class PacketHandler implements PacketHandlerInterface {
+abstract class AbstractUpstreamPacketHandler implements PacketHandlerInterface
+{
 	use PacketHandlerDefaultImplTrait;
 
 	public function __construct(
@@ -38,5 +40,5 @@ abstract class PacketHandler implements PacketHandlerInterface {
 		// NOOP
 	}
 
-	public function setUp(): void {}
+	public function setUp() : void {}
 }

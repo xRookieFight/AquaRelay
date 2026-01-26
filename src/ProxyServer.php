@@ -1,13 +1,14 @@
 <?php
 
 /*
+ *
  *                            _____      _
  *     /\                    |  __ \    | |
  *    /  \   __ _ _   _  __ _| |__) |___| | __ _ _   _
  *   / /\ \ / _` | | | |/ _` |  _  // _ \ |/ _` | | | |
  *  / ____ \ (_| | |_| | (_| | | \ \  __/ | (_| | |_| |
  * /_/    \_\__, |\__,_|\__,_|_|  \_\___|_|\__,_|\__, |
- *             |_|                                |___/
+ *               |_|                              |___/
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -26,7 +27,6 @@ namespace aquarelay;
 use aquarelay\config\ProxyConfig;
 use aquarelay\lang\Language;
 use aquarelay\lang\TranslationFactory;
-use aquarelay\lang\TranslationKeys;
 use aquarelay\network\compression\ZlibCompressor;
 use aquarelay\network\ProxyLoop;
 use aquarelay\network\raklib\RakLibInterface;
@@ -39,11 +39,21 @@ use aquarelay\utils\Colors;
 use aquarelay\utils\MainLogger;
 use aquarelay\utils\Utils;
 use pocketmine\network\mcpe\protocol\ProtocolInfo;
+use function count;
+use function file_exists;
+use function file_get_contents;
+use function file_put_contents;
+use function is_dir;
+use function microtime;
+use function mkdir;
+use function register_shutdown_function;
+use function round;
+use const DIRECTORY_SEPARATOR;
 
-class ProxyServer {
-
-	public const NAME = "AquaRelay";
-	public const VERSION = "1.0.0-alpha2"; // Semver
+class ProxyServer
+{
+	public const NAME = 'AquaRelay';
+	public const VERSION = '1.0.0-alpha2'; // Semver
 	public const IS_DEVELOPMENT = true;
 	public RakLibInterface $interface;
 	private MainLogger $logger;
@@ -56,9 +66,90 @@ class ProxyServer {
 
 	private float $startProcessTime;
 
+	public function __construct(
+		private string $dataPath,
+		private string $resourcePath
+	) {
+		if (self::$instance !== null) {
+			throw new \LogicException('Server instance is already initialized');
+		}
+
+		self::$instance = $this;
+		$this->startProcessTime = microtime(true);
+		$configFile = $this->dataPath . 'config.yml';
+
+		if (!file_exists($configFile)) {
+			$source = $this->resourcePath . 'config.yml';
+
+			if (!file_exists($source)) {
+				throw new \RuntimeException('Default configuration file missing in resources folder');
+			}
+
+			$data = file_get_contents($source);
+			if ($data === false) {
+				throw new \RuntimeException('Failed to read default config.yml from resources');
+			}
+
+			if (file_put_contents($configFile, $data) === false) {
+				throw new \RuntimeException('Failed to create config.yml. Please check permissions.');
+			}
+		}
+		$this->config = ProxyConfig::load($configFile);
+		$this->logger = new MainLogger('Main Thread', $this->getConfig()->getMiscSettings()->getLogName(), $this->isDebug());
+
+		$selectedLang = $this->getConfig()->getMiscSettings()->getSelectedLanguage();
+		$this->language = new Language($selectedLang);
+		$this->logger->info(TranslationFactory::languageSelected($this->language->getFullName(), $this->language->getLang()));
+
+		if (self::IS_DEVELOPMENT) {
+			$this->logger->warning('You are using development build. Be careful, your progress may be lost in future.');
+		}
+
+		$this->logger->info('Loading server configuration');
+
+		$this->logger->info('Starting ' . $this->getName() . ' version ' . $this->getVersion());
+		$this->logger->info('This server is running Minecraft: Bedrock Edition ' . Colors::AQUA . 'v' . $this->getMinecraftVersion());
+
+		$this->playerManager = new PlayerManager();
+		$this->taskScheduler = new TaskScheduler();
+
+		register_shutdown_function([$this, 'shutdown']);
+
+		$threshold = $this->getConfig()->getNetworkSettings()->getBatchThreshold();
+		$compressionThreshold = $threshold >= 0 ? $threshold : null;
+
+		$compressionLevel = $this->getConfig()->getNetworkSettings()->getCompressionLevel();
+		if ($compressionLevel < 1 || $compressionLevel > 9) {
+			throw new \RuntimeException('Compression level must be between 1 and 9');
+		}
+
+		ZlibCompressor::setInstance(new ZlibCompressor($compressionLevel, $compressionThreshold, ZlibCompressor::DEFAULT_MAX_DECOMPRESSION_SIZE));
+		$this->logger->debug('ZLib compressor initialized');
+
+		$this->logger->info('Initializing RakLib Interface...');
+		$this->interface = new RakLibInterface($this->dataPath, $this->logger, $this->getAddress(), $this->getPort(), $this->getConfig()->getNetworkSettings()->getMaxMtu());
+		$this->interface->setName($this->getMotd(), $this->getSubMotd());
+
+		$pluginsPath = $this->dataPath . 'plugins' . DIRECTORY_SEPARATOR;
+		if (!is_dir($pluginsPath)) {
+			@mkdir($pluginsPath, 0o755, true);
+		}
+		$pluginLoader = new PluginLoader($this, $pluginsPath);
+		$this->pluginManager = new PluginManager($this, $pluginLoader);
+		$this->pluginManager->loadPlugins();
+
+		$this->logger->info("Listening on {$this->getAddress()}:{$this->getPort()}");
+
+		$this->interface->start();
+
+		$this->logger->info('Proxy started! (' . round(microtime(true) - $this->startProcessTime, 3) . 's)');
+
+		$loop = new ProxyLoop($this);
+		$loop->run();
+	}
+
 	/**
-	 * Returns a server instance, can be nullable
-	 * @return ProxyServer|null
+	 * Returns a server instance, can be nullable.
 	 */
 	public static function getInstance() : ?ProxyServer
 	{
@@ -66,8 +157,7 @@ class ProxyServer {
 	}
 
 	/**
-	 * Returns the configuration of proxy
-	 * @return ProxyConfig
+	 * Returns the configuration of proxy.
 	 */
 	public function getConfig() : ProxyConfig
 	{
@@ -115,8 +205,7 @@ class ProxyServer {
 	}
 
 	/**
-	 * Returns all online proxied players
-	 * @return array
+	 * Returns all online proxied players.
 	 */
 	public function getOnlinePlayers() : array
 	{
@@ -124,8 +213,7 @@ class ProxyServer {
 	}
 
 	/**
-	 * Returns count of online proxied players
-	 * @return int
+	 * Returns count of online proxied players.
 	 */
 	public function getOnlinePlayerCount() : int
 	{
@@ -133,8 +221,7 @@ class ProxyServer {
 	}
 
 	/**
-	 * Returns the latest supported version of Minecraft
-	 * @return string
+	 * Returns the latest supported version of Minecraft.
 	 */
 	public function getMinecraftVersion() : string
 	{
@@ -176,148 +263,45 @@ class ProxyServer {
 		return $this->taskScheduler;
 	}
 
-	public function __construct(
-		private string $dataPath,
-		private string $resourcePath
-	){
-		if (self::$instance !== null) {
-			throw new \LogicException("Server instance is already initialized");
-		}
-
-		self::$instance = $this;
-		$this->startProcessTime = microtime(true);
-		$configFile = $this->dataPath . "config.yml";
-
-		if (!file_exists($configFile)) {
-			$source = $this->resourcePath . "config.yml";
-
-			if (!file_exists($source)) {
-				throw new \RuntimeException("Default configuration file missing in resources folder");
-			}
-
-			$data = file_get_contents($source);
-			if ($data === false) {
-				throw new \RuntimeException("Failed to read default config.yml from resources");
-			}
-
-			if (file_put_contents($configFile, $data) === false) {
-				throw new \RuntimeException("Failed to create config.yml. Please check permissions.");
-			}
-		}
-		$this->config = ProxyConfig::load($configFile);
-		$this->logger = new MainLogger("Main Thread", $this->getConfig()->getMiscSettings()->getLogName(), $this->isDebug());
-
-		$selectedLang = $this->getConfig()->getMiscSettings()->getSelectedLanguage();
-		$this->language = new Language($selectedLang);
-		$this->logger->info(TranslationFactory::languageSelected($this->language->getFullName(), $this->language->getLang()));
-
-		if (self::IS_DEVELOPMENT){
-			$this->logger->warning("You are using development build. Be careful, your progress may be lost in future.");
-		}
-
-		$this->logger->info("Loading server configuration");
-
-		$this->logger->info("Starting " . $this->getName() . " version " . $this->getVersion());
-		$this->logger->info("This server is running Minecraft: Bedrock Edition " . Colors::AQUA . "v" . $this->getMinecraftVersion());
-
-		$this->playerManager = new PlayerManager();
-		$this->taskScheduler = new TaskScheduler();
-
-		register_shutdown_function([$this, "shutdown"]);
-
-		$threshold = $this->getConfig()->getNetworkSettings()->getBatchThreshold();
-		$compressionThreshold = $threshold >= 0 ? $threshold : null;
-
-		$compressionLevel = $this->getConfig()->getNetworkSettings()->getCompressionLevel();
-		if ($compressionLevel < 1 || $compressionLevel > 9){
-			throw new \RuntimeException("Compression level must be between 1 and 9");
-		}
-
-		ZlibCompressor::setInstance(new ZlibCompressor($compressionLevel, $compressionThreshold, ZlibCompressor::DEFAULT_MAX_DECOMPRESSION_SIZE));
-		$this->logger->debug("ZLib compressor initialized");
-
-		$this->logger->info("Initializing RakLib Interface...");
-		$this->interface = new RakLibInterface($this->dataPath, $this->logger, $this->getAddress(), $this->getPort(), $this->getConfig()->getNetworkSettings()->getMaxMtu());
-		$this->interface->setName($this->getMotd(), $this->getSubMotd());
-
-		$pluginsPath = $this->dataPath . "plugins" . DIRECTORY_SEPARATOR;
-		if (!is_dir($pluginsPath)) {
-			@mkdir($pluginsPath, 0755, true);
-		}
-		$pluginLoader = new PluginLoader($this, $pluginsPath);
-		$this->pluginManager = new PluginManager($this, $pluginLoader);
-		$this->pluginManager->loadPlugins();
-
-		$this->logger->info("Listening on {$this->getAddress()}:{$this->getPort()}");
-
-		$this->interface->start();
-
-		$this->logger->info("Proxy started! (" . round(microtime(true) - $this->startProcessTime, 3) ."s)");
-		
-		$loop = new ProxyLoop($this);
-		$loop->run();
-	}
-
 	/**
-	 * Summary of broadcastMessage
-	 * @param string $message
-	 * @return void
+	 * Summary of broadcastMessage.
 	 */
 	public function broadcastMessage(string $message) : void
 	{
 		foreach ($this->getOnlinePlayers() as $player) {
-			/** @var Player $player */
+			// @var Player $player
 			$player->sendMessage($message);
 		}
 	}
 
 	public function shutdown() : void
-    {
-        $shutdownStart = microtime(true);
+	{
+		$shutdownStart = microtime(true);
 
 		foreach ($this->getOnlinePlayers() as $player) {
-			/** @var Player $player */
-			$player->disconnect("Proxy is shutting down");
+			// @var Player $player
+			$player->disconnect(TranslationFactory::translate('proxy.shutdown'));
 		}
 
-        foreach ($this->pluginManager->getPlugins() as $plugin) {
-            if ($plugin->isEnabled()) {
-                try {
-                    $this->pluginManager->disablePlugin($plugin);
-                } catch (\Throwable $e) {
-                    $this->logger->error("Failed to disable plugin " . $plugin->getName() . ": " . $e->getMessage());
-                    $this->logger->logException($e);
-                }
-            }
-        }
+		foreach ($this->pluginManager->getPlugins() as $plugin) {
+			if ($plugin->isEnabled()) {
+				try {
+					$this->pluginManager->disablePlugin($plugin);
+				} catch (\Throwable $e) {
+					$this->logger->error('Failed to disable plugin ' . $plugin->getName() . ': ' . $e->getMessage());
+					$this->logger->logException($e);
+				}
+			}
+		}
 
-        $this->taskScheduler->cancelAllTasks();
-        $this->taskScheduler->shutdown();
-        
-        $this->interface->shutdown();
+		$this->taskScheduler->cancelAllTasks();
+		$this->taskScheduler->shutdown();
 
-        $duration = round(microtime(true) - $shutdownStart, 3);
-        $this->logger->info("Shutdown completed in {$duration}s.");
+		$this->interface->shutdown();
 
-        $this->handleRestartThrottle();
-        $this->logger->shutdown();
-        @Utils::kill(Utils::pid()); 
-    }
-
-    /**
-     * Prevents the server from restarting too quickly if it was only up for a few seconds.
-     * This saves CPU/Disk if the server is in a crash-loop.
-     */
-    private function handleRestartThrottle() : void 
-    {
-        $uptime = time() - (int)$this->startProcessTime;
-        $minUptime = 10;
-        
-        if ($uptime < $minUptime) {
-            $spacing = $minUptime - $uptime;
-            echo PHP_EOL . "--- [AquaRelay] Server ran for only {$uptime}s. Waiting {$spacing}s before exit ---" . PHP_EOL;
-            echo "--- (Press Ctrl+C to skip wait) ---" . PHP_EOL;
-            sleep($spacing);
-        }
-    }
+		$duration = round(microtime(true) - $shutdownStart, 3);
+		$this->logger->info("Shutdown completed in {$duration}s.");
+		$this->logger->shutdown();
+		@Utils::kill(Utils::pid());
+	}
 }
