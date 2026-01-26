@@ -24,6 +24,7 @@ declare(strict_types=1);
 
 namespace aquarelay\network;
 
+use aquarelay\form\Form;
 use aquarelay\network\compression\ZlibCompressor;
 use aquarelay\network\handler\upstream\AbstractUpstreamPacketHandler;
 use aquarelay\network\handler\upstream\UpstreamLoginHandler;
@@ -34,8 +35,10 @@ use aquarelay\player\Player;
 use aquarelay\ProxyServer;
 use pmmp\encoding\ByteBufferReader;
 use pmmp\encoding\ByteBufferWriter;
+use pocketmine\network\mcpe\protocol\ClientboundCloseFormPacket;
 use pocketmine\network\mcpe\protocol\ClientboundPacket;
 use pocketmine\network\mcpe\protocol\DisconnectPacket;
+use pocketmine\network\mcpe\protocol\ModalFormRequestPacket;
 use pocketmine\network\mcpe\protocol\PacketPool;
 use pocketmine\network\mcpe\protocol\PlayStatusPacket;
 use pocketmine\network\mcpe\protocol\ProtocolInfo;
@@ -278,6 +281,14 @@ class NetworkSession
 	public function setPing(int $ping) : void
 	{
 		$this->ping = $ping;
+	}
+
+	public function onFormSent(int $id, Form $form) : void {
+		$this->sendDataPacket(ModalFormRequestPacket::create($id, json_encode($form, JSON_THROW_ON_ERROR)));
+	}
+
+	public function onCloseAllForms() : void{
+		$this->sendDataPacket(ClientboundCloseFormPacket::create());
 	}
 
 	public function isConnected() : bool
