@@ -48,7 +48,7 @@ class MainLoggerThread extends Thread
 
 		\touch($this->logFile);
 
-		if ($this->archiveDir !== null && !@\mkdir($this->archiveDir) && !\is_dir($this->archiveDir)) {
+		if (($this->archiveDir !== null) && !@\mkdir($this->archiveDir) && !\is_dir($this->archiveDir)) {
 			throw new \RuntimeException('Unable to create archive directory');
 		}
 	}
@@ -81,7 +81,7 @@ class MainLoggerThread extends Thread
 				}
 			});
 
-			while (!is_null($line = $this->buffer->shift())) {
+			while (($line = $this->buffer->shift()) !== null) {
 				echo $line;
 
 				$clean = \preg_replace('/\x1b\[[0-9;]*m/', '', $line);
@@ -106,7 +106,7 @@ class MainLoggerThread extends Thread
 
 	private function archiveIfNeeded(&$handle) : void
 	{
-		if (\is_null($this->archiveDir) || $this->currentSize < $this->maxFileSize) {
+		if (($this->archiveDir === null) || $this->currentSize < $this->maxFileSize) {
 			return;
 		}
 

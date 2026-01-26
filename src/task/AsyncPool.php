@@ -26,7 +26,6 @@ namespace aquarelay\task;
 
 use function array_values;
 use function count;
-use function is_null;
 use function spl_object_id;
 use function time;
 use const PHP_INT_MAX;
@@ -75,7 +74,7 @@ class AsyncPool
 			}
 		}
 
-		if (is_null($worker) || ($minUsage > 0 && count($this->workers) < $this->workerCount)) {
+		if (($worker === null) || ($minUsage > 0 && count($this->workers) < $this->workerCount)) {
 			for ($i = 0; $i < $this->workerCount; ++$i) {
 				if (!isset($this->workers[$i])) {
 					$worker = $i;

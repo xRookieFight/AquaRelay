@@ -28,7 +28,6 @@ use aquarelay\config\Config;
 use aquarelay\ProxyServer;
 use aquarelay\task\TaskScheduler;
 use function is_dir;
-use function is_null;
 use function mkdir;
 use const DIRECTORY_SEPARATOR;
 
@@ -162,7 +161,7 @@ abstract class Plugin
 	 */
 	public function getConfig() : Config
 	{
-		if (is_null($this->config)) {
+		if ($this->config === null) {
 			$configPath = $this->dataFolder . DIRECTORY_SEPARATOR . 'config.yml';
 			$this->config = new Config($configPath);
 		}

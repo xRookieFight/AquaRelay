@@ -35,7 +35,6 @@ use pocketmine\network\mcpe\protocol\ClientboundPacket;
 use pocketmine\network\mcpe\protocol\DataPacket;
 use pocketmine\network\mcpe\protocol\LoginPacket;
 use Ramsey\Uuid\UuidInterface;
-use function is_null;
 use function json_encode;
 
 class Player
@@ -47,9 +46,9 @@ class Player
 	private ?AbstractDownstreamPacketHandler $handler = null;
 
 	public function __construct(
-		private ProxyServer $proxyServer,
-		private NetworkSession $upstreamSession,
-		private LoginData $loginData
+		private readonly ProxyServer    $proxyServer,
+		private readonly NetworkSession $upstreamSession,
+		private readonly LoginData $loginData
 	)
 	{
 		$this->xuid = $loginData->xuid;
@@ -65,7 +64,7 @@ class Player
 
 	public function sendToBackend(DataPacket $packet) : void
 	{
-		if (is_null($this->downstreamConnection)) {
+		if ($this->downstreamConnection === null) {
 			$this->upstreamSession->debug('Cannot send packet to backend: downstream connection is null');
 			return;
 		}
@@ -109,7 +108,7 @@ class Player
 
 	public function sendLoginToBackend() : void
 	{
-		if (is_null($this->downstreamConnection)) {
+		if ($this->downstreamConnection === null) {
 			return;
 		}
 
@@ -129,7 +128,7 @@ class Player
 
 	public function handleBackendPacket(DataPacket $packet) : void
 	{
-		if (!is_null($this->handler)) {
+		if ($this->handler !== null) {
 			$packet->handle($this->handler);
 		}
 
@@ -191,7 +190,6 @@ class Player
 
 	/**
 	 * Returns the protocol id of player.
-	 * @return int
 	 */
 	public function getProtocol() : int
 	{
@@ -200,7 +198,6 @@ class Player
 
 	/**
 	 * Returns the Minecraft version of player.
-	 * @return string
 	 */
 	public function getMinecraftVersion() : string
 	{

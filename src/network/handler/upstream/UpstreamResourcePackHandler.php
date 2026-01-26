@@ -25,7 +25,6 @@ declare(strict_types=1);
 namespace aquarelay\network\handler\upstream;
 
 use aquarelay\utils\Colors;
-use aquarelay\utils\Utils;
 use pocketmine\network\mcpe\protocol\ClientCacheStatusPacket;
 use pocketmine\network\mcpe\protocol\LevelChunkPacket;
 use pocketmine\network\mcpe\protocol\NetworkChunkPublisherUpdatePacket;

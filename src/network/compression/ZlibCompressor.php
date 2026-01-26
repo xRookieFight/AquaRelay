@@ -75,7 +75,7 @@ final class ZlibCompressor implements Compressor
 
 	public function compress(string $payload) : string
 	{
-		$compressible = $this->minCompressionSize !== null && strlen($payload) >= $this->minCompressionSize;
+		$compressible = ($this->minCompressionSize !== null) && strlen($payload) >= $this->minCompressionSize;
 		$level = $compressible ? $this->level : 0;
 
 		if (function_exists('libdeflate_deflate_compress')) {

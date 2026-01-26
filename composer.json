@@ -4,7 +4,7 @@
 	"type": "project",
 	"license": "LGPL-3.0-only",
 	"require": {
-		"php": ">=8.1",
+		"php": ">=8.2",
 		"pocketmine/raklib": "dev-stable",
 		"pocketmine/snooze": "^0.5.0",
 		"pocketmine/raklib-ipc": "dev-master",
@@ -17,7 +17,8 @@
         "nethergamesmc/bedrock-protocol": "dev-master",
 		"symfony/yaml": "^7.0",
 		"ramsey/uuid": "~4.9.0",
-		"symfony/filesystem": "~6.4.0"
+		"symfony/filesystem": "~6.4.0",
+		"ext-igbinary": "*"
 	},
 	"autoload": {
 		"psr-4": {

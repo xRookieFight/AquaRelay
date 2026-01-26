@@ -33,8 +33,11 @@ use pocketmine\network\mcpe\protocol\RequestNetworkSettingsPacket;
 use pocketmine\utils\Binary;
 use raklib\client\ClientSocket;
 use raklib\generic\SocketException;
+use raklib\protocol\ConnectedPing;
+use raklib\protocol\ConnectedPong;
 use raklib\protocol\ConnectionRequest;
 use raklib\protocol\DisconnectionNotification;
+use raklib\protocol\MessageIdentifiers;
 use raklib\protocol\NewIncomingConnection;
 use raklib\protocol\OpenConnectionReply1;
 use raklib\protocol\OpenConnectionReply2;
@@ -45,6 +48,7 @@ use raklib\protocol\PacketSerializer;
 use raklib\protocol\UnconnectedPing;
 use raklib\utils\InternetAddress;
 use Ramsey\Uuid\Uuid;
+use Random\RandomException;
 use function ceil;
 use function count;
 use function implode;
@@ -62,10 +66,27 @@ use const PHP_INT_MAX;
 
 final class BackendRakClient
 {
+	private const ID_ACK = 0xC0;
+
+	private const ID_USER_PACKET_ENUM = 0x80;
+
+	private const ID_FRAME_SET = 0x84;
+
+	private const ID_MCPE_GAME_PACKET = 0xFE;
+
+	private const FLAG_SPLIT = 0x10;
+
+	private const MASK_RELIABILITY = 0xE0;
+
+	private const RELIABILITY_RELIABLE = 0x40;
+
+	private const HEADER_SIZE_LIMIT_OFFSET = 60;
+	private const DEFAULT_MTU = 1492;
+
 	private ClientSocket $socket;
 	private ConnectionState $state = ConnectionState::UNCONNECTED;
 	private int $clientId;
-	private int $mtu = 1492;
+	private int $mtu = self::DEFAULT_MTU;
 	private int $seqNumber = 0;
 	private int $messageIndex = 0;
 	private int $splitId = 0;
@@ -73,6 +94,9 @@ final class BackendRakClient
 	private array $sendQueue = [];
 	private ?int $rakCookie;
 
+	/**
+	 * @throws RandomException
+	 */
 	public function __construct(
 		private InternetAddress $address,
 		private Player $player
@@ -92,7 +116,6 @@ final class BackendRakClient
 	{
 		if ($this->state->value < ConnectionState::LOGGED_IN->value) {
 			$this->sendQueue[] = $packet;
-
 			return;
 		}
 		$this->encodeAndSend($packet);
@@ -101,10 +124,10 @@ final class BackendRakClient
 	public function tick(callable $onPacket) : void
 	{
 		try {
-			while (!is_null($buf = $this->socket->readPacket())) {
+			while (($buf = $this->socket->readPacket()) !== null) {
 				$pid = ord($buf[0]);
 
-				if ($pid < 0x80) {
+				if ($pid < self::ID_USER_PACKET_ENUM) {
 					$this->handleInternalPacket($buf);
 				} else {
 					$this->sendAck($buf);
@@ -241,13 +264,15 @@ final class BackendRakClient
 
 	private function sendEncapsulatedRaw(string $payload) : void
 	{
-		$limit = $this->mtu - 60;
+		$limit = $this->mtu - self::HEADER_SIZE_LIMIT_OFFSET;
 
 		if (strlen($payload) <= $limit) {
 			$s = new PacketSerializer();
-			$s->putByte(0x84);
+			$s->putByte(self::ID_FRAME_SET);
 			$s->putLTriad($this->seqNumber++);
-			$s->putByte(0x40);
+
+			$s->putByte(self::RELIABILITY_RELIABLE);
+
 			$s->putShort(strlen($payload) << 3);
 			$s->putLTriad($this->messageIndex++);
 			$s->put($payload);
@@ -262,9 +287,11 @@ final class BackendRakClient
 
 		foreach ($chunks as $index => $chunk) {
 			$s = new PacketSerializer();
-			$s->putByte(0x84);
+			$s->putByte(self::ID_FRAME_SET);
 			$s->putLTriad($this->seqNumber++);
-			$s->putByte(0x50);
+
+			$s->putByte(self::RELIABILITY_RELIABLE | self::FLAG_SPLIT);
+
 			$s->putShort(strlen($chunk) << 3);
 			$s->putLTriad($this->messageIndex++);
 			$s->putInt($count);
@@ -285,8 +312,8 @@ final class BackendRakClient
 			try {
 				$flags = $s->getByte();
 				$length = (int) ceil($s->getShort() / 8);
-				$reliability = ($flags & 0xE0) >> 5;
-				$split = 0 !== ($flags & 0x10);
+				$reliability = ($flags & self::MASK_RELIABILITY) >> 5;
+				$split = 0 !== ($flags & self::FLAG_SPLIT);
 
 				if ($reliability >= 2) {
 					$s->getLTriad();
@@ -330,7 +357,12 @@ final class BackendRakClient
 
 		$pid = ord($payload[0]);
 
-		if ($pid === 0x10 && $this->state === ConnectionState::CONNECTING_3) {
+		if ($pid === MessageIdentifiers::ID_CONNECTED_PING) {
+			$this->handleConnectedPing($payload);
+			return;
+		}
+
+		if ($pid === MessageIdentifiers::ID_CONNECTION_REQUEST_ACCEPTED && $this->state === ConnectionState::CONNECTING_3) {
 			$this->state = ConnectionState::CONNECTED;
 
 			$this->sendNewIncomingConnection();
@@ -340,7 +372,7 @@ final class BackendRakClient
 			return;
 		}
 
-		if ($pid === 0xFE) {
+		if ($pid === self::ID_MCPE_GAME_PACKET) {
 			if ($this->state === ConnectionState::GAME_HANDSHAKE) {
 				$this->state = ConnectionState::LOGGED_IN;
 
@@ -353,12 +385,25 @@ final class BackendRakClient
 		}
 	}
 
+	private function handleConnectedPing(string $payload) : void
+	{
+		$s = new PacketSerializer($payload);
+		$pk = new ConnectedPing();
+		$pk->decode($s);
+
+		$pong = new ConnectedPong();
+		$pong->sendPingTime = $pk->sendPingTime;
+		$pong->sendPongTime = (int) (microtime(true) * 1000);
+
+		$this->sendEncapsulated($pong);
+	}
+
 	private function handleInternalPacket(string $buf) : void
 	{
 		$s = new PacketSerializer($buf);
 
 		switch (ord($buf[0])) {
-			case 0x06:
+			case MessageIdentifiers::ID_OPEN_CONNECTION_REPLY_1:
 				$pk = new OpenConnectionReply1();
 				$pk->decode($s);
 				$this->mtu = min($this->mtu, $pk->mtuSize);
@@ -367,7 +412,7 @@ final class BackendRakClient
 
 				break;
 
-			case 0x08:
+			case MessageIdentifiers::ID_OPEN_CONNECTION_REPLY_2:
 				$pk = new OpenConnectionReply2();
 				$pk->decode($s);
 				$this->mtu = $pk->mtuSize;
@@ -381,7 +426,7 @@ final class BackendRakClient
 	{
 		$seq = unpack('V', substr($buf, 1, 3) . "\x00")[1];
 		$s = new PacketSerializer();
-		$s->putByte(0xC0);
+		$s->putByte(self::ID_ACK);
 		$s->putShort(1);
 		$s->putByte(1);
 		$s->putLTriad($seq);
@@ -414,5 +459,4 @@ final class BackendRakClient
 		$this->state = ConnectionState::UNCONNECTED;
 		$this->close();
 	}
-
 }

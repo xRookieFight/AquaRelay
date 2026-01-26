@@ -48,8 +48,8 @@ use pocketmine\network\mcpe\protocol\types\CompressionAlgorithm;
 use raklib\generic\DisconnectReason;
 use raklib\utils\InternetAddress;
 use Ramsey\Uuid\Uuid;
+use Random\RandomException;
 use function count;
-use function is_null;
 use function ord;
 use function substr;
 use function time;
@@ -69,13 +69,13 @@ class NetworkSession
 	private ?Player $player = null;
 
 	public function __construct(
-		private ProxyServer $server,
-		private NetworkSessionManager $manager,
-		private PacketPool $packetPool,
-		private PacketSender $sender,
-		private string $ip,
-		private int $port,
-		private int $sessionId
+		private readonly ProxyServer           $server,
+		private readonly NetworkSessionManager $manager,
+		private readonly PacketPool            $packetPool,
+		private readonly PacketSender          $sender,
+		private readonly string                $ip,
+		private readonly int                   $port,
+		private readonly int                   $sessionId
 	) {
 		$this->manager->add($this);
 		$this->lastUsed = time();
@@ -131,10 +131,13 @@ class NetworkSession
 		}
 	}
 
+	/**
+	 * @throws RandomException
+	 */
 	public function connectToBackend() : void
 	{
 		$player = $this->player;
-		if (is_null($player)) return;
+		if ($player === null) return;
 
 		$targetIp = $this->server->getConfig()->getNetworkSettings()->getBackendAddress();
 		$targetPort = $this->server->getConfig()->getNetworkSettings()->getBackendPort();
@@ -181,7 +184,7 @@ class NetworkSession
 			$batchData = $stream->getData();
 			$this->sendBuffer = [];
 
-			if (is_null($this->enableCompression)) {
+			if ($this->enableCompression === null) {
 				$finalPayload = $batchData;
 			} else {
 				$finalPayload = $this->enableCompression ? "\x00" . ZlibCompressor::getInstance()->compress($batchData) : "\xff" . $batchData;
@@ -355,10 +358,10 @@ class NetworkSession
 	private function processSinglePacket(string $buffer) : void
 	{
 		$packet = $this->packetPool->getPacket($buffer);
-		if (!is_null($packet)) {
+		if ($packet !== null) {
 			$packet->decode(new ByteBufferReader($buffer), $this->getProtocolId());
 
-			if (!is_null($this->handler)) {
+			if ($this->handler !== null) {
 				$packet->handle($this->handler);
 			}
 		}

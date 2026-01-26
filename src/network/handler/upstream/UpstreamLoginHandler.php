@@ -45,7 +45,6 @@ use function chr;
 use function count;
 use function gettype;
 use function is_array;
-use function is_null;
 use function is_object;
 use function json_decode;
 use function md5;
@@ -150,7 +149,7 @@ class UpstreamLoginHandler extends AbstractUpstreamPacketHandler
 					}
 				}
 
-				if (is_null($claimsArray)) {
+				if ($claimsArray === null) {
 					throw new PacketHandlingException("'extraData' not found in legacy chain data");
 				}
 			}

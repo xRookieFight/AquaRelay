@@ -28,7 +28,6 @@ use pmmp\thread\Thread as NativeThread;
 use pmmp\thread\ThreadSafe;
 use Symfony\Component\Filesystem\Path;
 use function date;
-use function is_null;
 use function sprintf;
 use function strtolower;
 use function strtoupper;
@@ -133,12 +132,15 @@ class MainLogger extends ThreadSafe implements \Logger
 		$this->writerThread->shutdown();
 	}
 
+	/**
+	 * @throws \ReflectionException
+	 */
 	private function send(string $level, string $color, string $message) : void
 	{
 		$time = date('H:i:s');
 
 		$currentThread = NativeThread::getCurrentThread();
-		$threadName = is_null($currentThread) ? $this->mainThreadName : (new \ReflectionClass($currentThread))->getShortName();
+		$threadName = ($currentThread === null) ? $this->mainThreadName : (new \ReflectionClass($currentThread))->getShortName();
 
 		$formatted = sprintf($this->format, $time, $threadName, $color, $level, $message);
 

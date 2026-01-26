@@ -24,13 +24,14 @@ declare(strict_types=1);
 
 namespace aquarelay\network;
 
+use aquarelay\network\compression\DecompressionException;
 use aquarelay\network\compression\ZlibCompressor;
 use aquarelay\network\raklib\RakLibPacketSender;
 use aquarelay\player\Player;
 use aquarelay\ProxyServer;
 use pmmp\encoding\ByteBufferReader;
+use pocketmine\network\mcpe\protocol\DataPacket;
 use pocketmine\network\mcpe\protocol\PacketPool;
-use pocketmine\network\mcpe\protocol\ProtocolInfo;
 use pocketmine\network\mcpe\protocol\serializer\PacketBatch;
 use pocketmine\network\mcpe\protocol\types\CompressionAlgorithm;
 use pocketmine\snooze\SleeperHandler;
@@ -85,7 +86,7 @@ class ProxyLoop
 		foreach ($this->sessions as $session) {
 			$player = $session->getPlayer();
 
-			if ($player !== null && $player->getDownstream() !== null) {
+			if (($player !== null) && ($player->getDownstream() !== null)) {
 				$player->getDownstream()->tick(function ($payload) use ($player) : void {
 					$this->handleBackendPayload($player, $payload);
 				});
@@ -106,24 +107,33 @@ class ProxyLoop
 		if ($compression === CompressionAlgorithm::ZLIB) {
 			try {
 				$buffer = ZlibCompressor::getInstance()->decompress($buffer);
-			} catch (\Exception $e) {
-				return;
-			}
+			}  catch (DecompressionException $e) {
+				$this->server->getLogger()->critical("Backend decompression failed: " . $e->getMessage());
+			    $player->disconnect("Proxy Error: Corrupt Packet Data");
+			    return;
+		    }
 		}
 
 		try {
 			$stream = new ByteBufferReader($buffer);
-			$packets = PacketBatch::decodeRaw($stream);
 
-			foreach ($packets as $pktBuffer) {
-				$packet = PacketPool::getInstance()->getPacket($pktBuffer);
-				if ($packet !== null) {
-					$packet->decode(new ByteBufferReader($pktBuffer), $player->getProtocol());
+			$generator = PacketBatch::decodePackets(
+				$stream,
+				$player->getProtocol(),
+				PacketPool::getInstance()
+			);
+
+			foreach ($generator as $packet) {
+				if ($packet instanceof DataPacket) {
 					$player->handleBackendPacket($packet);
 				}
 			}
-		} catch (\Exception $e) {
-			// Log error if needed
+
+		} catch (PacketHandlingException $e) {
+			$this->server->getLogger()->error("Backend packet decode error: " . $e->getMessage());
+		} catch (\Throwable $e) {
+			// Catch generic errors (like buffer underflow) that aren't strict PacketHandlingExceptions
+			$this->server->getLogger()->debug("General decode error: " . $e->getMessage());
 		}
 	}
 

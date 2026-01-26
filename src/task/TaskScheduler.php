@@ -27,7 +27,6 @@ namespace aquarelay\task;
 use aquarelay\ProxyServer;
 use function array_values;
 use function count;
-use function is_null;
 
 class TaskScheduler
 {
@@ -155,7 +154,7 @@ class TaskScheduler
 	 */
 	public function submitAsyncTask(AsyncTask $task) : int
 	{
-		if (is_null($this->asyncPool)) {
+		if ($this->asyncPool === null) {
 			$this->asyncPool = new AsyncPool(4, -1);
 		}
 

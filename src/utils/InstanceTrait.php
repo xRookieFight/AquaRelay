@@ -24,8 +24,6 @@ declare(strict_types=1);
 
 namespace aquarelay\utils;
 
-use function is_null;
-
 /**
  * @author PocketMine-MP Team
  */
@@ -35,7 +33,7 @@ trait InstanceTrait
 
 	public static function getInstance() : self
 	{
-		if (is_null(self::$instance)) {
+		if (self::$instance === null) {
 			self::$instance = new self();
 		}
 

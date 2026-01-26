@@ -39,7 +39,6 @@ use raklib\utils\ExceptionTraceCleaner;
 use raklib\utils\InternetAddress;
 use function dirname;
 use function gc_disable;
-use function random_int;
 use function usleep;
 
 class RakLibServerThread extends Thread

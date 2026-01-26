@@ -27,7 +27,6 @@ namespace aquarelay\player;
 use aquarelay\network\NetworkSession;
 use aquarelay\utils\LoginData;
 use function array_values;
-use function is_null;
 use function spl_object_hash;
 
 class PlayerManager
@@ -50,7 +49,7 @@ class PlayerManager
 
 	public function removePlayer($session) : void
 	{
-		if (!is_null($this->getPlayerBySession($session))) {
+		if ($this->getPlayerBySession($session) !== null) {
 			unset($this->players[spl_object_hash($session)]);
 		}
 	}

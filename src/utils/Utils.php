@@ -28,11 +28,8 @@ use pocketmine\network\mcpe\protocol\ProtocolInfo;
 use function escapeshellarg;
 use function exec;
 use function file_exists;
-use function function_exists;
 use function getmypid;
-use function is_null;
 use function php_uname;
-use function posix_kill;
 use function sprintf;
 use function str_replace;
 use function str_starts_with;
@@ -72,14 +69,6 @@ class Utils
 			return;
 		}
 
-		if (function_exists('posix_kill')) {
-			$targetPid = $subprocesses ? -$pid : $pid;
-
-			if (@posix_kill($targetPid, 9)) {
-				return;
-			}
-		}
-
 		$cmdPid = $subprocesses ? '-' . $pid : (string) $pid;
 		exec('kill -9 ' . escapeshellarg($cmdPid) . ' > /dev/null 2>&1');
 	}
@@ -93,7 +82,7 @@ class Utils
 	 */
 	public static function getOS(bool $recalculate = false) : string
 	{
-		if (is_null(self::$os) || $recalculate) {
+		if ((self::$os === null) || $recalculate) {
 			$uname = php_uname('s');
 			$machine = php_uname('m');
 

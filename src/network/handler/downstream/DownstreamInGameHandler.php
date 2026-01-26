@@ -28,12 +28,11 @@ use pocketmine\network\mcpe\protocol\AvailableCommandsPacket;
 use pocketmine\network\mcpe\protocol\PlayStatusPacket;
 use pocketmine\network\mcpe\protocol\RequestChunkRadiusPacket;
 use pocketmine\network\mcpe\protocol\StartGamePacket;
-use function is_null;
 
 class DownstreamInGameHandler extends AbstractDownstreamPacketHandler
 {
 
-	public function handleAvailableCommands(AvailableCommandsPacket $packet): bool
+	public function handleAvailableCommands(AvailableCommandsPacket $packet) : bool
 	{
 		// TODO: Command injection system
 		// EXAMPLE: $packet->commandData[] = new CommandRawData("test", "Test command for AquaRelay", 0, "any", -1, [], []);
@@ -60,7 +59,7 @@ class DownstreamInGameHandler extends AbstractDownstreamPacketHandler
 			return true;
 		}
 		if ($packet->status === PlayStatusPacket::PLAYER_SPAWN) {
-			if (is_null($this->getPlayer()->backendRuntimeId)) {
+			if ($this->getPlayer()->backendRuntimeId === null) {
 				$this->getPlayer()->getNetworkSession()->debug('Cannot send spawn notification: backendRuntimeId is null.');
 			} else {
 				$this->getPlayer()->getNetworkSession()->debug('Sending spawn notification, waiting for spawn response');

@@ -30,7 +30,6 @@ use pmmp\thread\ThreadSafeArray;
 use function array_key_exists;
 use function igbinary_serialize;
 use function igbinary_unserialize;
-use function is_null;
 use function is_scalar;
 use function spl_object_id;
 
@@ -41,7 +40,7 @@ use function spl_object_id;
 abstract class AsyncTask extends Runnable
 {
 	/**
-	 * @var mixed[][]
+	 * @var array[]
 	 *                Used to store thread-local data to be used by onCompletion()
 	 */
 	private static array $threadLocalStorage = [];
@@ -100,7 +99,7 @@ abstract class AsyncTask extends Runnable
 	 */
 	public function setResult(mixed $result) : void
 	{
-		$this->result = is_scalar($result) || is_null($result) || $result instanceof ThreadSafe ? $result : $result;
+		$this->result = is_scalar($result) || ($result === null) || $result instanceof ThreadSafe ? $result : $result;
 	}
 
 	public function setSubmitted() : void
@@ -132,7 +131,7 @@ abstract class AsyncTask extends Runnable
 	public function publishProgress(mixed $progress) : void
 	{
 		$progressUpdates = $this->progressUpdates;
-		if (is_null($progressUpdates)) {
+		if ($progressUpdates === null) {
 			$progressUpdates = $this->progressUpdates = new ThreadSafeArray();
 		}
 		$progressUpdates[] = igbinary_serialize($progress) ?? throw new \InvalidArgumentException('Progress must be serializable');
@@ -145,7 +144,7 @@ abstract class AsyncTask extends Runnable
 	{
 		$progressUpdates = $this->progressUpdates;
 		if ($progressUpdates !== null) {
-			while (!is_null($progress = $progressUpdates->shift())) {
+			while (($progress = $progressUpdates->shift()) !== null) {
 				$this->onProgressUpdate(igbinary_unserialize($progress));
 			}
 		}
