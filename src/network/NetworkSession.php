@@ -130,22 +130,14 @@ class NetworkSession
 		}
 	}
 
-	/**
-	 * @throws RandomException
-	 */
-	public function connectToBackend() : void
+	public function connectBackendTo(string $ip, int $port) : void
 	{
 		$player = $this->player;
 		if ($player === null) return;
 
-		$backend = $this->server->getServerManager()->select();
+		$this->debug("Connecting to $ip:$port...");
 
-		$targetIp = $backend->getAddress();
-		$targetPort = $backend->getPort();
-
-		$this->debug("Connecting to $targetIp:$targetPort...");
-
-		$backend = new BackendRakClient(new InternetAddress($targetIp, $targetPort, 4), $player);
+		$backend = new BackendRakClient(new InternetAddress($ip, $port, 4), $player);
 
 		$player->setDownstream($backend);
 		$player->sendLoginToBackend();
@@ -354,6 +346,12 @@ class NetworkSession
 	{
 		$format = $this->username ?? "$this->ip:$this->port";
 		$this->server->getLogger()->info("[NetworkSession - $format]: $message");
+	}
+
+	public function warning(string $message) : void
+	{
+		$format = $this->username ?? "$this->ip:$this->port";
+		$this->server->getLogger()->warning("[NetworkSession - $format]: $message");
 	}
 
 	private function processSinglePacket(string $buffer) : void

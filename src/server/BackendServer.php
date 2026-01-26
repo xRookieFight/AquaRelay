@@ -45,4 +45,25 @@ final class BackendServer
 	public function getAddress() : string { return $this->address; }
 	public function getPort() : int { return $this->port; }
 	public function getPriority() : int { return $this->priority; }
+
+    public function isOnline(int $timeout = 5) : bool
+    {
+        $errno = 0;
+        $errstr = '';
+
+        $socket = @fsockopen(
+            $this->address,
+            $this->port,
+            $errno,
+            $errstr,
+            $timeout
+        );
+
+        if ($socket === false) {
+            return false;
+        }
+
+        fclose($socket);
+        return true;
+    }
 }

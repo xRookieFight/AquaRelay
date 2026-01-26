@@ -24,16 +24,21 @@ declare(strict_types=1);
 
 namespace aquarelay\player;
 
+use aquarelay\lang\TranslationFactory;
 use aquarelay\network\handler\downstream\AbstractDownstreamPacketHandler;
 use aquarelay\network\handler\downstream\DownstreamResourcePackHandler;
 use aquarelay\network\NetworkSession;
 use aquarelay\network\raklib\client\BackendRakClient;
 use aquarelay\ProxyServer;
+use aquarelay\server\BackendServer;
+use aquarelay\server\ServerException;
 use aquarelay\utils\LoginData;
 use aquarelay\utils\Utils;
 use pocketmine\network\mcpe\protocol\ClientboundPacket;
 use pocketmine\network\mcpe\protocol\DataPacket;
 use pocketmine\network\mcpe\protocol\LoginPacket;
+use pocketmine\network\mcpe\protocol\TransferPacket;
+use Ramsey\Uuid\Uuid;
 use Ramsey\Uuid\UuidInterface;
 use function json_encode;
 
@@ -43,6 +48,7 @@ class Player
 	protected UuidInterface $uuid;
 	protected string $xuid = '';
 	private ?BackendRakClient $downstreamConnection = null;
+	private ?BackendServer $backendServer = null;
 	private ?AbstractDownstreamPacketHandler $handler = null;
 
 	public function __construct(
@@ -183,6 +189,55 @@ class Player
 		$this->upstreamSession->disconnect($reason);
 	}
 
+	public function transferToBackend(BackendServer $server) : void
+	{
+		if ($this->backendServer?->getName() === $server->getName()) {
+			return;
+		}
+
+		$this->backendServer = $server;
+
+		$this->upstreamSession->connectBackendTo($server->getAddress(), $server->getPort());
+		$this->getNetworkSession()->info("Transferring to server: {$server->getName()}");
+	}
+
+	public function tryFallbackOrDisconnect() : void
+	{
+		$serverManager = $this->getServer()->getServerManager();
+		$reason = TranslationFactory::translate("proxy.backend.read_error", [Uuid::uuid4()->toString()]);
+
+		try {
+			$fallback = $serverManager->select();
+		} catch (ServerException) {
+			$this->getNetworkSession()->warning("Backend '{$this->getBackendServer()?->getName()}' down, disconnecting");
+			$this->disconnect($reason);
+			return;
+		}
+
+		if (!$fallback->isOnline()) {
+			$this->getNetworkSession()->warning("Backend '{$this->getBackendServer()?->getName()}' down, disconnecting");
+			$this->disconnect($reason);
+			return;
+		}
+
+		if ($this->getBackendServer()?->getName() === $fallback->getName()) {
+			$this->getNetworkSession()->warning("Backend '{$this->getBackendServer()?->getName()}' down, disconnecting");
+			$this->disconnect($reason);
+			return;
+		}
+
+		$this->transfer($fallback);
+	}
+
+	public function transfer(BackendServer $server) : void
+	{
+		$this->sendToBackend(TransferPacket::create(
+				$server->getAddress(),
+				$server->getPort(),
+				false
+			));
+	}
+
 	public function getServer() : ProxyServer
 	{
 		return $this->proxyServer;
@@ -202,5 +257,14 @@ class Player
 	public function getMinecraftVersion() : string
 	{
 		return Utils::protocolIdToVersion($this->getProtocol()) ?? "unknown";
+	}
+
+	/**
+	 * Returns the backend server information.
+	 * @return BackendServer|null
+	 */
+	public function getBackendServer() : ?BackendServer
+	{
+		return $this->backendServer;
 	}
 }
