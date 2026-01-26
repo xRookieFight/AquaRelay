@@ -27,18 +27,11 @@ namespace aquarelay\event\default;
 use aquarelay\event\Cancellable;
 use aquarelay\event\Event;
 
-class ServerStopEvent extends Event implements Cancellable {
+class ServerStopEvent extends Event {
 
-	private bool $isCancelled = false;
+    use Cancellable;
 
 	public function __construct() {
 	}
 
-	public function isCancelled() : bool {
-		return $this->isCancelled;
-	}
-
-	public function setCancelled(bool $cancelled = true) : void {
-		$this->isCancelled = $cancelled;
-	}
 }

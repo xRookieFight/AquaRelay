@@ -82,8 +82,7 @@ class HandlerList {
 
 		foreach (self::$handlers[$type] as $handler) {
 			if ($event instanceof Cancellable && $event->isCancelled()) {
-				// Optional: Check if handler wants to ignore cancelled events
-				// For now, we continue so other plugins can un-cancel it
+				return;
 			}
 
 			$handler($event);

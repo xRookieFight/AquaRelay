@@ -41,7 +41,7 @@ class ModalForm implements Form {
 	/** @var callable|null */
 	private $button2Action = null;
 
-	public function __construct(string $title, string $content, string $button1Text = "Yes", string $button2Text = "No") {
+	public function __construct(string $title, string $content = "", string $button1Text = "Yes", string $button2Text = "No") {
 		$this->title = $title;
 		$this->content = $content;
 		$this->button1Text = $button1Text;

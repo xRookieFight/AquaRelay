@@ -27,9 +27,9 @@ namespace aquarelay\event\default;
 use aquarelay\event\Cancellable;
 use aquarelay\event\Event;
 
-class ServerStartEvent extends Event implements Cancellable {
-
-	private bool $isCancelled = false;
+class ServerStartEvent extends Event 
+{
+	use Cancellable;
 
 	private float $startTime;
 
@@ -39,13 +39,5 @@ class ServerStartEvent extends Event implements Cancellable {
 
 	public function getStartTime() : float {
 		return $this->startTime;
-	}
-
-	public function isCancelled() : bool {
-		return $this->isCancelled;
-	}
-
-	public function setCancelled(bool $cancelled = true) : void {
-		$this->isCancelled = $cancelled;
 	}
 }

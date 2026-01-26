@@ -24,7 +24,14 @@ declare(strict_types=1);
 
 namespace aquarelay\event;
 
-interface Cancellable {
-	public function isCancelled() : bool;
-	public function setCancelled(bool $cancelled = true) : void;
+trait Cancellable {
+	private bool $cancelled = false;
+
+	public function isCancelled() : bool {
+		return $this->cancelled;
+	}
+	
+	public function setCancelled(bool $cancelled = true) : void {
+		$this->cancelled = $cancelled;
+	}
 }
