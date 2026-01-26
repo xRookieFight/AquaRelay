@@ -41,7 +41,6 @@ use aquarelay\utils\Colors;
 use aquarelay\utils\MainLogger;
 use aquarelay\utils\Utils;
 use pocketmine\network\mcpe\protocol\ProtocolInfo;
-use raklib\server\Server;
 use function count;
 use function file_exists;
 use function file_get_contents;
@@ -66,6 +65,7 @@ class ProxyServer
 	private PlayerManager $playerManager;
 	private PluginManager $pluginManager;
 	private TaskScheduler $taskScheduler;
+	private ProxyLoop $proxyLoop;
 
 	private float $startProcessTime;
 
@@ -156,8 +156,8 @@ class ProxyServer
 			return;
 		}
 
-		$loop = new ProxyLoop($this);
-		$loop->run();
+		$this->proxyLoop = new ProxyLoop($this); // TODO: We can merge this into ProxyServer class
+		$this->getProxyLoop()->run();
 	}
 
 	/**
@@ -275,13 +275,19 @@ class ProxyServer
 		return $this->taskScheduler;
 	}
 
+	public function getProxyLoop() : ProxyLoop
+	{
+		return $this->proxyLoop;
+	}
+
 	/**
-	 * Summary of broadcastMessage.
+	 * @param string $message
+	 * @return void
 	 */
 	public function broadcastMessage(string $message) : void
 	{
 		foreach ($this->getOnlinePlayers() as $player) {
-			// @var Player $player
+			/** @var Player $player */
 			$player->sendMessage($message);
 		}
 	}
@@ -291,7 +297,7 @@ class ProxyServer
 		$shutdownStart = microtime(true);
 
 		foreach ($this->getOnlinePlayers() as $player) {
-			// @var Player $player
+			/** @var Player $player */
 			$player->disconnect(TranslationFactory::translate('proxy.shutdown'));
 		}
 
