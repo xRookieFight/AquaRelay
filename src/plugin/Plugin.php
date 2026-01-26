@@ -26,7 +26,6 @@ namespace aquarelay\plugin;
 use aquarelay\config\Config;
 use aquarelay\ProxyServer;
 use aquarelay\task\TaskScheduler;
-use Symfony\Component\Yaml\Yaml;
 
 use function file_exists;
 use function is_dir;
@@ -162,6 +161,27 @@ abstract class Plugin {
 	public function getDataFolder() : string
 	{
 		return $this->dataFolder;
+	}
+
+	/**
+	 * Saves a resource from the plugin's resources to the data folder.
+	 * * @param string $filename The name of the file (e.g., "config.yml")
+	 * @param bool $replace Whether to overwrite existing files
+	 */
+	public function saveResource(string $filename, bool $replace = false) : void
+	{
+		$source = dirname((new \ReflectionClass($this))->getFileName()) . DIRECTORY_SEPARATOR . 'resources' . DIRECTORY_SEPARATOR . $filename;
+		$destination = $this->dataFolder . DIRECTORY_SEPARATOR . $filename;
+
+		if (!file_exists($destination) || $replace) {
+			if (file_exists($source)) {
+				copy($source, $destination);
+			}
+		}
+	}
+
+	public function saveFile(string $file) : void {
+		$this->saveResource($file, false);
 	}
 
 	/**
