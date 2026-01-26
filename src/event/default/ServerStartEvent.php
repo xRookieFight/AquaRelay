@@ -22,20 +22,30 @@
 
 declare(strict_types=1);
 
-namespace aquarelay\form;
+namespace aquarelay\event\default;
 
-use aquarelay\player\Player;
+use aquarelay\event\Cancellable;
+use aquarelay\event\Event;
 
-/**
- * Form implementations must implement this interface to be able to utilize the Player form-sending mechanism.
- * There is no restriction on custom implementations other than that they must implement this.
- */
-interface Form extends \JsonSerializable{
+class ServerStartEvent extends Event implements Cancellable {
 
-	/**
-	 * Handles a form response from a player.
-	 *
-	 * @throws FormValidationException if the data could not be processed
-	 */
-	public function handleResponse(Player $player, mixed $data) : void;
+	private bool $isCancelled = false;
+
+	private float $startTime;
+
+	public function __construct(float $startTime) {
+		$this->startTime = $startTime;
+	}
+
+	public function getStartTime() : float {
+		return $this->startTime;
+	}
+
+	public function isCancelled() : bool {
+		return $this->isCancelled;
+	}
+
+	public function setCancelled(bool $cancelled = true) : void {
+		$this->isCancelled = $cancelled;
+	}
 }

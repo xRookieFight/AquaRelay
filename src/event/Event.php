@@ -22,20 +22,24 @@
 
 declare(strict_types=1);
 
-namespace aquarelay\form;
+namespace aquarelay\event;
 
-use aquarelay\player\Player;
+abstract class Event {
 
-/**
- * Form implementations must implement this interface to be able to utilize the Player form-sending mechanism.
- * There is no restriction on custom implementations other than that they must implement this.
- */
-interface Form extends \JsonSerializable{
+	protected ?string $eventName = null;
 
 	/**
-	 * Handles a form response from a player.
-	 *
-	 * @throws FormValidationException if the data could not be processed
+	 * Returns the event name (usually the class name).
 	 */
-	public function handleResponse(Player $player, mixed $data) : void;
+	public function getEventName() : string {
+		return $this->eventName ??= (new \ReflectionClass($this))->getShortName();
+	}
+
+	/**
+	 * Triggers the event processing.
+	 * This is a helper method to make code cleaner: $event->call();
+	 */
+	public function call() : void {
+		HandlerList::callEvent($this);
+	}
 }

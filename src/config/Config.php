@@ -25,9 +25,9 @@ declare(strict_types=1);
 namespace aquarelay\config;
 
 use Symfony\Component\Yaml\Yaml;
+use function explode;
 use function file_exists;
 use function file_put_contents;
-use function explode;
 use function is_array;
 
 /**
@@ -78,8 +78,6 @@ class Config
 
 	/**
 	 * Gets a value from the config.
-	 *
-	 * @param mixed|null $default
 	 */
 	public function get(string $key, mixed $default = null)
 	{
@@ -88,8 +86,6 @@ class Config
 
 	/**
 	 * Gets a nested value using dot notation (e.g., 'database.host').
-	 *
-	 * @param mixed|null $default
 	 */
 	public function getNested(string $key, mixed $default = null)
 	{
@@ -117,8 +113,6 @@ class Config
 	/**
 	 * Sets a nested value using dot notation.
 	 * *
-	 * @param string $key
-	 * @param mixed $value
 	 */
 	public function setNested(string $key, mixed $value) : void
 	{

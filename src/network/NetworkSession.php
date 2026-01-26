@@ -53,9 +53,11 @@ use raklib\utils\InternetAddress;
 use Ramsey\Uuid\Uuid;
 use Random\RandomException;
 use function count;
+use function json_encode;
 use function ord;
 use function substr;
 use function time;
+use const JSON_THROW_ON_ERROR;
 
 class NetworkSession
 {

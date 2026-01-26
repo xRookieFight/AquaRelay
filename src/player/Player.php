@@ -24,6 +24,8 @@ declare(strict_types=1);
 
 namespace aquarelay\player;
 
+use aquarelay\form\Form;
+use aquarelay\form\FormValidationException;
 use aquarelay\network\handler\downstream\AbstractDownstreamPacketHandler;
 use aquarelay\network\handler\downstream\DownstreamResourcePackHandler;
 use aquarelay\network\NetworkSession;
@@ -34,9 +36,8 @@ use aquarelay\utils\Utils;
 use pocketmine\network\mcpe\protocol\ClientboundPacket;
 use pocketmine\network\mcpe\protocol\DataPacket;
 use pocketmine\network\mcpe\protocol\LoginPacket;
-use aquarelay\form\Form;
-use aquarelay\form\FormValidationException;
 use Ramsey\Uuid\UuidInterface;
+use function get_class;
 use function json_encode;
 
 class Player

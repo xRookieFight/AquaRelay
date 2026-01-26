@@ -25,9 +25,13 @@ declare(strict_types=1);
 namespace aquarelay\plugin;
 
 use aquarelay\config\Config;
+use aquarelay\event\HandlerList;
+use aquarelay\event\Listener;
 use aquarelay\ProxyServer;
 use aquarelay\task\TaskScheduler;
 
+use function copy;
+use function dirname;
 use function file_exists;
 use function is_dir;
 use function mkdir;
@@ -177,6 +181,10 @@ abstract class Plugin
 
 	public function saveFile(string $file) : void {
 		$this->saveResource($file, false);
+	}
+
+	public function registerEvent(Listener $listener) : void {
+		HandlerList::register($listener);
 	}
 
 	/**

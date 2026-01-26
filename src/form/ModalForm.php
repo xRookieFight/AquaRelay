@@ -25,90 +25,90 @@ declare(strict_types=1);
 namespace aquarelay\form;
 
 use aquarelay\player\Player;
+use function gettype;
+use function is_bool;
 
 class ModalForm implements Form {
 
-    private string $title;
-    private string $content;
-    private string $button1Text;
-    private string $button2Text;
+	private string $title;
+	private string $content;
+	private string $button1Text;
+	private string $button2Text;
 
-    /** @var callable|null */
-    private $button1Action = null;
+	/** @var callable|null */
+	private $button1Action = null;
 
-    /** @var callable|null */
-    private $button2Action = null;
+	/** @var callable|null */
+	private $button2Action = null;
 
-    public function __construct(string $title, string $content, string $button1Text = "Yes", string $button2Text = "No") {
-        $this->title = $title;
-        $this->content = $content;
-        $this->button1Text = $button1Text;
-        $this->button2Text = $button2Text;
-    }
+	public function __construct(string $title, string $content, string $button1Text = "Yes", string $button2Text = "No") {
+		$this->title = $title;
+		$this->content = $content;
+		$this->button1Text = $button1Text;
+		$this->button2Text = $button2Text;
+	}
 
-    public function setTitle(string $title): self {
-        $this->title = $title;
-        return $this;
-    }
+	public function setTitle(string $title) : self {
+		$this->title = $title;
+		return $this;
+	}
 
-    public function setContent(string $content): self {
-        $this->content = $content;
-        return $this;
-    }
+	public function setContent(string $content) : self {
+		$this->content = $content;
+		return $this;
+	}
 
-    /**
-     * Sets the text and action for the first button (True/Yes).
-     * @param string $text
-     * @param callable|null $action fn(Player $player)
-     */
-    public function setButton1(string $text, ?callable $action = null): self {
-        $this->button1Text = $text;
-        $this->button1Action = $action;
-        return $this;
-    }
+	/**
+	 * Sets the text and action for the first button (True/Yes).
+	 * @param callable|null $action fn(Player $player)
+	 */
+	public function setButton1(string $text, ?callable $action = null) : self {
+		$this->button1Text = $text;
+		$this->button1Action = $action;
+		return $this;
+	}
 
-    /**
-     * Sets the text and action for the second button (False/No).
-     * @param string $text
-     * @param callable|null $action fn(Player $player)
-     */
-    public function setButton2(string $text, ?callable $action = null): self {
-        $this->button2Text = $text;
-        $this->button2Action = $action;
-        return $this;
-    }
+	/**
+	 * Sets the text and action for the second button (False/No).
+	 * @param callable|null $action fn(Player $player)
+	 */
+	public function setButton2(string $text, ?callable $action = null) : self {
+		$this->button2Text = $text;
+		$this->button2Action = $action;
+		return $this;
+	}
 
-    /**
-     * Handles the response from the client.
-     * In a Modal form, data is boolean: true (button1) or false (button2).
-     */
-    public function handleResponse(Player $player, mixed $data): void {
-        if ($data === null) {
-            return; 
-        }
+	/**
+	 * Handles the response from the client.
+	 * In a Modal form, data is boolean: true (button1) or false (button2).
+	 */
+	public function handleResponse(Player $player, mixed $data) : void {
+		if ($data === null) {
+			return;
+		}
 
-        if (!is_bool($data)) {
-            throw new FormValidationException("Invalid modal response: Expected boolean, got " . gettype($data));
-        }
+		if (!is_bool($data)) {
+			throw new FormValidationException("Invalid modal response: Expected boolean, got " . gettype($data));
+		}
 
-        if ($data) {
-            if ($this->button1Action !== null) {
-                ($this->button1Action)($player);
-            }
-        } else {
-            if ($this->button2Action !== null) {
-                ($this->button2Action)($player);
-            }
-        }
-    }
+		if ($data) {
+			if ($this->button1Action !== null) {
+				($this->button1Action)($player);
+			}
+		} else {
+			if ($this->button2Action !== null) {
+				($this->button2Action)($player);
+			}
+		}
+	}
 
-    public function jsonSerialize(): array {
-        return [
-            'type' => 'modal',
-            'title' => $this->title,
-            'content' => $this->content,
-            'button1' => $this->button1Text,
-            'button2' => $this->button2Text
-        ];
-    }
+	public function jsonSerialize() : array {
+		return [
+			'type' => 'modal',
+			'title' => $this->title,
+			'content' => $this->content,
+			'button1' => $this->button1Text,
+			'button2' => $this->button2Text
+		];
+	}
 }

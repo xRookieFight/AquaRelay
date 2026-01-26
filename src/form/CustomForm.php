@@ -24,143 +24,145 @@ declare(strict_types=1);
 
 namespace aquarelay\form;
 
-use aquarelay\player\Player; 
+use aquarelay\player\Player;
+use function gettype;
+use function is_array;
 
 class CustomForm implements Form {
 
-    private string $title;
-    
-    /** @var array<array<string, mixed>> */
-    private array $elements = [];
-    
-    /** @var callable|null */
-    private $submitAction = null;
-    
-    /** @var callable[] */
-    private array $validations = [];
+	private string $title;
 
-    public function __construct(string $title) {
-        $this->title = $title;
-    }
+	/** @var array<array<string, mixed>> */
+	private array $elements = [];
 
-    public function setTitle(string $title): self {
-        $this->title = $title;
-        return $this;
-    }
+	/** @var callable|null */
+	private $submitAction = null;
 
-    public function addLabel(string $text): self {
-        $this->elements[] = [
-            'type' => 'label',
-            'text' => $text
-        ];
-        $this->validations[] = null;
-        return $this;
-    }
+	/** @var callable[] */
+	private array $validations = [];
 
-    public function addInput(string $text, string $placeholder = "", string $default = "", ?callable $validation = null): self {
-        $this->elements[] = [
-            'type' => 'input',
-            'text' => $text,
-            'placeholder' => $placeholder,
-            'default' => $default
-        ];
-        $this->validations[] = $validation;
-        return $this;
-    }
+	public function __construct(string $title) {
+		$this->title = $title;
+	}
 
-    public function addToggle(string $text, bool $default = false, ?callable $validation = null): self {
-        $this->elements[] = [
-            'type' => 'toggle',
-            'text' => $text,
-            'default' => $default
-        ];
-        $this->validations[] = $validation;
-        return $this;
-    }
+	public function setTitle(string $title) : self {
+		$this->title = $title;
+		return $this;
+	}
 
-    public function addSlider(string $text, float $min, float $max, float $step = 1.0, float $default = 0.0, ?callable $validation = null): self {
-        $this->elements[] = [
-            'type' => 'slider',
-            'text' => $text,
-            'min' => $min,
-            'max' => $max,
-            'step' => $step,
-            'default' => $default
-        ];
-        $this->validations[] = $validation;
-        return $this;
-    }
+	public function addLabel(string $text) : self {
+		$this->elements[] = [
+			'type' => 'label',
+			'text' => $text
+		];
+		$this->validations[] = null;
+		return $this;
+	}
 
-    public function addStepSlider(string $text, array $steps, int $defaultIndex = 0, ?callable $validation = null): self {
-        $this->elements[] = [
-            'type' => 'step_slider',
-            'text' => $text,
-            'steps' => $steps,
-            'default' => $defaultIndex
-        ];
-        $this->validations[] = $validation;
-        return $this;
-    }
+	public function addInput(string $text, string $placeholder = "", string $default = "", ?callable $validation = null) : self {
+		$this->elements[] = [
+			'type' => 'input',
+			'text' => $text,
+			'placeholder' => $placeholder,
+			'default' => $default
+		];
+		$this->validations[] = $validation;
+		return $this;
+	}
 
-    public function addDropdown(string $text, array $options, int $defaultIndex = 0, ?callable $validation = null): self {
-        $this->elements[] = [
-            'type' => 'dropdown',
-            'text' => $text,
-            'options' => $options,
-            'default' => $defaultIndex
-        ];
-        $this->validations[] = $validation;
-        return $this;
-    }
+	public function addToggle(string $text, bool $default = false, ?callable $validation = null) : self {
+		$this->elements[] = [
+			'type' => 'toggle',
+			'text' => $text,
+			'default' => $default
+		];
+		$this->validations[] = $validation;
+		return $this;
+	}
 
-    /**
-     * Sets the action to run when the form is submitted.
-     * @param callable|null $action fn(Player $player, array $data)
-     */
-    public function setSubmitAction(?callable $action): self {
-        $this->submitAction = $action;
-        return $this;
-    }
+	public function addSlider(string $text, float $min, float $max, float $step = 1.0, float $default = 0.0, ?callable $validation = null) : self {
+		$this->elements[] = [
+			'type' => 'slider',
+			'text' => $text,
+			'min' => $min,
+			'max' => $max,
+			'step' => $step,
+			'default' => $default
+		];
+		$this->validations[] = $validation;
+		return $this;
+	}
 
-    public function handleResponse(Player $player, mixed $data): void {
-        if ($data === null) {
-            return;
-        }
+	public function addStepSlider(string $text, array $steps, int $defaultIndex = 0, ?callable $validation = null) : self {
+		$this->elements[] = [
+			'type' => 'step_slider',
+			'text' => $text,
+			'steps' => $steps,
+			'default' => $defaultIndex
+		];
+		$this->validations[] = $validation;
+		return $this;
+	}
 
-        if (!is_array($data)) {
-            throw new FormValidationException("Invalid form data: Expected array, got " . gettype($data));
-        }
+	public function addDropdown(string $text, array $options, int $defaultIndex = 0, ?callable $validation = null) : self {
+		$this->elements[] = [
+			'type' => 'dropdown',
+			'text' => $text,
+			'options' => $options,
+			'default' => $defaultIndex
+		];
+		$this->validations[] = $validation;
+		return $this;
+	}
 
-        $validatedData = [];
+	/**
+	 * Sets the action to run when the form is submitted.
+	 * @param callable|null $action fn(Player $player, array $data)
+	 */
+	public function setSubmitAction(?callable $action) : self {
+		$this->submitAction = $action;
+		return $this;
+	}
 
-        foreach ($this->elements as $index => $element) {
-            $value = $data[$index] ?? null;
+	public function handleResponse(Player $player, mixed $data) : void {
+		if ($data === null) {
+			return;
+		}
 
-            if ($element['type'] === 'label') {
-                $validatedData[] = null;
-                continue;
-            }
+		if (!is_array($data)) {
+			throw new FormValidationException("Invalid form data: Expected array, got " . gettype($data));
+		}
 
-            $validation = $this->validations[$index] ?? null;
-            if ($validation !== null) {
-                if (!$validation($value)) {
-                    throw new FormValidationException("Validation failed for field: " . $element['text']);
-                }
-            }
+		$validatedData = [];
 
-            $validatedData[] = $value;
-        }
+		foreach ($this->elements as $index => $element) {
+			$value = $data[$index] ?? null;
 
-        if ($this->submitAction !== null) {
-            ($this->submitAction)($player, $validatedData);
-        }
-    }
+			if ($element['type'] === 'label') {
+				$validatedData[] = null;
+				continue;
+			}
 
-    public function jsonSerialize(): array {
-        return [
-            'type' => 'custom_form',
-            'title' => $this->title,
-            'content' => $this->elements
-        ];
-    }
+			$validation = $this->validations[$index] ?? null;
+			if ($validation !== null) {
+				if (!$validation($value)) {
+					throw new FormValidationException("Validation failed for field: " . $element['text']);
+				}
+			}
+
+			$validatedData[] = $value;
+		}
+
+		if ($this->submitAction !== null) {
+			($this->submitAction)($player, $validatedData);
+		}
+	}
+
+	public function jsonSerialize() : array {
+		return [
+			'type' => 'custom_form',
+			'title' => $this->title,
+			'content' => $this->elements
+		];
+	}
 }

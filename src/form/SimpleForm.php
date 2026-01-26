@@ -25,58 +25,60 @@ declare(strict_types=1);
 namespace aquarelay\form;
 
 use aquarelay\player\Player;
+use function count;
+use function is_int;
 
 class SimpleForm implements Form {
 
-    private string $title;
-    private string $content;
-    /** @var array<array{ text: string, image?: array{ type: string, data: string } }> */
-    private array $buttons = [];
-    /** @var callable[] */
-    private array $buttonActions = [];
+	private string $title;
+	private string $content;
+	/** @var array<array{ text: string, image?: array{ type: string, data: string } }> */
+	private array $buttons = [];
+	/** @var callable[] */
+	private array $buttonActions = [];
 
-    public function __construct(string $title, string $content = "") {
-        $this->title = $title;
-        $this->content = $content;
-    }
+	public function __construct(string $title, string $content = "") {
+		$this->title = $title;
+		$this->content = $content;
+	}
 
-    public function setTitle(string $title): self {
-        $this->title = $title;
-        return $this;
-    }
+	public function setTitle(string $title) : self {
+		$this->title = $title;
+		return $this;
+	}
 
-    public function setContent(string $content): self {
-        $this->content = $content;
-        return $this;
-    }
+	public function setContent(string $content) : self {
+		$this->content = $content;
+		return $this;
+	}
 
-    public function addButton(string $text, ?callable $action = null, ?array $image = null): self {
-        $button = ['text' => $text];
-        if ($image !== null) {
-            $button['image'] = $image;
-        }
-        $this->buttons[] = $button;
-        $this->buttonActions[] = $action;
-        return $this;
-    }
+	public function addButton(string $text, ?callable $action = null, ?array $image = null) : self {
+		$button = ['text' => $text];
+		if ($image !== null) {
+			$button['image'] = $image;
+		}
+		$this->buttons[] = $button;
+		$this->buttonActions[] = $action;
+		return $this;
+	}
 
-    public function handleResponse(Player $player, mixed $data): void {
-        if (!is_int($data) || $data < 0 || $data >= count($this->buttons)) {
-            throw new FormValidationException("Invalid button selection");
-        }
+	public function handleResponse(Player $player, mixed $data) : void {
+		if (!is_int($data) || $data < 0 || $data >= count($this->buttons)) {
+			throw new FormValidationException("Invalid button selection");
+		}
 
-        $action = $this->buttonActions[$data];
-        if ($action !== null) {
-            $action($player);
-        }
-    }
+		$action = $this->buttonActions[$data];
+		if ($action !== null) {
+			$action($player);
+		}
+	}
 
-    public function jsonSerialize(): array {
-        return [
-            'type' => 'form',
-            'title' => $this->title,
-            'content' => $this->content,
-            'buttons' => $this->buttons
-        ];
-    }
+	public function jsonSerialize() : array {
+		return [
+			'type' => 'form',
+			'title' => $this->title,
+			'content' => $this->content,
+			'buttons' => $this->buttons
+		];
+	}
 }
