@@ -4,8 +4,54 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "2443a4140774af76bb39c71c6705ddb8",
+    "content-hash": "e5fe8f4ef2b648032046f56f8572bb7f",
     "packages": [
+        {
+            "name": "aqaquarelay/raklib-ipc",
+            "version": "dev-master",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/AquaRelay/RakLibIpc.git",
+                "reference": "cd4c5ca30d88a87596b8fadd757c40c87d0dc602"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/AquaRelay/RakLibIpc/zipball/cd4c5ca30d88a87596b8fadd757c40c87d0dc602",
+                "reference": "cd4c5ca30d88a87596b8fadd757c40c87d0dc602",
+                "shasum": ""
+            },
+            "require": {
+                "php": "^8.0",
+                "php-64bit": "*",
+                "pocketmine/binaryutils": "^0.2.0",
+                "pocketmine/raklib": "dev-stable"
+            },
+            "require-dev": {
+                "phpstan/phpstan": "2.1.33",
+                "phpstan/phpstan-strict-rules": "^2.0.0"
+            },
+            "default-branch": true,
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "raklib\\server\\ipc\\": "src/"
+                }
+            },
+            "license": [
+                "GPL-3.0"
+            ],
+            "description": "Channel-based protocols for inter-thread/inter-process communication with RakLib",
+            "support": {
+                "source": "https://github.com/AquaRelay/RakLibIpc/tree/master"
+            },
+            "funding": [
+                {
+                    "type": "patreon",
+                    "url": "https://www.patreon.com/AquaRelay"
+                }
+            ],
+            "time": "2026-01-26T08:58:26+00:00"
+        },
         {
             "name": "brick/math",
             "version": "0.14.1",
@@ -421,52 +467,6 @@
                 "source": "https://github.com/pmmp/RakLib/tree/stable"
             },
             "time": "2025-12-29T20:40:33+00:00"
-        },
-        {
-            "name": "pocketmine/raklib-ipc",
-            "version": "dev-master",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/AquaRelay/RakLibIpc.git",
-                "reference": "b264454b3723198fa53bd1ff8d1ad3fa0d197a52"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/AquaRelay/RakLibIpc/zipball/b264454b3723198fa53bd1ff8d1ad3fa0d197a52",
-                "reference": "b264454b3723198fa53bd1ff8d1ad3fa0d197a52",
-                "shasum": ""
-            },
-            "require": {
-                "php": "^8.0",
-                "php-64bit": "*",
-                "pocketmine/binaryutils": "^0.2.0",
-                "pocketmine/raklib": "dev-stable"
-            },
-            "require-dev": {
-                "phpstan/phpstan": "2.1.33",
-                "phpstan/phpstan-strict-rules": "^2.0.0"
-            },
-            "default-branch": true,
-            "type": "library",
-            "autoload": {
-                "psr-4": {
-                    "raklib\\server\\ipc\\": "src/"
-                }
-            },
-            "license": [
-                "GPL-3.0"
-            ],
-            "description": "Channel-based protocols for inter-thread/inter-process communication with RakLib",
-            "support": {
-                "source": "https://github.com/AquaRelay/RakLibIpc/tree/master"
-            },
-            "funding": [
-                {
-                    "type": "patreon",
-                    "url": "https://www.patreon.com/AquaRelay"
-                }
-            ],
-            "time": "2026-01-24T08:38:54+00:00"
         },
         {
             "name": "pocketmine/snooze",
@@ -3402,9 +3402,9 @@
     "aliases": [],
     "minimum-stability": "dev",
     "stability-flags": {
+        "aqaquarelay/raklib-ipc": 20,
         "nethergamesmc/bedrock-protocol": 20,
-        "pocketmine/raklib": 20,
-        "pocketmine/raklib-ipc": 20
+        "pocketmine/raklib": 20
     },
     "prefer-stable": true,
     "prefer-lowest": false,
