@@ -4,20 +4,20 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "e5fe8f4ef2b648032046f56f8572bb7f",
+    "content-hash": "2b50ac31b78afe89539ab6e08e238b9e",
     "packages": [
         {
-            "name": "aqaquarelay/raklib-ipc",
+            "name": "aquarelay/raklib-ipc",
             "version": "dev-master",
             "source": {
                 "type": "git",
                 "url": "https://github.com/AquaRelay/RakLibIpc.git",
-                "reference": "cd4c5ca30d88a87596b8fadd757c40c87d0dc602"
+                "reference": "14e62de49eb835c46cb0145b49d1e24feda38238"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/AquaRelay/RakLibIpc/zipball/cd4c5ca30d88a87596b8fadd757c40c87d0dc602",
-                "reference": "cd4c5ca30d88a87596b8fadd757c40c87d0dc602",
+                "url": "https://api.github.com/repos/AquaRelay/RakLibIpc/zipball/14e62de49eb835c46cb0145b49d1e24feda38238",
+                "reference": "14e62de49eb835c46cb0145b49d1e24feda38238",
                 "shasum": ""
             },
             "require": {
@@ -50,7 +50,7 @@
                     "url": "https://www.patreon.com/AquaRelay"
                 }
             ],
-            "time": "2026-01-26T08:58:26+00:00"
+            "time": "2026-01-26T09:02:10+00:00"
         },
         {
             "name": "brick/math",
@@ -3402,7 +3402,7 @@
     "aliases": [],
     "minimum-stability": "dev",
     "stability-flags": {
-        "aqaquarelay/raklib-ipc": 20,
+        "aquarelay/raklib-ipc": 20,
         "nethergamesmc/bedrock-protocol": 20,
         "pocketmine/raklib": 20
     },
