@@ -27,16 +27,16 @@ namespace aquarelay\server;
 use function fclose;
 use function fsockopen;
 
-final class BackendServer
+final readonly class BackendServer
 {
 	public function __construct(
-		private readonly string $name,
-		private readonly string $address,
-		private readonly int    $port,
-		private readonly int    $priority
+		private string $name,
+		private string $address,
+		private int    $port,
+		private int    $priority
 	) {}
 
-	public static function create(string $name, string $address, int $port, string $priority) : BackendServer
+	public static function create(string $name, string $address, int $port, int $priority) : BackendServer
 	{
 		return new self(
 			$name,
