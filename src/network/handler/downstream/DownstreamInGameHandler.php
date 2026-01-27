@@ -30,15 +30,48 @@ use pocketmine\network\mcpe\protocol\PlayStatusPacket;
 use pocketmine\network\mcpe\protocol\RequestChunkRadiusPacket;
 use pocketmine\network\mcpe\protocol\StartGamePacket;
 use pocketmine\network\mcpe\protocol\TransferPacket;
+use pocketmine\network\mcpe\protocol\types\command\raw\CommandRawData;
 
 class DownstreamInGameHandler extends AbstractDownstreamPacketHandler
 {
 
-	public function handleAvailableCommands(AvailableCommandsPacket $packet) : bool
+	public function handleAvailableCommands(AvailableCommandsPacket $packet): bool
 	{
-		// TODO: Command injection system
-		// EXAMPLE: $packet->commandData[] = new CommandRawData("test", "Test command for AquaRelay", 0, "any", -1, [], []);
-		$this->getPlayer()->setHandler(new DownstreamInGameHandler($this->getPlayer(), $this->logger));
+		$player = $this->getPlayer();
+		$commandMap = $player->getServer()->getCommandMap();
+
+		$added = [];
+
+		foreach ($commandMap->getCommands() as $command) {
+			$name = strtolower($command->getName());
+
+			if (isset($added[$name])) {
+				continue;
+			}
+
+			if (!$command->testPermission($player)) {
+				continue;
+			}
+
+			$aliases = $command->getAliases();
+
+			if (!empty($aliases) && !in_array($name, $aliases, true)) {
+				$aliases[] = $name;
+			}
+
+			$packet->commandData[] = new CommandRawData(
+				$name,
+				$command->getBuilder()->getDescription(),
+				0,
+				"any",
+				-1,
+				[],
+				[]
+			);
+
+			$added[$name] = true;
+		}
+
 		return true;
 	}
 

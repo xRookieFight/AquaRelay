@@ -24,6 +24,7 @@ declare(strict_types=1);
 
 namespace aquarelay\player;
 
+use aquarelay\command\sender\CommandSender;
 use aquarelay\form\Form;
 use aquarelay\form\FormValidationException;
 use aquarelay\lang\TranslationFactory;
@@ -45,7 +46,7 @@ use Ramsey\Uuid\UuidInterface;
 use function get_class;
 use function json_encode;
 
-class Player
+class Player implements CommandSender
 {
 	public ?int $backendRuntimeId = null;
 	protected UuidInterface $uuid;
@@ -317,5 +318,14 @@ class Player
 	public function getBackendServer() : ?BackendServer
 	{
 		return $this->backendServer;
+	}
+
+	/**
+	 * Returns the latency of player.
+	 * @return int
+	 */
+	public function getPing() : int
+	{
+		return $this->getNetworkSession()->getPing();
 	}
 }

@@ -110,7 +110,7 @@ class UpstreamInGameHandler extends AbstractUpstreamPacketHandler
 		return true;
 	}
 
-	public function handleText(TextPacket $packet) : bool
+	public function handleText(TextPacket $packet): bool
 	{
 		$this->forward($packet);
 		return true;
@@ -118,7 +118,28 @@ class UpstreamInGameHandler extends AbstractUpstreamPacketHandler
 
 	public function handleCommandRequest(CommandRequestPacket $packet) : bool
 	{
-		$this->forward($packet);
+		$message = trim($packet->command);
+
+		if ($message === "" || $message[0] !== "/") {
+			$this->forward($packet);
+			return true;
+		}
+
+		$commandLine = ltrim($message, "/");
+
+		if ($commandLine === "") {
+			$this->forward($packet);
+			return true;
+		}
+
+		if ($this->session->getPlayer() !== null) {
+			$player = $this->session->getPlayer();
+			$server = $player->getServer();
+			if ($server->getCommandMap()->getCommand($commandLine) !== null) {
+				$server->getCommandMap()->dispatch($player, $commandLine);
+			}
+		}
+
 		return true;
 	}
 
@@ -169,6 +190,7 @@ class UpstreamInGameHandler extends AbstractUpstreamPacketHandler
 		$this->forward($packet);
 		return true;
 	}
+
 
 	private function forward(DataPacket $packet) : void
 	{

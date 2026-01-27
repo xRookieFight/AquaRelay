@@ -24,6 +24,7 @@ declare(strict_types=1);
 
 namespace aquarelay;
 
+use aquarelay\command\SimpleCommandMap;
 use aquarelay\config\ProxyConfig;
 use aquarelay\event\default\ServerStartEvent;
 use aquarelay\event\default\ServerStopEvent;
@@ -68,6 +69,7 @@ class ProxyServer
 	private TaskScheduler $taskScheduler;
 	private ProxyLoop $proxyLoop;
 	private ServerManager $serverManager;
+	private SimpleCommandMap $commandMap;
 
 	private float $startProcessTime;
 
@@ -115,6 +117,7 @@ class ProxyServer
 		$this->logger->info('Starting ' . $this->getName() . ' version ' . $this->getVersion());
 		$this->logger->info('This server is running Minecraft: Bedrock Edition ' . Colors::AQUA . 'v' . $this->getMinecraftVersion());
 
+		$this->commandMap = new SimpleCommandMap();
 		$this->playerManager = new PlayerManager();
 		$this->taskScheduler = new TaskScheduler();
 
@@ -137,7 +140,7 @@ class ProxyServer
 
 		$pluginsPath = $this->dataPath . 'plugins' . DIRECTORY_SEPARATOR;
 		if (!is_dir($pluginsPath)) {
-			@mkdir($pluginsPath, 0o755, true);
+			@mkdir($pluginsPath, 0755, true);
 		}
 		$pluginLoader = new PluginLoader($this, $pluginsPath);
 		$this->pluginManager = new PluginManager($this, $pluginLoader);
@@ -286,6 +289,15 @@ class ProxyServer
 
 	public function getServerManager() : ServerManager {
 		return $this->serverManager;
+	}
+
+	/**
+	 * Returns the command map.
+	 * @return SimpleCommandMap
+	 */
+	public function getCommandMap() : SimpleCommandMap
+	{
+		return $this->commandMap;
 	}
 
 	/**
