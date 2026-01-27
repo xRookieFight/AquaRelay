@@ -24,14 +24,19 @@ declare(strict_types=1);
 
 namespace aquarelay\event\default;
 
-use aquarelay\event\Cancellable;
+use aquarelay\event\CancellableTrait;
 use aquarelay\event\Event;
 
 class ServerStopEvent extends Event {
 
-    use Cancellable;
+	private float $startTime;
 
-	public function __construct() {
+	public function __construct(float $startTime) {
+		$this->startTime = $startTime;
+	}
+
+	public function getStartTime() : float {
+		return $this->startTime;
 	}
 
 }

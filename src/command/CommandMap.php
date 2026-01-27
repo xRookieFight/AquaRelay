@@ -22,20 +22,13 @@
 
 declare(strict_types=1);
 
-namespace aquarelay\event\default;
+namespace aquarelay\command;
 
-use aquarelay\event\CancellableTrait;
-use aquarelay\event\Event;
+use aquarelay\command\sender\CommandSender;
 
-class ServerStartEvent extends Event 
-{
-	private float $startTime;
+interface CommandMap {
 
-	public function __construct(float $startTime) {
-		$this->startTime = $startTime;
-	}
-
-	public function getStartTime() : float {
-		return $this->startTime;
-	}
+	public function register(Command $command) : bool;
+	public function dispatch(CommandSender $sender, string $line) : bool;
+	public function getCommand(string $name) : ?Command;
 }

@@ -27,7 +27,7 @@ namespace aquarelay\command;
 use aquarelay\command\default\ProxyListCommand;
 use aquarelay\command\sender\CommandSender;
 
-class SimpleCommandMap {
+class SimpleCommandMap implements CommandMap {
 
 	/** @var Command[] */
 	private array $commands = [];
@@ -42,12 +42,16 @@ class SimpleCommandMap {
         $this->register(new ProxyListCommand());
     }
 
-	public function register(Command $command): void {
+	public function register(Command $command): bool {
+		if (isset($this->commands[$command->getName()])) return false;
+
 		$this->commands[strtolower($command->getName())] = $command;
 
 		foreach ($command->getAliases() as $alias) {
 			$this->commands[strtolower($alias)] = $command;
 		}
+
+		return true;
 	}
 
     public function getCommand(string $name) : ?Command

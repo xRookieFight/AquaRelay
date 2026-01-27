@@ -22,20 +22,16 @@
 
 declare(strict_types=1);
 
-namespace aquarelay\event\default;
+namespace aquarelay\event;
 
-use aquarelay\event\CancellableTrait;
-use aquarelay\event\Event;
+trait CancellableTrait {
+	private bool $cancelled = false;
 
-class ServerStartEvent extends Event 
-{
-	private float $startTime;
-
-	public function __construct(float $startTime) {
-		$this->startTime = $startTime;
+	public function isCancelled() : bool {
+		return $this->cancelled;
 	}
-
-	public function getStartTime() : float {
-		return $this->startTime;
+	
+	public function setCancelled(bool $cancelled = true) : void {
+		$this->cancelled = $cancelled;
 	}
 }

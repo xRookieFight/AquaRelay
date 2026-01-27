@@ -22,16 +22,35 @@
 
 declare(strict_types=1);
 
-namespace aquarelay\event;
+namespace aquarelay\command\sender;
 
-trait Cancellable {
-	private bool $cancelled = false;
+use aquarelay\ProxyServer;
 
-	public function isCancelled() : bool {
-		return $this->cancelled;
+readonly class ConsoleCommandSender implements CommandSender
+{
+
+	public function __construct(private ProxyServer $server)
+	{
+		// NOOP
 	}
-	
-	public function setCancelled(bool $cancelled = true) : void {
-		$this->cancelled = $cancelled;
+
+	public function sendMessage(string $message): void
+	{
+		$this->getServer()->getCommandMap()->dispatch($this, $message);
+	}
+
+	public function getName(): string
+	{
+		return "CONSOLE";
+	}
+
+	public function getServer(): ProxyServer
+	{
+		return $this->server;
+	}
+
+	public function hasPermission(string $permission): bool
+	{
+		return true;
 	}
 }

@@ -81,7 +81,7 @@ class HandlerList {
 		}
 
 		foreach (self::$handlers[$type] as $handler) {
-			if ($event instanceof Cancellable && $event->isCancelled()) {
+			if ($event instanceof CancellableTrait && $event->isCancelled()) {
 				return;
 			}
 

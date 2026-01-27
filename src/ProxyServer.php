@@ -42,6 +42,7 @@ use aquarelay\server\ServerManager;
 use aquarelay\task\TaskScheduler;
 use aquarelay\utils\Colors;
 use aquarelay\utils\MainLogger;
+use aquarelay\utils\SignalHandler;
 use aquarelay\utils\Utils;
 use pocketmine\network\mcpe\protocol\ProtocolInfo;
 use function count;
@@ -126,6 +127,8 @@ class ProxyServer
 
 		register_shutdown_function([$this, 'shutdown']);
 
+		new SignalHandler(fn() =>$this->shutdown());
+
 		$threshold = $this->getConfig()->getNetworkSettings()->getBatchThreshold();
 		$compressionThreshold = $threshold >= 0 ? $threshold : null;
 
@@ -157,14 +160,8 @@ class ProxyServer
 
 		$this->logger->info('Proxy started! (' . round(microtime(true) - $this->startProcessTime, 3) . 's)');
 
-		$ev = new ServerStartEvent($this->startProcessTime);
-		$ev->call();
-
-		if ($ev->isCancelled()) {
-			$this->logger->warning('Server start cancelled by a plugin');
-			$this->shutdown();
-			return;
-		}
+		$event = new ServerStartEvent($this->startProcessTime);
+		$event->call();
 
 		$this->proxyLoop = new ProxyLoop($this); // TODO: We can merge this into ProxyServer class
 		$this->getProxyLoop()->run();
@@ -333,8 +330,8 @@ class ProxyServer
 			$player->disconnect(TranslationFactory::translate('proxy.shutdown'));
 		}
 
-		$ev = new ServerStopEvent();
-		$ev->call();
+		$event = new ServerStopEvent($shutdownStart);
+		$event->call();
 
 		foreach ($this->pluginManager->getPlugins() as $plugin) {
 			if ($plugin->isEnabled()) {

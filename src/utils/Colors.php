@@ -49,11 +49,18 @@ class Colors
 	public const MATERIAL_GOLD = "\033[38;5;220m";
 	public const BOLD = "\033[1m";
 	public const ITALIC = "\033[3m";
-	public const UNDERLINE = "\033[4m";
 
 	public static function clean(string $text) : string
 	{
 		return preg_replace('/\033\[[0-9;]*m/', '', $text);
+	}
+
+	public static function colorize(string $text): string {
+		return str_replace(
+				["§r", "§0", "§b", "§c", "§a", "§e", "§9", "§5", "§f", "§7", "§4", "§2", "§g", "§1", "§6", "§l", "§o"],
+				[self::RESET, self::BLACK, self::AQUA, self::RED, self::GREEN, self::YELLOW, self::BLUE, self::PURPLE, self::WHITE, self::GRAY, self::DARK_RED, self::DARK_GREEN, self::DARK_YELLOW, self::DARK_BLUE, self::MATERIAL_GOLD, self::BOLD, self::ITALIC],
+				$text
+			) . self::RESET;
 	}
 
 	public static function supportsColors() : bool
