@@ -81,8 +81,10 @@ class SimpleCommandMap implements CommandMap {
 		}
 
 		$label = strtolower($label);
+		if (empty($label)) return false;
 
 		if (!isset($this->commands[$label])) {
+			$sender->sendMessage("§cUnknown command: $label. Use /help for a list of available commands.");
 			return false;
 		}
 

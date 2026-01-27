@@ -30,17 +30,23 @@ use pocketmine\network\mcpe\protocol\PlayStatusPacket;
 use pocketmine\network\mcpe\protocol\RequestChunkRadiusPacket;
 use pocketmine\network\mcpe\protocol\StartGamePacket;
 use pocketmine\network\mcpe\protocol\TransferPacket;
+use pocketmine\network\mcpe\protocol\types\command\raw\CommandEnumRawData;
 use pocketmine\network\mcpe\protocol\types\command\raw\CommandRawData;
-use function in_array;
 use function strtolower;
 
 class DownstreamInGameHandler extends AbstractDownstreamPacketHandler
 {
 
-	public function handleAvailableCommands(AvailableCommandsPacket $packet) : bool
+	public function handleAvailableCommands(AvailableCommandsPacket $packet): bool
 	{
 		$player = $this->getPlayer();
-		$commandMap = $player->getServer()->getCommandMap();
+		$server = $player->getServer();
+
+		if (!$server->getConfig()->getMiscSettings()->getCommandInjection()){
+			return true;
+		}
+
+		$commandMap = $server->getCommandMap();
 
 		$added = [];
 
@@ -55,10 +61,31 @@ class DownstreamInGameHandler extends AbstractDownstreamPacketHandler
 				continue;
 			}
 
+			$aliasIndexes = [];
 			$aliases = $command->getAliases();
+			$aliases[] = $name;
 
-			if (!empty($aliases) && !in_array($name, $aliases, true)) {
-				$aliases[] = $name;
+			foreach ($aliases as $alias) {
+				$alias = strtolower($alias);
+
+				$index = array_search($alias, $packet->enumValues, true);
+				if ($index === false) {
+					$packet->enumValues[] = $alias;
+					$index = count($packet->enumValues) - 1;
+				}
+
+				$aliasIndexes[] = $index;
+			}
+
+			$enumIndex = -1;
+
+			if ($aliasIndexes !== []) {
+				$packet->enums[] = new CommandEnumRawData(
+					ucfirst($name) . "Aliases",
+					$aliasIndexes
+				);
+
+				$enumIndex = count($packet->enums) - 1;
 			}
 
 			$packet->commandData[] = new CommandRawData(
@@ -66,7 +93,7 @@ class DownstreamInGameHandler extends AbstractDownstreamPacketHandler
 				$command->getBuilder()->getDescription(),
 				0,
 				"any",
-				-1,
+				$enumIndex,
 				[],
 				[]
 			);

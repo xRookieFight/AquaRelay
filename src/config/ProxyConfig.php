@@ -31,14 +31,14 @@ use aquarelay\config\category\PermissionSettings;
 use aquarelay\config\category\ServerSettings;
 use Symfony\Component\Yaml\Yaml;
 
-class ProxyConfig
+readonly class ProxyConfig
 {
 	public function __construct(
-		private readonly GameSettings $gameSettings,
-		private readonly ServerSettings $serverSettings,
-		private readonly PermissionSettings $permissionSettings,
-		private readonly MiscSettings $miscSettings,
-		private readonly NetworkSettings $networkSettings
+		private GameSettings       $gameSettings,
+		private ServerSettings     $serverSettings,
+		private PermissionSettings $permissionSettings,
+		private MiscSettings       $miscSettings,
+		private NetworkSettings    $networkSettings
 	) {}
 
 	public static function load(string $file, string $path) : self
@@ -74,7 +74,8 @@ class ProxyConfig
 			new MiscSettings(
 				(bool) $miscSettings['debug-mode'],
 				$miscSettings['log-name'],
-				$miscSettings['language']
+				$miscSettings['language'],
+				(bool) $miscSettings['command-injection']
 			),
 			new NetworkSettings(
 				$networkSettings['bind']['address'],

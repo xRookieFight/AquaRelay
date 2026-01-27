@@ -29,7 +29,8 @@ final class MiscSettings
 	public function __construct(
 		private bool $debugMode,
 		private string $logName,
-		private string $selectedLanguage
+		private string $selectedLanguage,
+		private bool $commandInjection
 	) {}
 
 	public function isDebugMode() : bool
@@ -60,5 +61,15 @@ final class MiscSettings
 	public function setSelectedLanguage(string $selectedLanguage) : void
 	{
 		$this->selectedLanguage = $selectedLanguage;
+	}
+
+	public function getCommandInjection() : bool
+	{
+		return $this->commandInjection;
+	}
+
+	public function setCommandInjection(bool $commandInjection) : void
+	{
+		$this->commandInjection = $commandInjection;
 	}
 }
