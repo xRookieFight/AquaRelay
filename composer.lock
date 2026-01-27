@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "2b50ac31b78afe89539ab6e08e238b9e",
+    "content-hash": "08c021d7a00e22bbd15019ddb5b2199f",
     "packages": [
         {
             "name": "aquarelay/raklib-ipc",
@@ -3422,7 +3422,8 @@
         "ext-pmmpthread": "^6.1.0",
         "ext-encoding": "~1.0.0",
         "ext-zlib": ">=1.2.11",
-        "ext-igbinary": "*"
+        "ext-igbinary": "*",
+        "ext-pcre": "*"
     },
     "platform-dev": {},
     "plugin-api-version": "2.6.0"

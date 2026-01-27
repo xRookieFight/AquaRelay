@@ -31,7 +31,6 @@ use function pcntl_signal;
 use function sapi_windows_set_ctrl_handler;
 use const PHP_WINDOWS_EVENT_CTRL_BREAK;
 use const PHP_WINDOWS_EVENT_CTRL_C;
-use const SIG_DFL;
 use const SIGHUP;
 use const SIGINT;
 use const SIGTERM;
