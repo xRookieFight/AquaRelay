@@ -42,27 +42,22 @@ use aquarelay\plugin\PluginManager;
 use aquarelay\server\ServerManager;
 use aquarelay\task\TaskScheduler;
 use aquarelay\utils\Colors;
+use aquarelay\utils\ConsoleReaderThread;
 use aquarelay\utils\MainLogger;
 use aquarelay\utils\SignalHandler;
 use aquarelay\utils\Utils;
 use pocketmine\network\mcpe\protocol\ProtocolInfo;
+use pmmp\thread\ThreadSafeArray;
+use pmmp\thread\Thread;
 use function count;
 use function file_exists;
 use function file_get_contents;
 use function file_put_contents;
-use function fopen;
-use function fread;
 use function is_dir;
-use function is_resource;
 use function microtime;
 use function mkdir;
 use function register_shutdown_function;
 use function round;
-use function stream_select;
-use function stream_set_blocking;
-use function strpos;
-use function substr;
-use function trim;
 use const DIRECTORY_SEPARATOR;
 
 class ProxyServer
@@ -85,11 +80,7 @@ class ProxyServer
 
 	private ConsoleCommandSender $consoleSender;
 
-	/** @var string Holds incomplete command fragments */
-	private string $consoleBuffer = "";
-
-	/** @var resource */
-	private $inputStream;
+	private ThreadSafeArray $consoleQueue;
 
 	private float $startProcessTime;
 
@@ -103,11 +94,10 @@ class ProxyServer
 
 		$this->consoleSender = new ConsoleCommandSender($this);
 
-		$this->inputStream = fopen("php://stdin", "r");
+        $this->consoleQueue = new ThreadSafeArray();
 
-		if ($this->inputStream !== false) {
-			stream_set_blocking($this->inputStream, false);
-		}
+        $consoleThread = new ConsoleReaderThread($this->consoleQueue);
+        $consoleThread->start(Thread::INHERIT_ALL);
 
 		self::$instance = $this;
 		$this->startProcessTime = microtime(true);
@@ -333,38 +323,11 @@ class ProxyServer
 	}
 
 	public function handleConsoleInput() : void
-	{
-		if (!is_resource($this->inputStream)) {
-			return;
-		}
-
-		$read = [$this->inputStream];
-		$write = null;
-		$except = null;
-
-		if (stream_select($read, $write, $except, 0) === 0) {
-			return;
-		}
-
-		$chunk = fread($this->inputStream, 1024);
-
-		if ($chunk === false || $chunk === "") {
-			return;
-		}
-
-		$this->consoleBuffer .= $chunk;
-
-		while (($pos = strpos($this->consoleBuffer, "\n")) !== false) {
-			$line = substr($this->consoleBuffer, 0, $pos);
-
-			$this->consoleBuffer = substr($this->consoleBuffer, $pos + 1);
-
-			$line = trim($line);
-			if ($line !== "") {
-				$this->getCommandMap()->dispatch($this->consoleSender, $line);
-			}
-		}
-	}
+    {
+        while (($line = $this->consoleQueue->shift()) !== null) {
+            $this->getCommandMap()->dispatch($this->consoleSender, $line);
+        }
+    }
 
 	public function broadcastMessage(string $message) : void
 	{
