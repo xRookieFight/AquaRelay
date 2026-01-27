@@ -164,18 +164,20 @@ final class BackendRakClient
 	}
 
 	private function sendRequest2() : void
-	{
-		$packet = new OpenConnectionRequest2();
-		$packet->clientID = $this->clientId;
-		$packet->serverAddress = new InternetAddress($this->address->getIp(), $this->address->getPort(), 4);
-		$packet->mtuSize = $this->mtu;
-		if ($this->rakCookie !== null) {
-			$packet->cookie = $this->rakCookie;
-		}
+    {
+        $packet = new OpenConnectionRequest2();
+        $packet->clientID = $this->clientId;
+        $packet->serverAddress = new InternetAddress("127.0.0.1", $this->address->getPort(), 4);
 
-		$this->sendRawPacket($packet);
-		$this->state = ConnectionState::CONNECTING_2;
-	}
+        $packet->mtuSize = $this->mtu;
+        
+        if ($this->rakCookie !== null) {
+            $packet->cookie = $this->rakCookie;
+        }
+
+        $this->sendRawPacket($packet);
+        $this->state = ConnectionState::CONNECTING_2;
+    }
 
 	private function sendNewIncomingConnection() : void
 	{
