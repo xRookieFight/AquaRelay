@@ -27,6 +27,7 @@ namespace aquarelay\config;
 use aquarelay\config\category\GameSettings;
 use aquarelay\config\category\MiscSettings;
 use aquarelay\config\category\NetworkSettings;
+use aquarelay\config\category\PermissionSettings;
 use aquarelay\config\category\ServerSettings;
 use Symfony\Component\Yaml\Yaml;
 use function file_put_contents;
@@ -36,6 +37,7 @@ class ProxyConfig
 	public function __construct(
 		private readonly GameSettings $gameSettings,
 		private readonly ServerSettings $serverSettings,
+		private readonly PermissionSettings $permissionSettings,
 		private readonly MiscSettings $miscSettings,
 		private readonly NetworkSettings $networkSettings
 	) {}
@@ -56,6 +58,7 @@ class ProxyConfig
 
 		$gameSettings = $data['game-settings'];
 		$serverSettings = $data['server-settings'];
+		$permissionSettings = $data['permissions'];
 		$miscSettings = $data['misc-settings'];
 		$networkSettings = $data['network-settings'];
 
@@ -69,6 +72,9 @@ class ProxyConfig
 			new ServerSettings(
 				(array) $serverSettings["servers"],
 				$serverSettings['selection-strategy']
+			),
+			new PermissionSettings(
+				(array) $permissionSettings
 			),
 			new MiscSettings(
 				(bool) $miscSettings['debug-mode'],
@@ -93,6 +99,11 @@ class ProxyConfig
 	public function getServerSettings() : ServerSettings
 	{
 		return $this->serverSettings;
+	}
+
+	public function getPermissionSettings() : PermissionSettings
+	{
+		return $this->permissionSettings;
 	}
 
 	public function getMiscSettings() : MiscSettings

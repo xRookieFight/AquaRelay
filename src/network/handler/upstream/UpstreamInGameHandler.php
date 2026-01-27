@@ -134,12 +134,14 @@ class UpstreamInGameHandler extends AbstractUpstreamPacketHandler
 
 		if ($this->session->getPlayer() !== null) {
 			$player = $this->session->getPlayer();
-			$server = $player->getServer();
-			if ($server->getCommandMap()->getCommand($commandLine) !== null) {
-				$server->getCommandMap()->dispatch($player, $commandLine);
+			$commandMap = $player->getServer()->getCommandMap();
+
+			if ($commandMap->getCommand($commandLine) === null) {
+				$this->forward($packet);
+			} else {
+				$commandMap->dispatch($player, $commandLine);
 			}
 		}
-
 		return true;
 	}
 

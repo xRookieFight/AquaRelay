@@ -27,7 +27,7 @@ namespace aquarelay\config\category;
 final class ServerSettings
 {
 	public function __construct(
-		private array $servers,
+		private array  $servers,
 		private string $selectionStrategy
 	) {}
 
@@ -36,8 +36,18 @@ final class ServerSettings
 		return $this->servers;
 	}
 
+	public function setServers(array $servers) : void
+	{
+		$this->servers = $servers;
+	}
+
 	public function getSelectionStrategy() : string
 	{
 		return $this->selectionStrategy;
+	}
+
+	public function setSelectionStrategy(string $strategy) : void
+	{
+		$this->selectionStrategy = $strategy;
 	}
 }

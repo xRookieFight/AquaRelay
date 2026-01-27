@@ -22,21 +22,19 @@
 
 declare(strict_types=1);
 
-namespace aquarelay\command\builder;
+namespace aquarelay\permission;
 
-readonly class CommandBuilder {
+final class PermissionAttachment
+{
+	private array $permissions = [];
 
-	public function __construct(
-		private string  $name,
-		private string  $description = "",
-		private string  $usage = "",
-		private array   $aliases = [],
-		private ?string $permission = null
-	) {}
+	public function setPermission(string $permission, bool $value = true) : void
+	{
+		$this->permissions[strtolower($permission)] = $value;
+	}
 
-	public function getName(): string { return $this->name; }
-	public function getDescription(): string { return $this->description; }
-	public function getUsage(): string { return $this->usage; }
-	public function getAliases(): array { return $this->aliases; }
-	public function getPermission(): ?string { return $this->permission; }
+	public function getPermissions() : array
+	{
+		return $this->permissions;
+	}
 }

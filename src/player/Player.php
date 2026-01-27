@@ -32,6 +32,7 @@ use aquarelay\network\handler\downstream\AbstractDownstreamPacketHandler;
 use aquarelay\network\handler\downstream\DownstreamResourcePackHandler;
 use aquarelay\network\NetworkSession;
 use aquarelay\network\raklib\client\BackendRakClient;
+use aquarelay\permission\PermissionHolder;
 use aquarelay\ProxyServer;
 use aquarelay\server\BackendServer;
 use aquarelay\server\ServerException;
@@ -46,7 +47,7 @@ use Ramsey\Uuid\UuidInterface;
 use function get_class;
 use function json_encode;
 
-class Player implements CommandSender
+class Player implements CommandSender, PermissionHolder
 {
 	public ?int $backendRuntimeId = null;
 	protected UuidInterface $uuid;
@@ -288,6 +289,11 @@ class Player implements CommandSender
 				$server->getPort(),
 				false
 			));
+	}
+
+	public function hasPermission(string $permission) : bool
+	{
+		return $this->getServer()->getPermissionManager()->hasPermission($this->getName(), $permission);
 	}
 
 	public function getServer() : ProxyServer

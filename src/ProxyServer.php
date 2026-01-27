@@ -33,6 +33,7 @@ use aquarelay\lang\TranslationFactory;
 use aquarelay\network\compression\ZlibCompressor;
 use aquarelay\network\ProxyLoop;
 use aquarelay\network\raklib\RakLibInterface;
+use aquarelay\permission\PermissionManager;
 use aquarelay\player\Player;
 use aquarelay\player\PlayerManager;
 use aquarelay\plugin\PluginLoader;
@@ -70,6 +71,7 @@ class ProxyServer
 	private ProxyLoop $proxyLoop;
 	private ServerManager $serverManager;
 	private SimpleCommandMap $commandMap;
+	private PermissionManager $permissionManager;
 
 	private float $startProcessTime;
 
@@ -117,6 +119,7 @@ class ProxyServer
 		$this->logger->info('Starting ' . $this->getName() . ' version ' . $this->getVersion());
 		$this->logger->info('This server is running Minecraft: Bedrock Edition ' . Colors::AQUA . 'v' . $this->getMinecraftVersion());
 
+		$this->permissionManager = new PermissionManager($this->getConfig());
 		$this->commandMap = new SimpleCommandMap();
 		$this->playerManager = new PlayerManager();
 		$this->taskScheduler = new TaskScheduler();
@@ -298,6 +301,15 @@ class ProxyServer
 	public function getCommandMap() : SimpleCommandMap
 	{
 		return $this->commandMap;
+	}
+
+	/**
+	 * Returns the permission manager.
+	 * @return PermissionManager
+	 */
+	public function getPermissionManager() : PermissionManager
+	{
+		return $this->permissionManager;
 	}
 
 	/**

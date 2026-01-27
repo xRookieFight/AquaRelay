@@ -20,6 +20,11 @@ server-settings:
 
   selection-strategy: priority # priority | round-robin | random
 
+permissions:
+  xRookieFight: # Example permissions
+    - aquarelay.command.proxylist
+    - aquarelay.command.transfer
+
 misc-settings:
   debug-mode: false # Enables debug logging for development and troubleshooting
   log-name: proxy.log # File name used for proxy log output
