@@ -26,6 +26,7 @@ namespace aquarelay\command;
 
 use aquarelay\command\default\ProxyListCommand;
 use aquarelay\command\default\ProxyStopCommand;
+use aquarelay\command\default\ProxyTransferCommand;
 use aquarelay\command\sender\CommandSender;
 use function array_shift;
 use function explode;
@@ -48,6 +49,7 @@ class SimpleCommandMap implements CommandMap {
 	{
 		$this->register(new ProxyListCommand());
 		$this->register(new ProxyStopCommand());
+		$this->register(new ProxyTransferCommand());
 	}
 
 	public function register(Command $command) : bool {
