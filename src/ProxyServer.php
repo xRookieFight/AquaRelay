@@ -24,6 +24,7 @@ declare(strict_types=1);
 
 namespace aquarelay;
 
+use aquarelay\command\sender\ConsoleCommandSender;
 use aquarelay\command\SimpleCommandMap;
 use aquarelay\config\ProxyConfig;
 use aquarelay\event\default\ServerStartEvent;
@@ -49,11 +50,19 @@ use function count;
 use function file_exists;
 use function file_get_contents;
 use function file_put_contents;
+use function fopen;
+use function fread;
 use function is_dir;
+use function is_resource;
 use function microtime;
 use function mkdir;
 use function register_shutdown_function;
 use function round;
+use function stream_select;
+use function stream_set_blocking;
+use function strpos;
+use function substr;
+use function trim;
 use const DIRECTORY_SEPARATOR;
 
 class ProxyServer
@@ -74,6 +83,14 @@ class ProxyServer
 	private SimpleCommandMap $commandMap;
 	private PermissionManager $permissionManager;
 
+	private ConsoleCommandSender $consoleSender;
+
+	/** @var string Holds incomplete command fragments */
+	private string $consoleBuffer = "";
+
+	/** @var resource */
+	private $inputStream;
+
 	private float $startProcessTime;
 
 	public function __construct(
@@ -82,6 +99,14 @@ class ProxyServer
 	) {
 		if (self::$instance !== null) {
 			throw new \LogicException('Server instance is already initialized');
+		}
+
+		$this->consoleSender = new ConsoleCommandSender($this);
+
+		$this->inputStream = fopen("php://stdin", "r");
+
+		if ($this->inputStream !== false) {
+			stream_set_blocking($this->inputStream, false);
 		}
 
 		self::$instance = $this;
@@ -104,7 +129,7 @@ class ProxyServer
 				throw new \RuntimeException('Failed to create config.yml. Please check permissions.');
 			}
 		}
-		$this->config = ProxyConfig::load($configFile);
+		$this->config = ProxyConfig::load($configFile, $this->resourcePath);
 		$this->logger = new MainLogger('Main Thread', $this->getConfig()->getMiscSettings()->getLogName(), $this->isDebug());
 
 		$selectedLang = $this->getConfig()->getMiscSettings()->getSelectedLanguage();
@@ -127,7 +152,7 @@ class ProxyServer
 
 		register_shutdown_function([$this, 'shutdown']);
 
-		new SignalHandler(fn() =>$this->shutdown());
+		new SignalHandler(fn() => $this->shutdown());
 
 		$threshold = $this->getConfig()->getNetworkSettings()->getBatchThreshold();
 		$compressionThreshold = $threshold >= 0 ? $threshold : null;
@@ -293,7 +318,6 @@ class ProxyServer
 
 	/**
 	 * Returns the command map.
-	 * @return SimpleCommandMap
 	 */
 	public function getCommandMap() : SimpleCommandMap
 	{
@@ -302,17 +326,46 @@ class ProxyServer
 
 	/**
 	 * Returns the permission manager.
-	 * @return PermissionManager
 	 */
 	public function getPermissionManager() : PermissionManager
 	{
 		return $this->permissionManager;
 	}
 
-	/**
-	 * @param string $message
-	 * @return void
-	 */
+	public function handleConsoleInput() : void
+	{
+		if (!is_resource($this->inputStream)) {
+			return;
+		}
+
+		$read = [$this->inputStream];
+		$write = null;
+		$except = null;
+
+		if (stream_select($read, $write, $except, 0) === 0) {
+			return;
+		}
+
+		$chunk = fread($this->inputStream, 1024);
+
+		if ($chunk === false || $chunk === "") {
+			return;
+		}
+
+		$this->consoleBuffer .= $chunk;
+
+		while (($pos = strpos($this->consoleBuffer, "\n")) !== false) {
+			$line = substr($this->consoleBuffer, 0, $pos);
+
+			$this->consoleBuffer = substr($this->consoleBuffer, $pos + 1);
+
+			$line = trim($line);
+			if ($line !== "") {
+				$this->getCommandMap()->dispatch($this->consoleSender, $line);
+			}
+		}
+	}
+
 	public function broadcastMessage(string $message) : void
 	{
 		foreach ($this->getOnlinePlayers() as $player) {

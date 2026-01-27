@@ -25,8 +25,10 @@ declare(strict_types=1);
 namespace aquarelay\config;
 
 use aquarelay\utils\InstanceTrait;
-use function array_key_exists;
-use function is_array;
+use function file_exists;
+use function file_get_contents;
+use function file_put_contents;
+use function unlink;
 
 class ConfigUpdater
 {
@@ -39,26 +41,13 @@ class ConfigUpdater
 		return $configVersion >= self::CONFIG_VERSION;
 	}
 
-	public function update(array $current, array $config) : array
+	public function update(string $file, string $path) : void
 	{
-		foreach ($config as $key => $value) {
-			if (!array_key_exists($key, $current)) {
-				$current[$key] = $value;
-
-				continue;
-			}
-
-			if (is_array($value) && is_array($current[$key])) {
-				$current[$key] = self::update($current[$key], $value);
-			}
+		$configFile = $path . 'config.yml';
+		$data = file_get_contents($configFile);
+		if (file_exists($file)) {
+			unlink($file);
+			file_put_contents($file, $data);
 		}
-
-		foreach ($current as $key => $_) {
-			if (!array_key_exists($key, $config)) {
-				unset($current[$key]);
-			}
-		}
-
-		return $current;
 	}
 }

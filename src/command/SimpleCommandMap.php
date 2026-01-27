@@ -25,24 +25,32 @@ declare(strict_types=1);
 namespace aquarelay\command;
 
 use aquarelay\command\default\ProxyListCommand;
+use aquarelay\command\default\ProxyStopCommand;
 use aquarelay\command\sender\CommandSender;
+use function array_shift;
+use function explode;
+use function str_starts_with;
+use function strtolower;
+use function substr;
+use function trim;
 
 class SimpleCommandMap implements CommandMap {
 
 	/** @var Command[] */
 	private array $commands = [];
 
-    public function __construct()
-    {
-        $this->registerDefaults();
-    }
+	public function __construct()
+	{
+		$this->registerDefaults();
+	}
 
-    public function registerDefaults() : void
-    {
-        $this->register(new ProxyListCommand());
-    }
+	public function registerDefaults() : void
+	{
+		$this->register(new ProxyListCommand());
+		$this->register(new ProxyStopCommand());
+	}
 
-	public function register(Command $command): bool {
+	public function register(Command $command) : bool {
 		if (isset($this->commands[$command->getName()])) return false;
 
 		$this->commands[strtolower($command->getName())] = $command;
@@ -54,14 +62,25 @@ class SimpleCommandMap implements CommandMap {
 		return true;
 	}
 
-    public function getCommand(string $name) : ?Command
-    {
-        return $this->commands[strtolower($name)] ?? null;
-    }
+	public function getCommand(string $name) : ?Command
+	{
+		return $this->commands[strtolower($name)] ?? null;
+	}
 
-	public function dispatch(CommandSender $sender, string $line): bool {
+	public function dispatch(CommandSender $sender, string $line) : bool
+	{
 		$args = explode(" ", trim($line));
-		$label = strtolower(array_shift($args));
+		$label = array_shift($args);
+
+		if ($label === null) {
+			return false;
+		}
+
+		if (str_starts_with($label, "/")) {
+			$label = substr($label, 1);
+		}
+
+		$label = strtolower($label);
 
 		if (!isset($this->commands[$label])) {
 			return false;
@@ -78,7 +97,7 @@ class SimpleCommandMap implements CommandMap {
 		return true;
 	}
 
-	public function getCommands(): array {
+	public function getCommands() : array {
 		return $this->commands;
 	}
 }

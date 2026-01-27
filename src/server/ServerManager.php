@@ -20,9 +20,15 @@
  *
  */
 
+declare(strict_types=1);
+
 namespace aquarelay\server;
 
 use aquarelay\config\category\ServerSettings;
+use function array_rand;
+use function array_values;
+use function count;
+use function usort;
 
 class ServerManager
 {
@@ -51,7 +57,7 @@ class ServerManager
 
 	public function select() : BackendServer
 	{
-        $strategy = $this->serverSettings->getSelectionStrategy() ?? "priority";
+		$strategy = $this->serverSettings->getSelectionStrategy() ?? "priority";
 		$available = $this->getAll();
 
 		if ($available === []) {
@@ -65,14 +71,14 @@ class ServerManager
 		};
 	}
 
-    private function priority(array $servers) : BackendServer
-    {
-        usort(
-            $servers,
-            fn($a, $b) => $a->getPriority() <=> $b->getPriority()
-        );
-        return $servers[0];
-    }
+	private function priority(array $servers) : BackendServer
+	{
+		usort(
+			$servers,
+			fn($a, $b) => $a->getPriority() <=> $b->getPriority()
+		);
+		return $servers[0];
+	}
 
 	private function roundRobin(array $servers) : BackendServer
 	{

@@ -35,27 +35,27 @@ abstract class Command {
 		$this->builder = $this->getBuilder();
 	}
 
-	abstract public function getBuilder(): CommandBuilder;
+	abstract public function getBuilder() : CommandBuilder;
 
 	abstract public function execute(
 		CommandSender $sender,
 		string $label,
 		array $args
-	): bool;
+	) : bool;
 
-	public function getName(): string {
+	public function getName() : string {
 		return $this->builder->getName();
 	}
 
-	public function getAliases(): array {
+	public function getAliases() : array {
 		return $this->builder->getAliases();
 	}
 
-	public function getPermission(): ?string {
+	public function getPermission() : ?string {
 		return $this->builder->getPermission();
 	}
 
-	public function testPermission(CommandSender $sender): bool {
+	public function testPermission(CommandSender $sender) : bool {
 		if ($this->getPermission() === null || $this->getPermission() === "") return true;
 
 		return $sender->hasPermission($this->getPermission());

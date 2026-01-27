@@ -24,7 +24,6 @@ declare(strict_types=1);
 
 namespace aquarelay\event\default;
 
-use aquarelay\event\CancellableTrait;
 use aquarelay\event\Event;
 
 class ServerStopEvent extends Event {

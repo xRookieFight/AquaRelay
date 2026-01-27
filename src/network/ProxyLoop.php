@@ -83,10 +83,10 @@ class ProxyLoop
 	private function tick() : void
 	{
 		$this->server->getScheduler()->processAll();
+		$this->server->handleConsoleInput();
 
 		foreach ($this->sessions as $session) {
 			$player = $session->getPlayer();
-
 			$player?->getDownstream()?->tick();
 		}
 	}
@@ -106,9 +106,9 @@ class ProxyLoop
 				$buffer = ZlibCompressor::getInstance()->decompress($buffer);
 			}  catch (DecompressionException $e) {
 				$this->server->getLogger()->critical("Backend decompression failed: " . $e->getMessage());
-			    $player->disconnect(TranslationFactory::translate("session.login.corrupt_packet"));
-			    return;
-		    }
+				$player->disconnect(TranslationFactory::translate("session.login.corrupt_packet"));
+				return;
+			}
 		}
 
 		try {

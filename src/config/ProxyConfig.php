@@ -30,7 +30,6 @@ use aquarelay\config\category\NetworkSettings;
 use aquarelay\config\category\PermissionSettings;
 use aquarelay\config\category\ServerSettings;
 use Symfony\Component\Yaml\Yaml;
-use function file_put_contents;
 
 class ProxyConfig
 {
@@ -42,18 +41,14 @@ class ProxyConfig
 		private readonly NetworkSettings $networkSettings
 	) {}
 
-	public static function load(string $file) : self
+	public static function load(string $file, string $path) : self
 	{
 		$data = Yaml::parseFile($file);
-		$template = Yaml::parseFile(\aquarelay\RESOURCE_PATH . 'config.yml');
 
 		$configVersion = $data['config-version'] ?? 0;
 
 		if (!ConfigUpdater::getInstance()->isUpToDate($configVersion)) {
-			$data = ConfigUpdater::getInstance()->update($data, $template);
-			$data['config-version'] = ConfigUpdater::CONFIG_VERSION;
-
-			file_put_contents($file, Yaml::dump($data, 4, 2));
+			ConfigUpdater::getInstance()->update($file, $path);
 		}
 
 		$gameSettings = $data['game-settings'];

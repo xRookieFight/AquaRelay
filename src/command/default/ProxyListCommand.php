@@ -24,15 +24,18 @@ declare(strict_types=1);
 
 namespace aquarelay\command\default;
 
-use aquarelay\command\Command;
 use aquarelay\command\builder\CommandBuilder;
+use aquarelay\command\Command;
 use aquarelay\command\sender\CommandSender;
 use aquarelay\permission\DefaultPermissionNames;
 use aquarelay\server\BackendServer;
+use function array_map;
+use function count;
+use function implode;
 
 class ProxyListCommand extends Command
 {
-	public function getBuilder(): CommandBuilder
+	public function getBuilder() : CommandBuilder
 	{
 		return new CommandBuilder(
 			"proxylist",
@@ -43,7 +46,7 @@ class ProxyListCommand extends Command
 		);
 	}
 
-	public function execute(CommandSender $sender, string $label, array $args): bool
+	public function execute(CommandSender $sender, string $label, array $args) : bool
 	{
 		$server = $sender->getServer();
 		$onlinePlayers = $server->getOnlinePlayers();

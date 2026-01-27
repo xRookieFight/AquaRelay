@@ -24,6 +24,8 @@ declare(strict_types=1);
 
 namespace aquarelay\permission;
 
+use function strtolower;
+
 final class PermissionAttachment
 {
 	private array $permissions = [];

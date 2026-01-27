@@ -85,7 +85,7 @@ class UpstreamResourcePackHandler extends AbstractUpstreamPacketHandler
 
 				$this->session->flushGamePacketQueue();
 
-                $backend = $this->session->getServer()->getServerManager()->select();
+				$backend = $this->session->getServer()->getServerManager()->select();
 
 				$this->session->getPlayer()->transferToBackend($backend);
 				$this->session->setHandler(new UpstreamInGameHandler($this->session, $this->logger));

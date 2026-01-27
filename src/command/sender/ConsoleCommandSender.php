@@ -25,6 +25,8 @@ declare(strict_types=1);
 namespace aquarelay\command\sender;
 
 use aquarelay\ProxyServer;
+use aquarelay\utils\Colors;
+use const PHP_EOL;
 
 readonly class ConsoleCommandSender implements CommandSender
 {
@@ -34,22 +36,22 @@ readonly class ConsoleCommandSender implements CommandSender
 		// NOOP
 	}
 
-	public function sendMessage(string $message): void
+	public function sendMessage(string $message) : void
 	{
-		$this->getServer()->getCommandMap()->dispatch($this, $message);
+		echo Colors::colorize($message) . PHP_EOL;
 	}
 
-	public function getName(): string
+	public function getName() : string
 	{
 		return "CONSOLE";
 	}
 
-	public function getServer(): ProxyServer
+	public function getServer() : ProxyServer
 	{
 		return $this->server;
 	}
 
-	public function hasPermission(string $permission): bool
+	public function hasPermission(string $permission) : bool
 	{
 		return true;
 	}

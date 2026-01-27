@@ -22,19 +22,30 @@
 
 declare(strict_types=1);
 
-namespace aquarelay\event\default;
+namespace aquarelay\command\default;
 
-use aquarelay\event\Event;
+use aquarelay\command\builder\CommandBuilder;
+use aquarelay\command\Command;
+use aquarelay\command\sender\CommandSender;
+use aquarelay\permission\DefaultPermissionNames;
+use aquarelay\ProxyServer;
 
-class ServerStartEvent extends Event
+class ProxyStopCommand extends Command
 {
-	private float $startTime;
-
-	public function __construct(float $startTime) {
-		$this->startTime = $startTime;
+	public function getBuilder() : CommandBuilder
+	{
+		return new CommandBuilder(
+			"proxystop",
+			"Stops the proxy server",
+			"/proxystop",
+			["ps"],
+			DefaultPermissionNames::COMMAND_PROXYSTOP
+		);
 	}
 
-	public function getStartTime() : float {
-		return $this->startTime;
+	public function execute(CommandSender $sender, string $label, array $args) : bool
+	{
+		ProxyServer::getInstance()->shutdown();
+		return true;
 	}
 }

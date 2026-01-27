@@ -24,6 +24,9 @@ permissions:
   xRookieFight: # Example permissions
     - aquarelay.command.proxylist
     - aquarelay.command.transfer
+  GAB BISWAJIT:
+    - aquarelay.command.proxystop
+    - aquarelay.command.proxylist
 
 misc-settings:
   debug-mode: false # Enables debug logging for development and troubleshooting

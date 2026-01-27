@@ -27,4 +27,5 @@ namespace aquarelay\permission;
 class DefaultPermissionNames
 {
 	const COMMAND_PROXYLIST = "aquarelay.command.proxylist";
+	const COMMAND_PROXYSTOP = "aquarelay.command.proxystop";
 }

@@ -319,7 +319,6 @@ class Player implements CommandSender, PermissionHolder
 
 	/**
 	 * Returns the backend server information.
-	 * @return BackendServer|null
 	 */
 	public function getBackendServer() : ?BackendServer
 	{
@@ -328,7 +327,6 @@ class Player implements CommandSender, PermissionHolder
 
 	/**
 	 * Returns the latency of player.
-	 * @return int
 	 */
 	public function getPing() : int
 	{

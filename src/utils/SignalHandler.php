@@ -54,10 +54,10 @@ final class SignalHandler{
 			});
 		}elseif(function_exists('pcntl_signal')){
 			foreach([
-						SIGTERM,
-						SIGINT,
-						SIGHUP
-					] as $signal){
+				SIGTERM,
+				SIGINT,
+				SIGHUP
+			] as $signal){
 				pcntl_signal($signal, $this->interruptCallback = fn(int $signo) => $interruptCallback());
 			}
 			pcntl_async_signals(true);

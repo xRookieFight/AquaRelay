@@ -31,11 +31,13 @@ use pocketmine\network\mcpe\protocol\RequestChunkRadiusPacket;
 use pocketmine\network\mcpe\protocol\StartGamePacket;
 use pocketmine\network\mcpe\protocol\TransferPacket;
 use pocketmine\network\mcpe\protocol\types\command\raw\CommandRawData;
+use function in_array;
+use function strtolower;
 
 class DownstreamInGameHandler extends AbstractDownstreamPacketHandler
 {
 
-	public function handleAvailableCommands(AvailableCommandsPacket $packet): bool
+	public function handleAvailableCommands(AvailableCommandsPacket $packet) : bool
 	{
 		$player = $this->getPlayer();
 		$commandMap = $player->getServer()->getCommandMap();
@@ -104,10 +106,10 @@ class DownstreamInGameHandler extends AbstractDownstreamPacketHandler
 		return true;
 	}
 
-    public function handleTransfer(TransferPacket $packet): bool
-    {
+	public function handleTransfer(TransferPacket $packet) : bool
+	{
 		$serverManager = $this->getPlayer()->getServer()->getServerManager();
-        $ipAddress = $packet->address;
+		$ipAddress = $packet->address;
 
 		$server = $serverManager->get($ipAddress);
 		if ($server !== null){
@@ -115,21 +117,21 @@ class DownstreamInGameHandler extends AbstractDownstreamPacketHandler
 			return true;
 		}
 
-        $port = $packet->port;
+		$port = $packet->port;
 
-        foreach ($serverManager->getAll() as $data) {
-            if ($data->getAddress() === $ipAddress && $data->getPort() === $port) {
-                $this->getPlayer()->transferToBackend($serverManager->get($data->getName()));
+		foreach ($serverManager->getAll() as $data) {
+			if ($data->getAddress() === $ipAddress && $data->getPort() === $port) {
+				$this->getPlayer()->transferToBackend($serverManager->get($data->getName()));
 				break;
-            }
-        }
+			}
+		}
 
-        return true;
-    }
+		return true;
+	}
 
-    public function handleDisconnect(DisconnectPacket $packet): bool
-    {
-        $this->getPlayer()->tryFallbackOrDisconnect();
-        return true;
-    }
+	public function handleDisconnect(DisconnectPacket $packet) : bool
+	{
+		$this->getPlayer()->tryFallbackOrDisconnect();
+		return true;
+	}
 }

@@ -27,6 +27,7 @@ namespace aquarelay\utils;
 use function function_exists;
 use function preg_replace;
 use function sapi_windows_vt100_support;
+use function str_replace;
 use const PHP_OS_FAMILY;
 use const STDOUT;
 
@@ -55,7 +56,7 @@ class Colors
 		return preg_replace('/\033\[[0-9;]*m/', '', $text);
 	}
 
-	public static function colorize(string $text): string {
+	public static function colorize(string $text) : string {
 		return str_replace(
 				["§r", "§0", "§b", "§c", "§a", "§e", "§9", "§5", "§f", "§7", "§4", "§2", "§g", "§1", "§6", "§l", "§o"],
 				[self::RESET, self::BLACK, self::AQUA, self::RED, self::GREEN, self::YELLOW, self::BLUE, self::PURPLE, self::WHITE, self::GRAY, self::DARK_RED, self::DARK_GREEN, self::DARK_YELLOW, self::DARK_BLUE, self::MATERIAL_GOLD, self::BOLD, self::ITALIC],
