@@ -64,9 +64,24 @@ class ProxyLoop
 
 	public function run() : void
 	{
+
 		$nextTick = microtime(true);
 
 		while (true) {
+			foreach ($this->sessions as $session) {
+				$player = $session->getPlayer();
+				if ($player === null) {
+					continue;
+				}
+
+				$downstream = $player->getDownstream();
+				if ($downstream === null) {
+					continue;
+				}
+
+				$downstream->tick();
+			}
+
 			$now = microtime(true);
 
 			$this->server->interface->tick();
@@ -84,11 +99,6 @@ class ProxyLoop
 	{
 		$this->server->getScheduler()->processAll();
 		$this->server->handleConsoleInput();
-
-		foreach ($this->sessions as $session) {
-			$player = $session->getPlayer();
-			$player?->getDownstream()?->tick();
-		}
 	}
 
 	public function handleBackendPayload(Player $player, string $payload) : void
