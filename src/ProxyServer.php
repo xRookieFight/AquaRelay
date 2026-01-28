@@ -332,7 +332,7 @@ class ProxyServer
 	public function getPlayerByName(string $name) : ?Player
 	{
 		foreach($this->getOnlinePlayers() as $player) {
-			if ($player->getName() === $name) {
+			if (strtolower($player->getName()) === strtolower($name)) {
 				return $player;
 			}
 		}

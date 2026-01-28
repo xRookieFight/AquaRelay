@@ -123,9 +123,7 @@ final class RewriteData
 		$buffer .= chr(0); // biome storage count
 
 		// biome data (zeros)
-		$buffer .= str_repeat("\x00\x00\x00\x00", 8);
-
-		$buffer .= "\x00";
+		$buffer .= str_repeat("\x00", 8 * 4 + 1);
 
 		// skylight
 		$buffer .= chr(0);
