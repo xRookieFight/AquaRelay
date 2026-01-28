@@ -32,18 +32,16 @@ use aquarelay\network\handler\downstream\AbstractDownstreamPacketHandler;
 use aquarelay\network\handler\downstream\DownstreamResourcePackHandler;
 use aquarelay\network\NetworkSession;
 use aquarelay\network\raklib\client\BackendRakClient;
+use aquarelay\network\rewrite\RewriteData;
 use aquarelay\permission\PermissionHolder;
 use aquarelay\ProxyServer;
 use aquarelay\server\BackendServer;
 use aquarelay\server\ServerException;
 use aquarelay\utils\LoginData;
 use aquarelay\utils\Utils;
-use pocketmine\math\Vector3;
 use pocketmine\network\mcpe\protocol\ClientboundPacket;
 use pocketmine\network\mcpe\protocol\DataPacket;
 use pocketmine\network\mcpe\protocol\LoginPacket;
-use pocketmine\network\mcpe\protocol\PlayerAuthInputPacket;
-use pocketmine\network\mcpe\protocol\TransferPacket;
 use Ramsey\Uuid\Uuid;
 use Ramsey\Uuid\UuidInterface;
 use function get_class;
@@ -51,17 +49,15 @@ use function json_encode;
 
 class Player implements CommandSender, PermissionHolder
 {
-	public ?int $backendRuntimeId = null;
 	protected UuidInterface $uuid;
 	protected string $xuid = '';
 	private ?BackendRakClient $downstreamConnection = null;
 	private ?BackendServer $backendServer = null;
 	private ?AbstractDownstreamPacketHandler $handler = null;
-	public Vector3 $position;
 	protected int $formIdCounter = 0;
 	/** @var Form[] */
 	protected array $forms = [];
-	public bool $isTransferring = false;
+	private RewriteData $rewriteData;
 
 	public function __construct(
 		private readonly ProxyServer    $proxyServer,
@@ -71,6 +67,7 @@ class Player implements CommandSender, PermissionHolder
 	{
 		$this->xuid = $loginData->xuid;
 		$this->uuid = $loginData->uuid;
+		$this->rewriteData = RewriteData::create();
 
 		$this->setHandler(new DownstreamResourcePackHandler($this, $this->proxyServer->getLogger()));
 	}
@@ -86,7 +83,7 @@ class Player implements CommandSender, PermissionHolder
 			$this->upstreamSession->debug('Cannot send packet to backend: downstream connection is null');
 			return;
 		}
-		if (($this->isTransferring && $packet instanceof PlayerAuthInputPacket)) return;
+
 		$this->downstreamConnection->sendGamePacket($packet);
 	}
 
@@ -103,6 +100,11 @@ class Player implements CommandSender, PermissionHolder
 	public function getName() : string
 	{
 		return $this->loginData->username;
+	}
+
+	public function getRewriteData() : RewriteData
+	{
+		return $this->rewriteData;
 	}
 
 	public function setDownstream(BackendRakClient $client) : void
@@ -148,7 +150,7 @@ class Player implements CommandSender, PermissionHolder
 	public function handleBackendPacket(DataPacket $packet) : void
 	{
 		if ($this->handler !== null) {
-			if ($packet->handle($this->handler)){
+			if (!$packet->handle($this->handler)) {
 				$this->sendDataPacket($packet);
 			}
 		}
@@ -247,7 +249,7 @@ class Player implements CommandSender, PermissionHolder
 		$this->upstreamSession->disconnect($reason);
 	}
 
-	public function transfer(BackendServer $server, bool $firstJoin = false) : void
+	public function transfer(BackendServer $server, bool $transfer = true) : void
 	{
 		if ($this->backendServer?->getName() === $server->getName()) {
 			return;
@@ -255,7 +257,7 @@ class Player implements CommandSender, PermissionHolder
 
 		$this->backendServer = $server;
 
-		$this->upstreamSession->connectBackendTo($server->getAddress(), $server->getPort(), $firstJoin);
+		$this->upstreamSession->connectBackendTo($server->getAddress(), $server->getPort(), $transfer);
 		$this->getNetworkSession()->info("Transferring to server: {$server->getName()}");
 	}
 
@@ -265,16 +267,10 @@ class Player implements CommandSender, PermissionHolder
 		$reason = TranslationFactory::translate("proxy.backend.read_error", [Uuid::uuid4()->toString()]);
 
 		try {
-			$fallback = $serverManager->select();
-		} catch (ServerException) {
-			$this->getNetworkSession()->warning("Backend '{$this->getBackendServer()?->getName()}' down, disconnecting");
-			$this->disconnect($reason);
-			return;
-		}
-
-		if (!$fallback->isOnline()) {
-			$this->getNetworkSession()->warning("Backend '{$fallback->getName()}' down, disconnecting");
-			$this->disconnect($reason);
+			$fallback = $serverManager->selectAfter();
+		} catch (ServerException $e) {
+			$this->getNetworkSession()->warning($e->getMessage());
+			$this->disconnect($e->getMessage());
 			return;
 		}
 

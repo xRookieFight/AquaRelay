@@ -136,15 +136,17 @@ class NetworkSession
 		}
 	}
 
-	public function connectBackendTo(string $ip, int $port, bool $firstJoin) : void
+	public function connectBackendTo(string $ip, int $port, bool $transfer) : void
 	{
 		$player = $this->player;
 		if ($player === null) return;
 
 		$this->debug("Connecting to $ip:$port...");
-		if (!$firstJoin) {
-			$this->getPlayer()->isTransferring = true;
+
+		if ($transfer) {
+			$this->getPlayer()->getRewriteData()->setTransferring(true);
 		}
+
 		$backend = new BackendRakClient(new InternetAddress($ip, $port, 4), $player);
 
 		$player->setDownstream($backend);

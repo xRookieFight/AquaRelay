@@ -27,6 +27,7 @@ namespace aquarelay\network\handler\upstream;
 use pocketmine\network\mcpe\protocol\AnimatePacket;
 use pocketmine\network\mcpe\protocol\BlockActorDataPacket;
 use pocketmine\network\mcpe\protocol\BlockPickRequestPacket;
+use pocketmine\network\mcpe\protocol\ClientCacheStatusPacket;
 use pocketmine\network\mcpe\protocol\CommandRequestPacket;
 use pocketmine\network\mcpe\protocol\ContainerClosePacket;
 use pocketmine\network\mcpe\protocol\CraftingEventPacket;
@@ -45,6 +46,7 @@ use pocketmine\network\mcpe\protocol\PlayerHotbarPacket;
 use pocketmine\network\mcpe\protocol\RequestChunkRadiusPacket;
 use pocketmine\network\mcpe\protocol\SetLocalPlayerAsInitializedPacket;
 use pocketmine\network\mcpe\protocol\SettingsCommandPacket;
+use pocketmine\network\mcpe\protocol\SubChunkRequestPacket;
 use pocketmine\network\mcpe\protocol\TextPacket;
 use function ltrim;
 use function trim;
@@ -102,20 +104,31 @@ class UpstreamInGameHandler extends AbstractUpstreamPacketHandler
 
 	public function handlePlayerAuthInput(PlayerAuthInputPacket $packet) : bool
 	{
-		$this->forward($packet);
+		if (!$this->session->getPlayer()?->getRewriteData()->isTransferring()) {
+			$this->forward($packet);
+		}
 		return true;
 	}
 
 	public function handleMovePlayer(MovePlayerPacket $packet) : bool
 	{
 		$this->forward($packet);
-
 		return true;
 	}
 
 	public function handleRequestChunkRadius(RequestChunkRadiusPacket $packet) : bool
 	{
 		$this->forward($packet);
+		return true;
+	}
+
+	public function handleSubChunkRequest(SubChunkRequestPacket $packet): bool
+	{
+		return true;
+	}
+
+	public function handleClientCacheStatus(ClientCacheStatusPacket $packet): bool
+	{
 		return true;
 	}
 
@@ -162,7 +175,7 @@ class UpstreamInGameHandler extends AbstractUpstreamPacketHandler
 
 	public function handleInventoryTransaction(InventoryTransactionPacket $packet) : bool
 	{
-		//$this->forward($packet);
+		$this->forward($packet);
 		return true;
 	}
 

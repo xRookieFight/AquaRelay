@@ -24,24 +24,16 @@ declare(strict_types=1);
 
 namespace aquarelay\network\handler\downstream;
 
-use aquarelay\player\Player;
-use pocketmine\math\Vector3;
+use aquarelay\network\rewrite\RewriteData;
 use pocketmine\network\mcpe\protocol\AvailableCommandsPacket;
-use pocketmine\network\mcpe\protocol\ChangeDimensionPacket;
 use pocketmine\network\mcpe\protocol\DisconnectPacket;
-use pocketmine\network\mcpe\protocol\LevelChunkPacket;
-use pocketmine\network\mcpe\protocol\MovePlayerPacket;
-use pocketmine\network\mcpe\protocol\NetworkChunkPublisherUpdatePacket;
-use pocketmine\network\mcpe\protocol\PlayerActionPacket;
 use pocketmine\network\mcpe\protocol\PlayStatusPacket;
-use pocketmine\network\mcpe\protocol\RequestChunkRadiusPacket;
 use pocketmine\network\mcpe\protocol\SetLocalPlayerAsInitializedPacket;
 use pocketmine\network\mcpe\protocol\StartGamePacket;
 use pocketmine\network\mcpe\protocol\TransferPacket;
-use pocketmine\network\mcpe\protocol\types\BlockPosition;
-use pocketmine\network\mcpe\protocol\types\ChunkPosition;
 use pocketmine\network\mcpe\protocol\types\command\raw\CommandEnumRawData;
 use pocketmine\network\mcpe\protocol\types\command\raw\CommandRawData;
+use pocketmine\network\mcpe\protocol\types\DimensionIds;
 use function strtolower;
 
 class DownstreamInGameHandler extends AbstractDownstreamPacketHandler
@@ -53,7 +45,7 @@ class DownstreamInGameHandler extends AbstractDownstreamPacketHandler
 		$server = $player->getServer();
 
 		if (!$server->getConfig()->getMiscSettings()->getCommandInjection()){
-			return true;
+			return false;
 		}
 
 		$commandMap = $server->getCommandMap();
@@ -111,137 +103,53 @@ class DownstreamInGameHandler extends AbstractDownstreamPacketHandler
 			$added[$name] = true;
 		}
 
-		return true;
+		return false;
 	}
 
 	public function handleStartGame(StartGamePacket $packet) : bool
 	{
-		$chunkRadiusPacket = new RequestChunkRadiusPacket();
-		$chunkRadiusPacket->radius = 8;
-		$chunkRadiusPacket->maxRadius = 8;
+		RewriteData::sendChunkRadius($this->getPlayer());
 
-		$this->getPlayer()->getDownstream()->sendGamePacket($chunkRadiusPacket);
-		$this->getPlayer()->position = $packet->playerPosition;
+		$position = $packet->playerPosition;
+		$runtimeId = $packet->actorRuntimeId;
 
-		if ($this->getPlayer()->backendRuntimeId !== null){
-			$this->injectPosition($this->getPlayer(), $this->getPlayer()->position, $packet->actorRuntimeId);
-			$this->injectDimChange($this->getPlayer(), 1, $this->getPlayer()->position, $packet->actorRuntimeId);
-		}
-		$this->getPlayer()->backendRuntimeId = $packet->actorRuntimeId;
+		if ($this->getPlayer()->getRewriteData()->isTransferring()){
+			$this->getPlayer()->getRewriteData()->setLastPosition($position);
 
-		return true;
-	}
-
-	private function injectDimChange(Player $player, int $dimensionId, Vector3 $position, int $entityId) : void
-	{
-		$changeDim = new ChangeDimensionPacket();
-		$changeDim->position = $position;
-		$changeDim->respawn = true;
-		$changeDim->dimension = $dimensionId;
-		$player->getNetworkSession()->sendDataPacket($changeDim);
-
-		$this->injectChunkPublisher($player, $position, 3);
-		$this->injectEmptyChunks($player, $position, 3, $dimensionId);
-	}
-
-	private function injectChunkPublisher(Player $player, Vector3 $defaultSpawn, int $radius) : void
-	{
-		$packet = NetworkChunkPublisherUpdatePacket::create(
-			new BlockPosition($defaultSpawn->getFloorX(), $defaultSpawn->getFloorY(), $defaultSpawn->getFloorZ()),
-			$radius,
-			[]
-		);
-		$player->getNetworkSession()->sendDataPacket($packet);
-	}
-
-	private function injectEmptyChunks(
-		Player $player,
-		Vector3 $spawnPosition,
-		int $radius,
-		int $dimension
-	) : void
-	{
-		$chunkX = $spawnPosition->getFloorX() >> 4;
-		$chunkZ = $spawnPosition->getFloorZ() >> 4;
-
-		for ($x = -$radius; $x <= $radius; $x++) {
-			for ($z = -$radius; $z <= $radius; $z++) {
-				$packet = self::injectEmptyChunk(
-					$chunkX + $x,
-					$chunkZ + $z,
-					$dimension
-				);
-				$player->getNetworkSession()->sendDataPacket($packet);
-			}
-		}
-	}
-
-	private function createChunkData(int $subChunkCount, int $biomeCount) : string {
-		$buffer = '';
-
-		for ($i = 0; $i < $subChunkCount; $i++) {
-			$buffer .= chr(8); // subchunk version
-			$buffer .= chr(0); // no block storages
+			RewriteData::injectPosition($this->getPlayer(), $position, $runtimeId);
+			RewriteData::injectDimChange($this->getPlayer(), DimensionIds::NETHER, $position); // TODO: what if the player is already in nether?
 		}
 
-		// 1.18+ biome palette
-		$buffer .= chr(0); // biome storage count
-
-		// biome data (zeros)
-		$buffer .= str_repeat("\x00\x00\x00\x00", $biomeCount);
-
-		$buffer .= "\x00";
-
-		// skylight
-		$buffer .= chr(0);
-		// block light
-		$buffer .= chr(0);
-
-		return $buffer;
-	}
-
-	private function injectEmptyChunk(
-		int $chunkX,
-		int $chunkZ,
-		int $dimension
-	) : LevelChunkPacket {
-		return LevelChunkPacket::create(new ChunkPosition($chunkX, $chunkZ), $dimension, 1, true, null, $this->createChunkData(1,8));
-	}
-
-	private function injectPosition(Player $player, Vector3 $position, int $runtimeId) : void
-	{
-		$packet = new MovePlayerPacket();
-		$packet->actorRuntimeId =  $runtimeId;
-		$packet->position = $position;
-		$packet->mode = MovePlayerPacket::MODE_RESET;
-		$packet->pitch = 0.0;
-		$packet->yaw = 0.0;
-		$packet->headYaw = 0.0;
-
-		$player->getNetworkSession()->sendDataPacket($packet);
+		$this->getPlayer()->getRewriteData()->setActorRuntimeId($runtimeId);
+		return false;
 	}
 
 	public function handlePlayStatus(PlayStatusPacket $packet) : bool
 	{
 		if ($packet->status === PlayStatusPacket::LOGIN_SUCCESS) {
 			$this->getPlayer()->getNetworkSession()->debug('Forwarding LOGIN_SUCCESS from backend to client');
-			return true;
+			return false;
 		}
 		if ($packet->status === PlayStatusPacket::PLAYER_SPAWN) {
-			if ($this->getPlayer()->backendRuntimeId === null) {
-				$this->getPlayer()->getNetworkSession()->debug('Cannot send spawn notification: backendRuntimeId is null.');
+			$player = $this->getPlayer();
+			$rewriteData = $player->getRewriteData();
+			$actorRuntimeId = $rewriteData->getActorRuntimeId();
+
+			if ($actorRuntimeId === null) {
+				$player->getNetworkSession()->debug('Cannot send spawn notification: backendRuntimeId is null.');
 			} else {
-				if ($this->getPlayer()->isTransferring){
-					$this->injectPosition($this->getPlayer(), $this->getPlayer()->position, $this->getPlayer()->backendRuntimeId);
-					$this->injectDimChange($this->getPlayer(), 0, $this->getPlayer()->position, $this->getPlayer()->backendRuntimeId);
-					$this->getPlayer()->getDownstream()->sendGamePacket(SetLocalPlayerAsInitializedPacket::create($this->getPlayer()->backendRuntimeId));
-					$this->getPlayer()->isTransferring = false;
+				if ($player->getRewriteData()->isTransferring()) {
+					RewriteData::injectPosition($player, $rewriteData->getLastPosition(), $actorRuntimeId);
+					RewriteData::injectDimChange($player, DimensionIds::OVERWORLD, $rewriteData->getLastPosition());
+
+					$player->getDownstream()->sendGamePacket(SetLocalPlayerAsInitializedPacket::create($actorRuntimeId));
+					$player->getRewriteData()->setTransferring(false);
 				}
-				$this->getPlayer()->getNetworkSession()->debug('Sending spawn notification, waiting for spawn response');
+				$player->getNetworkSession()->debug('Sending spawn notification, waiting for spawn response');
 			}
 		}
 
-		return true;
+		return false;
 	}
 
 	public function handleTransfer(TransferPacket $packet) : bool
@@ -254,7 +162,7 @@ class DownstreamInGameHandler extends AbstractDownstreamPacketHandler
 			$packet->address = $this->getPlayer()->getServer()->getAddress();
 			$packet->port = $this->getPlayer()->getServer()->getPort();
 			$this->getPlayer()->transfer($server);
-			return false;
+			return true;
 		}
 
 		$port = $packet->port;
@@ -268,12 +176,12 @@ class DownstreamInGameHandler extends AbstractDownstreamPacketHandler
 			}
 		}
 
-		return false;
+		return true;
 	}
 
 	public function handleDisconnect(DisconnectPacket $packet) : bool
 	{
 		$this->getPlayer()->tryFallbackOrDisconnect();
-		return true;
+		return false;
 	}
 }
