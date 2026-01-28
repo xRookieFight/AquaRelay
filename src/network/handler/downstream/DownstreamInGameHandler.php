@@ -254,7 +254,7 @@ class DownstreamInGameHandler extends AbstractDownstreamPacketHandler
 			$packet->address = $this->getPlayer()->getServer()->getAddress();
 			$packet->port = $this->getPlayer()->getServer()->getPort();
 			$this->getPlayer()->transfer($server);
-			return true;
+			return false;
 		}
 
 		$port = $packet->port;
@@ -268,7 +268,7 @@ class DownstreamInGameHandler extends AbstractDownstreamPacketHandler
 			}
 		}
 
-		return true;
+		return false;
 	}
 
 	public function handleDisconnect(DisconnectPacket $packet) : bool
