@@ -374,7 +374,9 @@ class NetworkSession
 			$packet->decode(new ByteBufferReader($buffer), $this->getProtocolId());
 
 			if ($this->handler !== null) {
-				$packet->handle($this->handler);
+				if (!$packet->handle($this->handler)){
+					$this->debug("Unhandled packet: " . $packet->getName());
+				}
 			}
 		}
 	}

@@ -36,6 +36,7 @@ use pocketmine\network\mcpe\protocol\InteractPacket;
 use pocketmine\network\mcpe\protocol\InventoryTransactionPacket;
 use pocketmine\network\mcpe\protocol\ItemStackRequestPacket;
 use pocketmine\network\mcpe\protocol\LevelSoundEventPacket;
+use pocketmine\network\mcpe\protocol\MobEquipmentPacket;
 use pocketmine\network\mcpe\protocol\MovePlayerPacket;
 use pocketmine\network\mcpe\protocol\NetworkStackLatencyPacket;
 use pocketmine\network\mcpe\protocol\PlayerActionPacket;
@@ -76,6 +77,12 @@ class UpstreamInGameHandler extends AbstractUpstreamPacketHandler
 	}
 
 	public function handleEmote(EmotePacket $packet) : bool
+	{
+		$this->forward($packet);
+		return true;
+	}
+
+	public function handleMobEquipment(MobEquipmentPacket $packet): bool
 	{
 		$this->forward($packet);
 		return true;
