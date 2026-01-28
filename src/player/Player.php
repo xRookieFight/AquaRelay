@@ -38,9 +38,11 @@ use aquarelay\server\BackendServer;
 use aquarelay\server\ServerException;
 use aquarelay\utils\LoginData;
 use aquarelay\utils\Utils;
+use pocketmine\math\Vector3;
 use pocketmine\network\mcpe\protocol\ClientboundPacket;
 use pocketmine\network\mcpe\protocol\DataPacket;
 use pocketmine\network\mcpe\protocol\LoginPacket;
+use pocketmine\network\mcpe\protocol\PlayerAuthInputPacket;
 use pocketmine\network\mcpe\protocol\TransferPacket;
 use Ramsey\Uuid\Uuid;
 use Ramsey\Uuid\UuidInterface;
@@ -55,9 +57,11 @@ class Player implements CommandSender, PermissionHolder
 	private ?BackendRakClient $downstreamConnection = null;
 	private ?BackendServer $backendServer = null;
 	private ?AbstractDownstreamPacketHandler $handler = null;
+	public Vector3 $position;
 	protected int $formIdCounter = 0;
 	/** @var Form[] */
 	protected array $forms = [];
+	public bool $isTransferring = false;
 
 	public function __construct(
 		private readonly ProxyServer    $proxyServer,
@@ -82,6 +86,7 @@ class Player implements CommandSender, PermissionHolder
 			$this->upstreamSession->debug('Cannot send packet to backend: downstream connection is null');
 			return;
 		}
+		if (($this->isTransferring && $packet instanceof PlayerAuthInputPacket)) return;
 		$this->downstreamConnection->sendGamePacket($packet);
 	}
 
@@ -146,7 +151,9 @@ class Player implements CommandSender, PermissionHolder
 			$packet->handle($this->handler);
 		}
 
-		$this->sendDataPacket($packet);
+		if (!$packet instanceof TransferPacket){
+			$this->sendDataPacket($packet);
+		}
 	}
 
 	public function sendMessage(string $message) : void
@@ -242,7 +249,7 @@ class Player implements CommandSender, PermissionHolder
 		$this->upstreamSession->disconnect($reason);
 	}
 
-	public function transferToBackend(BackendServer $server) : void
+	public function transfer(BackendServer $server, bool $firstJoin = false) : void
 	{
 		if ($this->backendServer?->getName() === $server->getName()) {
 			return;
@@ -250,7 +257,7 @@ class Player implements CommandSender, PermissionHolder
 
 		$this->backendServer = $server;
 
-		$this->upstreamSession->connectBackendTo($server->getAddress(), $server->getPort());
+		$this->upstreamSession->connectBackendTo($server->getAddress(), $server->getPort(), $firstJoin);
 		$this->getNetworkSession()->info("Transferring to server: {$server->getName()}");
 	}
 
@@ -268,27 +275,18 @@ class Player implements CommandSender, PermissionHolder
 		}
 
 		if (!$fallback->isOnline()) {
-			$this->getNetworkSession()->warning("Backend '{$this->getBackendServer()?->getName()}' down, disconnecting");
+			$this->getNetworkSession()->warning("Backend '{$fallback->getName()}' down, disconnecting");
 			$this->disconnect($reason);
 			return;
 		}
 
 		if ($this->getBackendServer()?->getName() === $fallback->getName()) {
-			$this->getNetworkSession()->warning("Backend '{$this->getBackendServer()?->getName()}' down, disconnecting");
+			$this->getNetworkSession()->warning("Backend '{$fallback->getName()}' down, disconnecting");
 			$this->disconnect($reason);
 			return;
 		}
 
 		$this->transfer($fallback);
-	}
-
-	public function transfer(BackendServer $server) : void
-	{
-		$this->sendToBackend(TransferPacket::create(
-				$server->getAddress(),
-				$server->getPort(),
-				false
-			));
 	}
 
 	public function hasPermission(string $permission) : bool

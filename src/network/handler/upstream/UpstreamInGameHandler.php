@@ -155,7 +155,7 @@ class UpstreamInGameHandler extends AbstractUpstreamPacketHandler
 
 	public function handleInventoryTransaction(InventoryTransactionPacket $packet) : bool
 	{
-		$this->forward($packet);
+		//$this->forward($packet);
 		return true;
 	}
 

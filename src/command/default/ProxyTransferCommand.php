@@ -67,7 +67,7 @@ class ProxyTransferCommand extends Command
 					return false;
 				}
 
-				$sender->transferToBackend($backend);
+				$sender->transfer($backend);
 				return true;
 			}
 
@@ -84,7 +84,7 @@ class ProxyTransferCommand extends Command
 				return false;
 			}
 
-			$target->transferToBackend($backend);
+			$target->transfer($backend);
 			$sender->sendMessage("§aTransferred §2$targetName §ato §2$serverName");
 			return true;
 		}
@@ -102,7 +102,7 @@ class ProxyTransferCommand extends Command
 			return false;
 		}
 
-		$target->transferToBackend($backend);
+		$target->transfer($backend);
 		$sender->sendMessage("§aTransferred §2$targetName §ato §2$serverName");
 		return true;
 	}

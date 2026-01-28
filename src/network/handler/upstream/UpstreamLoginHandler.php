@@ -256,7 +256,7 @@ class UpstreamLoginHandler extends AbstractUpstreamPacketHandler
 	private function warnUndefinedJsonPropertyHandler(string $context) : Closure
 	{
 		return fn (object $object, string $name, mixed $value) => ProxyServer::getInstance()->getLogger()->warning(
-			"{$context}: Unexpected JSON property for " . (new \ReflectionClass($object))->getShortName() . ': ' . $name . ' = ' . var_export($value, return: true)
+			"$context: Unexpected JSON property for " . (new \ReflectionClass($object))->getShortName() . ': ' . $name . ' = ' . var_export($value, return: true)
 		);
 	}
 }
