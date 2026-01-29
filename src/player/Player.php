@@ -143,11 +143,9 @@ class Player implements CommandSender, PermissionHolder
 	public function handleBackendPacket(DataPacket $packet) : void
 	{
 		if ($this->handler !== null) {
-			if ($packet->handle($this->handler)){
-				$this->sendDataPacket($packet);
-			}
+			$packet->handle($this->handler);
 		}
-
+		$this->sendDataPacket($packet);
 	}
 
 	public function sendMessage(string $message) : void

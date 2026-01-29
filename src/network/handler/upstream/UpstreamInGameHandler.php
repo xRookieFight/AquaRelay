@@ -145,10 +145,16 @@ class UpstreamInGameHandler extends AbstractUpstreamPacketHandler
 			$player = $this->session->getPlayer();
 			$commandMap = $player->getServer()->getCommandMap();
 
-			if ($commandMap->getCommand($commandLine) === null) {
+			$parts = explode(" ", $commandLine);
+			$commandName = strtolower(array_shift($parts));
+			$args = $parts;
+
+			$command = $commandMap->getCommand($commandName);
+
+			if ($command === null) {
 				$this->forward($packet);
 			} else {
-				$commandMap->dispatch($player, $commandLine);
+				$commandMap->dispatch($player, $commandName . (count($args) > 0 ? " " . implode(" ", $args) : ""));
 			}
 		}
 		return true;
