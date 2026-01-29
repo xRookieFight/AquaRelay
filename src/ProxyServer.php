@@ -37,6 +37,7 @@ use aquarelay\network\raklib\RakLibInterface;
 use aquarelay\permission\PermissionManager;
 use aquarelay\player\Player;
 use aquarelay\player\PlayerManager;
+use aquarelay\plugin\loader\PharPluginLoader;
 use aquarelay\plugin\PluginLoader;
 use aquarelay\plugin\PluginManager;
 use aquarelay\server\ServerManager;
@@ -161,10 +162,11 @@ class ProxyServer
 
 		$pluginsPath = $this->dataPath . 'plugins' . DIRECTORY_SEPARATOR;
 		if (!is_dir($pluginsPath)) {
-			@mkdir($pluginsPath, 0755, true);
+			@mkdir($pluginsPath, 0o755, true);
 		}
 		$pluginLoader = new PluginLoader($this, $pluginsPath);
 		$this->pluginManager = new PluginManager($this, $pluginLoader);
+		$this->pluginManager->registerLoader(new PharPluginLoader($this, $this->dataPath));
 		$this->pluginManager->loadPlugins();
 
 		$this->logger->info("Listening on {$this->getAddress()}:{$this->getPort()}");

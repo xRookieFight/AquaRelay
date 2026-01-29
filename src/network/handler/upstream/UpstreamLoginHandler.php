@@ -69,12 +69,6 @@ class UpstreamLoginHandler extends AbstractUpstreamPacketHandler
 		}
 
 		if ($authInfo->AuthenticationType === AuthenticationType::FULL->value) {
-			if (!ProxyServer::getInstance()->getConfig()->getGameSettings()->getXboxAuth()) {
-				$this->session->disconnect(TranslationFactory::translate('session.login.failed'));
-
-				return false;
-			}
-
 			try {
 				[, $clientDataClaims] = JWTUtils::parse($authInfo->Token);
 				$clientData = $this->mapXboxTokenBody($clientDataClaims);
@@ -100,6 +94,11 @@ class UpstreamLoginHandler extends AbstractUpstreamPacketHandler
 				return false;
 			}
 		} elseif ($authInfo->AuthenticationType === AuthenticationType::SELF_SIGNED->value) {
+			if (ProxyServer::getInstance()->getConfig()->getGameSettings()->getXboxAuth()) {
+				$this->session->disconnect(TranslationFactory::translate('session.login.failed'));
+				return false;
+			}
+
 			try {
 				$chainData = json_decode($authInfo->Certificate, flags: JSON_THROW_ON_ERROR);
 			} catch (\JsonException $e) {

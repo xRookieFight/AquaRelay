@@ -32,6 +32,8 @@ use pocketmine\network\mcpe\protocol\SetLocalPlayerAsInitializedPacket;
 use pocketmine\network\mcpe\protocol\StartGamePacket;
 use pocketmine\network\mcpe\protocol\TransferPacket;
 use pocketmine\network\mcpe\protocol\types\command\raw\CommandEnumRawData;
+use pocketmine\network\mcpe\protocol\types\command\raw\CommandOverloadRawData;
+use pocketmine\network\mcpe\protocol\types\command\raw\CommandParameterRawData;
 use pocketmine\network\mcpe\protocol\types\command\raw\CommandRawData;
 use pocketmine\network\mcpe\protocol\types\DimensionIds;
 use function strtolower;
@@ -63,12 +65,20 @@ class DownstreamInGameHandler extends AbstractDownstreamPacketHandler
 				continue;
 			}
 
+			if ($command->getName() === "help") {
+				continue;
+			}
+
 			$aliasIndexes = [];
 			$aliases = $command->getAliases();
 			$aliases[] = $name;
 
 			foreach ($aliases as $alias) {
 				$alias = strtolower($alias);
+
+				if ($alias === "help") {
+					continue;
+				}
 
 				$index = array_search($alias, $packet->enumValues, true);
 				if ($index === false) {
@@ -97,7 +107,15 @@ class DownstreamInGameHandler extends AbstractDownstreamPacketHandler
 				"any",
 				$enumIndex,
 				[],
-				[]
+				[
+					new CommandOverloadRawData(false, [
+						new CommandParameterRawData(
+							"args",
+							1048646,
+							true,
+							0)
+					]) // TODO: what this magic typeInfo could be?
+				]
 			);
 
 			$added[$name] = true;

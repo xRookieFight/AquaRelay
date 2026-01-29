@@ -24,41 +24,49 @@ declare(strict_types=1);
 
 namespace aquarelay\plugin;
 
+use aquarelay\plugin\loader\PluginLoaderInterface;
 use aquarelay\ProxyServer;
 use aquarelay\utils\MainLogger;
-use Symfony\Component\Yaml\Yaml;
 use function array_map;
-use function array_search;
-use function class_exists;
 use function count;
 use function explode;
-use function file_exists;
-use function file_get_contents;
 use function is_dir;
-use function is_file;
-use function is_subclass_of;
 use function mkdir;
 use function scandir;
-use function spl_autoload_register;
-use function str_ends_with;
-use function str_replace;
 use const DIRECTORY_SEPARATOR;
 
-/**
- * Loads plugins from directory and phar files.
- */
 class PluginLoader
 {
 	private MainLogger $logger;
 	private string $dataPath;
+	private array $loaders = [];
 
-	public function __construct(private ProxyServer $server, private string $pluginsPath)
+	public function __construct(private readonly ProxyServer $server, private readonly string $pluginsPath)
 	{
 		$this->logger = $server->getLogger();
 		$this->dataPath = $this->pluginsPath . DIRECTORY_SEPARATOR . 'data';
 		if (!is_dir($this->dataPath)) {
 			mkdir($this->dataPath, 0o755, true);
 		}
+	}
+
+	public function registerLoader(PluginLoaderInterface $loader) : void
+	{
+		foreach ($this->loaders as $loaders) {
+			if ($loaders === $loader){
+				throw new PluginException("Loader already registered");
+			}
+		}
+
+		$this->loaders[] = $loader;
+	}
+
+	/**
+	 * @return PluginLoaderInterface[]
+	 */
+	public function getLoaders() : array
+	{
+		return $this->loaders;
 	}
 
 	/**
@@ -68,67 +76,29 @@ class PluginLoader
 	{
 		$plugins = [];
 
-		if (!is_dir($this->pluginsPath)) {
-			$this->logger->debug('Plugins directory does not exist, creating it...');
-			if (!@mkdir($this->pluginsPath, 0o755, true)) {
-				$this->logger->warning('Failed to create plugins directory');
+		foreach (scandir($this->pluginsPath) ?: [] as $entry) {
+			if ($entry === '.' || $entry === '..' || $entry === 'data') continue;
 
-				return $plugins;
-			}
-		}
+			$path = $this->pluginsPath . DIRECTORY_SEPARATOR . $entry;
 
-		$entries = @scandir($this->pluginsPath);
-		foreach ($entries as $entry) {
-			if ($entry === 'data') {
-				unset($entries[array_search($entry, $entries, true)]);
-			}
-		}
-		if ($entries === false) {
-			$this->logger->error('Failed to scan plugins directory');
-
-			return $plugins;
-		}
-
-		$count = count($entries) - 2;
-		$this->logger->debug("Found {$count} potential plugin(s)");
-
-		foreach ($entries as $entry) {
-			if ($entry === '.' || $entry === '..') {
-				continue;
-			}
-
-			$fullPath = $this->pluginsPath . DIRECTORY_SEPARATOR . $entry;
-
-			try {
-				if (is_dir($fullPath)) {
-					$plugin = $this->loadDirectoryPlugin($fullPath);
-					if ($plugin !== null) {
-						$name = $plugin->getName();
-						if (isset($plugins[$name])) {
-							$this->logger->warning("Plugin '{$name}' already loaded, skipping duplicate.");
-
-							continue;
-						}
-						$plugins[$name] = $plugin;
-					}
-				} elseif (is_file($fullPath) && str_ends_with($fullPath, '.phar')) {
-					$plugin = $this->loadPharPlugin($fullPath);
-					if ($plugin !== null) {
-						$name = $plugin->getName();
-						if (isset($plugins[$name])) {
-							$this->logger->warning("Plugin '{$name}' already loaded, skipping duplicate.");
-
-							continue;
-						}
-						$plugins[$name] = $plugin;
-					}
+			foreach ($this->getLoaders() as $loader) {
+				if (!$loader->canLoad($path)) {
+					continue;
 				}
-			} catch (PluginException $e) {
-				$this->logger->error("Failed to load plugin from {$entry}: " . $e->getMessage());
-			} catch (\Throwable $e) {
-				$this->logger->error("Unexpected error loading plugin from {$entry}: " . $e->getMessage() . ' (File: ' . $e->getFile() . ':' . $e->getLine() . ')');
+
+				try {
+					$plugin = $loader->load($path);
+					if ($plugin !== null) {
+						$plugins[$plugin->getName()] = $plugin;
+					}
+				} catch (\Throwable $e) {
+					$this->server->getLogger()->error("Failed to load plugin $entry: {$e->getMessage()}");
+				}
+
+				break;
 			}
 		}
+
 
 		return $plugins;
 	}
@@ -139,7 +109,7 @@ class PluginLoader
 	 * @param string $pluginVersion Version required by plugin (e.g. "5.0.0")
 	 * @param string $serverVersion Version of server (e.g. "5.3.2")
 	 */
-	private function isCompatible(string $pluginVersion, string $serverVersion) : bool
+	public function isCompatible(string $pluginVersion, string $serverVersion) : bool
 	{
 		$pluginParts = array_map('intval', explode('.', $pluginVersion));
 		$serverParts = array_map('intval', explode('.', $serverVersion));
@@ -162,171 +132,5 @@ class PluginLoader
 		}
 
 		return true;
-	}
-
-	/**
-	 * Loads a plugin from a directory.
-	 *
-	 * @throws PluginException
-	 */
-	private function loadDirectoryPlugin(string $path) : ?Plugin
-	{
-		$pluginYmlPath = $path . DIRECTORY_SEPARATOR . 'plugin.yml';
-
-		if (!file_exists($pluginYmlPath)) {
-			return null;
-		}
-
-		$data = Yaml::parseFile($pluginYmlPath);
-		$description = PluginDescription::fromYaml($data);
-
-		if (!$this->isCompatible($description->getApiVersion(), $this->server::VERSION)) {
-			$this->logger->error("Could not load plugin '{$description->getName()}': requires API version {$description->getApiVersion()}, server is " . ProxyServer::VERSION);
-
-			return null;
-		}
-
-		$vendorPath = $path . DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR . 'autoload.php';
-		if (file_exists($vendorPath)) {
-			require_once $vendorPath;
-		}
-
-		$srcPath = $path . DIRECTORY_SEPARATOR . 'src';
-		if (is_dir($srcPath)) {
-			$this->registerPluginAutoloader($srcPath);
-		}
-
-		$this->loadPhpFilesRecursive($srcPath);
-
-		$mainClass = $description->getMain();
-
-		$classFile = $path . DIRECTORY_SEPARATOR . 'src' . DIRECTORY_SEPARATOR . str_replace('\\', DIRECTORY_SEPARATOR, $mainClass) . '.php';
-
-		if (file_exists($classFile)) {
-			require_once $classFile;
-		} else {
-			$this->logger->debug("Expected class file not found at: {$classFile}");
-		}
-
-		if (!class_exists($mainClass)) {
-			throw new PluginException("Main class {$mainClass} not found in {$path}");
-		}
-
-		if (!is_subclass_of($mainClass, Plugin::class)) {
-			throw new PluginException('Main class must extend ' . Plugin::class);
-		}
-
-		$plugin = new $mainClass();
-		$plugin->setDescription($description);
-		$plugin->setServer($this->server);
-		$plugin->setDataFolder($this->dataPath . DIRECTORY_SEPARATOR . $description->getName());
-
-		try {
-			$plugin->onLoad();
-		} catch (\Throwable $e) {
-			$this->logger->error("Error in plugin {$description->getName()} onLoad: " . $e->getMessage());
-
-			throw new PluginException('Plugin onLoad failed: ' . $e->getMessage());
-		}
-
-		return $plugin;
-	}
-
-	/**
-	 * Recursively loads all PHP files from a directory.
-	 */
-	private function loadPhpFilesRecursive(string $dir) : void
-	{
-		if (!is_dir($dir)) {
-			return;
-		}
-
-		$files = @scandir($dir);
-		if ($files === false) {
-			return;
-		}
-
-		foreach ($files as $file) {
-			if ($file === '.' || $file === '..') {
-				continue;
-			}
-
-			$fullPath = $dir . DIRECTORY_SEPARATOR . $file;
-
-			if (is_dir($fullPath)) {
-				$this->loadPhpFilesRecursive($fullPath);
-			} elseif (is_file($fullPath) && str_ends_with($fullPath, '.php')) {
-				require_once $fullPath;
-			}
-		}
-	}
-
-	/**
-	 * Registers a custom autoloader for the plugin.
-	 */
-	private function registerPluginAutoloader(string $srcPath) : void
-	{
-		spl_autoload_register(function (string $class) use ($srcPath) : void {
-			$classPath = str_replace('\\', DIRECTORY_SEPARATOR, $class);
-			$filePath = $srcPath . DIRECTORY_SEPARATOR . $classPath . '.php';
-
-			if (file_exists($filePath)) {
-				require_once $filePath;
-			}
-		});
-	}
-
-	/**
-	 * Loads a plugin from a phar archive.
-	 *
-	 * @throws PluginException
-	 */
-	private function loadPharPlugin(string $path) : ?Plugin
-	{
-		try {
-			$pharYmlPath = 'phar://' . $path . '/plugin.yml';
-
-			if (!file_exists($pharYmlPath)) {
-				$this->logger->debug("No plugin.yml found in phar: {$path}");
-
-				return null;
-			}
-
-			$content = file_get_contents($pharYmlPath);
-			$data = Yaml::parse($content);
-			$description = PluginDescription::fromYaml($data);
-
-			$vendorPath = 'phar://' . $path . '/vendor/autoload.php';
-			if (file_exists($vendorPath)) {
-				require_once $vendorPath;
-			}
-
-			$mainClass = $description->getMain();
-			$classFile = 'phar://' . $path . '/src/' . str_replace('\\', '/', $mainClass) . '.php';
-
-			if (file_exists($classFile)) {
-				require_once $classFile;
-			} else {
-				$this->logger->debug("Expected class file not found in phar at: {$classFile}");
-			}
-
-			if (!class_exists($mainClass)) {
-				throw new PluginException("Main class {$mainClass} not found in phar: {$path}");
-			}
-
-			if (!is_subclass_of($mainClass, Plugin::class)) {
-				throw new PluginException('Main class must extend ' . Plugin::class);
-			}
-
-			$plugin = new $mainClass();
-			$plugin->setDescription($description);
-			$plugin->setServer($this->server);
-			$plugin->setDataFolder($this->dataPath . DIRECTORY_SEPARATOR . $description->getName());
-			$plugin->onLoad();
-
-			return $plugin;
-		} catch (\PharException $e) {
-			throw new PluginException('Failed to load phar: ' . $e->getMessage());
-		}
 	}
 }
