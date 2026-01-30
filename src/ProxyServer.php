@@ -158,15 +158,16 @@ class ProxyServer
 
 		$this->logger->info('Initializing RakLib Interface...');
 		$this->interface = new RakLibInterface($this->dataPath, $this->logger, $this->getAddress(), $this->getPort(), $this->getConfig()->getNetworkSettings()->getMaxMtu());
-		$this->interface->setName($this->getMotd(), $this->getSubMotd());
+		$this->interface->setName($this);
 
 		$pluginsPath = $this->dataPath . 'plugins' . DIRECTORY_SEPARATOR;
 		if (!is_dir($pluginsPath)) {
 			@mkdir($pluginsPath, 0o755, true);
 		}
+
 		$pluginLoader = new PluginLoader($this, $pluginsPath);
 		$this->pluginManager = new PluginManager($this, $pluginLoader);
-		$this->pluginManager->registerLoader(new PharPluginLoader($this, $this->dataPath));
+		$this->pluginManager->registerLoader(new PharPluginLoader($this, $pluginsPath));
 		$this->pluginManager->loadPlugins();
 
 		$this->logger->info("Listening on {$this->getAddress()}:{$this->getPort()}");

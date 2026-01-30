@@ -24,6 +24,7 @@ declare(strict_types=1);
 
 namespace aquarelay\network\raklib;
 
+use aquarelay\event\default\server\QueryRegenerateEvent;
 use aquarelay\network\raklib\ipc\PthreadsChannelReader;
 use aquarelay\network\raklib\ipc\PthreadsChannelWriter;
 use aquarelay\ProxyServer;
@@ -102,7 +103,7 @@ class RakLibInterface implements ServerEventListener
 		if (++$this->tickCounter >= 20) {
 			$this->tickCounter = 0;
 			$server = ProxyServer::getInstance();
-			$this->setName($server->getMotd(), $server->getSubMotd());
+			$this->setName($server);
 		}
 	}
 
@@ -161,22 +162,22 @@ class RakLibInterface implements ServerEventListener
 		$this->interface->setPortCheck($check);
 	}
 
-	public function setName(string $name, string $subMotd) : void
+	public function setName(ProxyServer $server) : void
 	{
-		$server = ProxyServer::getInstance();
-		$config = $server->getConfig();
+		$ev = new QueryRegenerateEvent($server->getName(), $server->getSubMotd(), $server->getMaxPlayers(), $server->getOnlinePlayerCount());
+		$ev->call();
 		$this->interface->setName(
 			implode(
 				';',
 				[
 					'MCPE',
-					rtrim(addcslashes($name, ';'), '\\'),
+					rtrim(addcslashes($ev->getName(), ';'), '\\'),
 					ProtocolInfo::CURRENT_PROTOCOL,
 					ProtocolInfo::MINECRAFT_VERSION_NETWORK,
-					$server->getOnlinePlayerCount(),
-					$config->getGameSettings()->getMaxPlayers(),
+					$ev->getCurrentPlayers(),
+					$ev->getMaxPlayers(),
 					$this->rakServerId,
-					$subMotd,
+					$ev->getSubMotd(),
 					'Survival', // This shouldn't matter since we're a proxy
 				]
 			) . ';'

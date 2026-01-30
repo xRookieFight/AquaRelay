@@ -30,67 +30,81 @@ use aquarelay\plugin\PluginDescription;
 use aquarelay\plugin\PluginException;
 use Symfony\Component\Yaml\Yaml;
 
-use function class_exists;
-use function file_exists;
-use function is_subclass_of;
-use function str_replace;
-
 readonly class PharPluginLoader implements PluginLoaderInterface
 {
-	public function __construct(
-		private ProxyServer $server,
-		private string $dataPath
-	) {}
+    public function __construct(
+        private ProxyServer $server,
+        private string $dataPath
+    ) {}
 
-	public function canLoad(string $path) : bool
-	{
-		return is_file($path) && str_ends_with($path, '.phar');
-	}
+    public function canLoad(string $path): bool
+    {
+        return is_file($path) && str_ends_with($path, '.phar');
+    }
 
-	public function load(string $path) : ?Plugin
-	{
-		try {
-			$phar = new \Phar($path);
-		} catch (\Throwable $e) {
-			throw new PluginException("Invalid phar file: {$e->getMessage()}");
-		}
+    public function load(string $path): ?Plugin
+    {
+        $pharPath = "phar://{$path}";
 
-		if (!isset($phar['plugin.yml'])) {
-			throw new PluginException("plugin.yml not found in phar");
-		}
+        if (!file_exists($pharPath . '/plugin.yml')) {
+            throw new PluginException("Invalid Plugin: 'plugin.yml' missing in '{$path}'");
+        }
 
-		$yaml = Yaml::parse($phar['plugin.yml']->getContent());
-		if (!is_array($yaml)) {
-			throw new PluginException("plugin.yml is invalid");
-		}
+        try {
+            $data = Yaml::parse(file_get_contents($pharPath . '/plugin.yml'));
+            $description = PluginDescription::fromYaml($data);
+        } catch (\Throwable $e) {
+            throw new PluginException("Error loading plugin.yml in '{$path}': {$e->getMessage()}");
+        }
 
-		$description = PluginDescription::fromYaml($yaml);
+        $vendorAutoload = $pharPath . '/vendor/autoload.php';
+        if (file_exists($vendorAutoload)) {
+            require_once $vendorAutoload;
+        }
 
-		$vendor = "phar://$path/vendor/autoload.php";
-		if (file_exists($vendor)) {
-			require_once $vendor;
-		}
+        $srcPath = $pharPath . '/src';
+        if (file_exists($srcPath)) {
+            $this->registerAutoloader($srcPath);
+        }
 
-		$main = $description->getMain();
-		$mainFile = "phar://{$path}/src/" . str_replace('\\', '/', $main) . '.php';
+        $mainClass = $description->getMain();
+        
+        if (!class_exists($mainClass, true)) {
+            $mainFile = $srcPath . '/' . str_replace('\\', '/', $mainClass) . '.php';
+            if (file_exists($mainFile)) {
+                require_once $mainFile;
+            } else {
+                throw new PluginException("Main class file not found: $mainFile");
+            }
+        }
 
-		if (!file_exists($mainFile)) {
-			throw new PluginException("Main class file not found: $mainFile");
-		}
+        if (!class_exists($mainClass)) {
+            throw new PluginException("Class '$mainClass' not found. Namespace mismatch?");
+        }
 
-		require_once $mainFile;
+        try {
+            $plugin = new $mainClass();
+            $plugin->setDescription($description);
+            $plugin->setServer($this->server);
+            $plugin->setDataFolder($this->dataPath . 'data' . DIRECTORY_SEPARATOR . $description->getName());
+            $plugin->setResourceFolder($pharPath . '/resources');
+            $plugin->onLoad();
+        } catch (\Throwable $e) {
+            throw new PluginException("Error enabling plugin '{$description->getName()}': {$e->getMessage()}");
+        }
 
-		if (!class_exists($main, false)) {
-			throw new PluginException("Main class $main not found");
-		}
+        return $plugin;
+    }
 
-		$plugin = new $main();
-		$plugin->setDescription($description);
-		$plugin->setServer($this->server);
-		$plugin->setDataFolder($this->dataPath . DIRECTORY_SEPARATOR . $description->getName());
-		$plugin->onLoad();
+    private function registerAutoloader(string $srcPath): void
+    {
+        spl_autoload_register(function (string $class) use ($srcPath): void {
+            $path = str_replace('\\', '/', $class);
+            $file = $srcPath . '/' . $path . '.php';
 
-		return $plugin;
-
-	}
+            if (file_exists($file)) {
+                require_once $file;
+            }
+        });
+    }
 }
