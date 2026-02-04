@@ -22,28 +22,42 @@
 
 declare(strict_types=1);
 
-namespace aquarelay\event\default\player;
+namespace aquarelay\event\default\command;
 
+use aquarelay\command\sender\CommandSender;
 use aquarelay\event\Cancellable;
 use aquarelay\event\CancellableTrait;
-use aquarelay\player\Player;
+use aquarelay\event\Event;
 
-class PlayerChatEvent extends PlayerEvent implements Cancellable
-{
+/**
+ * Called before a player dispatches a command.
+ */
+final class CommandEvent extends Event implements Cancellable {
 
 	use CancellableTrait;
 
-	public function __construct(Player $player, protected string $message)
+	private CommandSender $sender;
+	private string $command;
+	private array $args = [];
+
+	public function __construct(CommandSender $sender, string $command, array $args = []) {
+		$this->sender = $sender;
+		$this->command = $command;
+		$this->args = $args;
+	}
+
+	public function getSender() : CommandSender
 	{
-		$this->player = $player;
+		return $this->sender;
 	}
 
-	public function setMessage(string $message) : void{
-		$this->message = $message;
+	public function getCommand() : string
+	{
+		return $this->command;
 	}
 
-	public function getMessage() : string{
-		return $this->message;
+	public function getArgs() : array
+	{
+		return $this->args;
 	}
-
 }

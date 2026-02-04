@@ -22,28 +22,26 @@
 
 declare(strict_types=1);
 
-namespace aquarelay\event\default\player;
+namespace aquarelay\resourcepack;
 
-use aquarelay\event\Cancellable;
-use aquarelay\event\CancellableTrait;
-use aquarelay\player\Player;
+use Ramsey\Uuid\UuidInterface;
 
-class PlayerChatEvent extends PlayerEvent implements Cancellable
+interface ResourcePack
 {
+	public const TYPE_RESOURCES = "resources";
+	public const TYPE_DATA = "data";
 
-	use CancellableTrait;
+	public function getName() : string;
 
-	public function __construct(Player $player, protected string $message)
-	{
-		$this->player = $player;
-	}
+	public function getUuid() : UuidInterface;
 
-	public function setMessage(string $message) : void{
-		$this->message = $message;
-	}
+	public function getVersion() : string;
 
-	public function getMessage() : string{
-		return $this->message;
-	}
+	public function getType() : string;
 
+	public function getSize() : int;
+
+	public function getSha256() : string;
+
+	public function getChunk(int $offset, int $length) : string;
 }
