@@ -178,7 +178,7 @@ class UpstreamResourcePackHandler extends AbstractUpstreamPacketHandler
 
 		$backend = $this->session->getServer()->getServerManager()->select();
 
-		$this->session->getPlayer()->transferToBackend($backend);
+		$this->session->getPlayer()->transfer($backend, false);
 		$this->session->setHandler(new UpstreamInGameHandler($this->session, $this->logger));
 	}
 }
