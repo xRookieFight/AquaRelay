@@ -24,15 +24,14 @@ declare(strict_types=1);
 
 namespace aquarelay\config;
 
+use Symfony\Component\Yaml\Exception\ParseException;
 use Symfony\Component\Yaml\Yaml;
+use function array_replace_recursive;
 use function explode;
 use function file_exists;
 use function file_put_contents;
 use function is_array;
 
-/**
- * Configuration manager for plugins.
- */
 class Config
 {
 	private array $data = [];
@@ -44,27 +43,24 @@ class Config
 		$this->reload();
 	}
 
-	/**
-	 * Reloads the config from the file.
-	 */
 	public function reload() : void
 	{
-		if (file_exists($this->filePath)) {
-			$this->data = Yaml::parseFile($this->filePath) ?? [];
-		} else {
+		if (!file_exists($this->filePath)) {
 			$this->data = [];
+			return;
+		}
+
+		try {
+			$content = Yaml::parseFile($this->filePath);
+			$this->data = is_array($content) ? $content : [];
+		} catch (ParseException $e) {
+			$this->data = [];
+			throw new ConfigException("Failed to parse YAML file at {$this->filePath}: " . $e->getMessage());
 		}
 	}
 
-	/**
-	 * Checks if a key exists (supports dot notation 'section.key').
-	 */
 	public function has(string $key) : bool
 	{
-		if (isset($this->data[$key])) {
-			return true;
-		}
-
 		$parts = explode('.', $key);
 		$current = $this->data;
 		foreach ($parts as $part) {
@@ -76,17 +72,11 @@ class Config
 		return true;
 	}
 
-	/**
-	 * Gets a value from the config.
-	 */
 	public function get(string $key, mixed $default = null)
 	{
 		return $this->data[$key] ?? $default;
 	}
 
-	/**
-	 * Gets a nested value using dot notation (e.g., 'database.host').
-	 */
 	public function getNested(string $key, mixed $default = null)
 	{
 		$parts = explode('.', $key);
@@ -102,18 +92,11 @@ class Config
 		return $current;
 	}
 
-	/**
-	 * Sets a value in the config.
-	 */
 	public function set(string $key, $value) : void
 	{
 		$this->data[$key] = $value;
 	}
 
-	/**
-	 * Sets a nested value using dot notation.
-	 * *
-	 */
 	public function setNested(string $key, mixed $value) : void
 	{
 		$parts = explode('.', $key);
@@ -129,9 +112,6 @@ class Config
 		$current = $value;
 	}
 
-	/**
-	 * Removes a value from the config.
-	 */
 	public function remove(string $key) : void
 	{
 		if (isset($this->data[$key])) {
@@ -139,25 +119,16 @@ class Config
 		}
 	}
 
-	/**
-	 * Sets default values.
-	 */
 	public function setDefaults(array $defaults) : void
 	{
-		$this->data = $defaults + $this->data;
+		$this->data = array_replace_recursive($defaults, $this->data);
 	}
 
-	/**
-	 * Saves the config to file.
-	 */
 	public function save() : void
 	{
 		file_put_contents($this->filePath, Yaml::dump($this->data, 4, 2));
 	}
 
-	/**
-	 * Gets all config data.
-	 */
 	public function getAll() : array
 	{
 		return $this->data;

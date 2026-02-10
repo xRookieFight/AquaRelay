@@ -39,7 +39,13 @@ class PluginLoader
 {
 	private MainLogger $logger;
 	private string $dataPath;
+	/** @var PluginLoaderInterface[] */
 	private array $loaders = [];
+
+	/** * @var array<string, mixed>
+	 * Stores currently loaded plugins to prevent duplicates
+	 */
+	private array $loadedPlugins = [];
 
 	public function __construct(private readonly ProxyServer $server, private readonly string $pluginsPath)
 	{
@@ -89,6 +95,16 @@ class PluginLoader
 				try {
 					$plugin = $loader->load($path);
 					if ($plugin !== null) {
+						if (isset($this->loadedPlugins[$plugin->getName()])) {
+							break;
+						}
+
+						if (isset($plugins[$plugin->getName()])) {
+							 $this->logger->warning("Duplicate plugin '{$plugin->getName()}' detected in scan. Ignoring $entry.");
+							 break;
+						}
+
+						$this->loadedPlugins[$plugin->getName()] = $plugin;
 						$plugins[$plugin->getName()] = $plugin;
 					}
 				} catch (\Throwable $e) {
@@ -98,7 +114,6 @@ class PluginLoader
 				break;
 			}
 		}
-
 
 		return $plugins;
 	}

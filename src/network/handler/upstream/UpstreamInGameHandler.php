@@ -24,6 +24,7 @@ declare(strict_types=1);
 
 namespace aquarelay\network\handler\upstream;
 
+use aquarelay\event\default\player\PlayerChatEvent;
 use pocketmine\network\mcpe\protocol\AnimatePacket;
 use pocketmine\network\mcpe\protocol\BlockActorDataPacket;
 use pocketmine\network\mcpe\protocol\BlockPickRequestPacket;
@@ -48,7 +49,12 @@ use pocketmine\network\mcpe\protocol\SetLocalPlayerAsInitializedPacket;
 use pocketmine\network\mcpe\protocol\SettingsCommandPacket;
 use pocketmine\network\mcpe\protocol\SubChunkRequestPacket;
 use pocketmine\network\mcpe\protocol\TextPacket;
+use function array_shift;
+use function count;
+use function explode;
+use function implode;
 use function ltrim;
+use function strtolower;
 use function trim;
 
 class UpstreamInGameHandler extends AbstractUpstreamPacketHandler
@@ -84,7 +90,7 @@ class UpstreamInGameHandler extends AbstractUpstreamPacketHandler
 		return true;
 	}
 
-	public function handleMobEquipment(MobEquipmentPacket $packet): bool
+	public function handleMobEquipment(MobEquipmentPacket $packet) : bool
 	{
 		$this->forward($packet);
 		return true;
@@ -134,7 +140,14 @@ class UpstreamInGameHandler extends AbstractUpstreamPacketHandler
 
 	public function handleText(TextPacket $packet) : bool
 	{
-		$this->forward($packet);
+		$event = new PlayerChatEvent($this->session->getPlayer(), $packet->message);
+		$event->call();
+
+		$packet->message = $event->getMessage();
+
+		if (!$event->isCancelled()) {
+			$this->forward($packet);
+		}
 		return true;
 	}
 

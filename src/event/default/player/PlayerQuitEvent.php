@@ -22,20 +22,16 @@
 
 declare(strict_types=1);
 
-namespace aquarelay\event\default;
+namespace aquarelay\event\default\player;
 
-use aquarelay\event\Event;
+use aquarelay\player\Player;
 
-class ServerStopEvent extends Event {
+class PlayerQuitEvent extends PlayerEvent
+{
 
-	private float $startTime;
-
-	public function __construct(float $startTime) {
-		$this->startTime = $startTime;
-	}
-
-	public function getStartTime() : float {
-		return $this->startTime;
+	public function __construct(Player $player)
+	{
+		$this->player = $player;
 	}
 
 }

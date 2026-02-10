@@ -22,17 +22,28 @@
 
 declare(strict_types=1);
 
-namespace aquarelay\plugin\loader;
+namespace aquarelay\event\default\player;
 
-use aquarelay\plugin\Plugin;
-use aquarelay\plugin\PluginException;
+use aquarelay\event\Cancellable;
+use aquarelay\event\CancellableTrait;
+use aquarelay\player\Player;
 
-interface PluginLoaderInterface
+class PlayerChatEvent extends PlayerEvent implements Cancellable
 {
-	public function canLoad(string $path) : bool;
 
-	/**
-	 * @throws PluginException
-	 */
-	public function load(string $path) : ?Plugin;
+	use CancellableTrait;
+
+	public function __construct(Player $player, protected string $message)
+	{
+		$this->player = $player;
+	}
+
+	public function setMessage(string $message) : void{
+		$this->message = $message;
+	}
+
+	public function getMessage() : string{
+		return $this->message;
+	}
+
 }

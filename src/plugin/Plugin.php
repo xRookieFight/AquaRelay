@@ -29,174 +29,160 @@ use aquarelay\event\HandlerList;
 use aquarelay\event\Listener;
 use aquarelay\ProxyServer;
 use aquarelay\task\TaskScheduler;
-
+use RuntimeException;
+use Symfony\Component\Filesystem\Path;
 use function copy;
 use function dirname;
+use function error_log;
 use function file_exists;
 use function is_dir;
 use function mkdir;
-use const DIRECTORY_SEPARATOR;
+use function trim;
 
-/**
- * Base class for all AquaRelay plugins.
- */
 abstract class Plugin
 {
 	private PluginDescription $description;
 	private ProxyServer $server;
 	private bool $enabled = false;
 	private string $dataFolder;
+	private string $resourceFolder;
 	private ?Config $config = null;
 
-	/**
-	 * Called when the plugin is loaded.
-	 */
 	public function onLoad() : void {}
-
-	/**
-	 * Called when the plugin is enabled.
-	 */
 	public function onEnable() : void {}
-
-	/**
-	 * Called when the plugin is disabled.
-	 */
 	public function onDisable() : void {}
 
-	/**
-	 * Sets the plugin description.
-	 */
 	public function setDescription(PluginDescription $description) : void
 	{
 		$this->description = $description;
 	}
 
-	/**
-	 * Gets the plugin description.
-	 */
 	public function getDescription() : PluginDescription
 	{
 		return $this->description;
 	}
 
-	/**
-	 * Sets the server instance.
-	 */
 	public function setServer(ProxyServer $server) : void
 	{
 		$this->server = $server;
 	}
 
-	/**
-	 * Gets the server instance.
-	 */
 	public function getServer() : ProxyServer
 	{
 		return $this->server;
 	}
 
-	/**
-	 * Gets the plugin name.
-	 */
 	public function getName() : string
 	{
 		return $this->description->getName();
 	}
 
-	/**
-	 * Gets the plugin version.
-	 */
 	public function getVersion() : string
 	{
 		return $this->description->getVersion();
 	}
 
-	/**
-	 * Gets the plugin authors.
-	 */
 	public function getAuthors() : array
 	{
 		return $this->description->getAuthors();
 	}
 
-	/**
-	 * Checks if the plugin is enabled.
-	 */
 	public function isEnabled() : bool
 	{
 		return $this->enabled;
 	}
 
-	/**
-	 * Sets the enabled state.
-	 */
 	public function setEnabled(bool $enabled) : void
 	{
 		$this->enabled = $enabled;
 	}
 
-	/**
-	 * Returns task scheduler, alias of ProxyServer#getScheduler.
-	 */
 	public function getScheduler() : TaskScheduler
 	{
 		return $this->server->getScheduler();
 	}
 
-	/**
-	 * Sets the data folder for the plugin.
-	 */
-	public function setDataFolder(string $dataFolder) : void
+   public function setDataFolder(string $dataFolder) : void
 	{
 		$this->dataFolder = $dataFolder;
-		if (!is_dir($this->dataFolder)) {
-			mkdir($this->dataFolder, 0o755, true);
-		}
 	}
 
-	/**
-	 * Gets the data folder for the plugin.
-	 */
+	public function setResourceFolder(string $resourceFolder) : void
+	{
+		$this->resourceFolder = $resourceFolder;
+	}
+
 	public function getDataFolder() : string
 	{
 		return $this->dataFolder;
 	}
 
-	/**
-	 * Saves a resource from the plugin's resources to the data folder.
-	 * * @param string $filename The name of the file (e.g., "config.yml")
-	 * @param bool $replace Whether to overwrite existing files
-	 */
 	public function saveResource(string $filename, bool $replace = false) : void
 	{
-		$source = dirname((new \ReflectionClass($this))->getFileName()) . DIRECTORY_SEPARATOR . 'resources' . DIRECTORY_SEPARATOR . $filename;
-		$destination = $this->dataFolder . DIRECTORY_SEPARATOR . $filename;
-
-		if (!file_exists($destination) || $replace) {
-			if (file_exists($source)) {
-				copy($source, $destination);
-			}
+		if (trim($filename) === "") {
+			return;
 		}
+
+		if (!isset($this->resourceFolder)) {
+			throw new RuntimeException("Resource folder not initialized for plugin " . $this->getName());
+		}
+
+		$source = Path::join($this->resourceFolder, $filename);
+
+		if (!file_exists($source)) {
+			error_log("Warning: Could not save resource '$filename' for " . $this->getName() . ". Source not found.");
+			return;
+		}
+
+		$destination = Path::join($this->dataFolder, $filename);
+		$destDir = dirname($destination);
+
+		if (!is_dir($destDir)) {
+			mkdir($destDir, 0755, true);
+		}
+
+		if (file_exists($destination) && !$replace) {
+			return;
+		}
+
+		copy($source, $destination);
 	}
 
-	public function saveFile(string $file) : void {
+	public function saveFile(string $file) : void
+	{
 		$this->saveResource($file, false);
 	}
 
-	public function registerEvent(Listener $listener) : void {
+	public function registerEvent(Listener $listener) : void
+	{
 		HandlerList::register($listener);
 	}
 
 	/**
-	 * Gets the config object
+	 * Gets the config object safely.
 	 */
-	public function getConfig() : Config
+	public function getConfig() : ?Config
 	{
-		if ($this->config === null) {
-			$configPath = $this->dataFolder . DIRECTORY_SEPARATOR . 'config.yml';
+		if ($this->config !== null) {
+			return $this->config;
+		}
+
+		$folder = $this->getDataFolder();
+		$configPath = Path::join($folder, "config.yml");
+
+		if (!file_exists($configPath)) {
+			$this->saveDefaultConfig();
+		}
+
+		if (file_exists($configPath)) {
 			$this->config = new Config($configPath);
 		}
 
 		return $this->config;
+	}
+
+	public function saveDefaultConfig() : void
+	{
+		$this->saveResource("config.yml");
 	}
 }

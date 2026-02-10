@@ -22,17 +22,17 @@
 
 declare(strict_types=1);
 
-namespace aquarelay\plugin\loader;
+namespace aquarelay\event\default\player;
 
-use aquarelay\plugin\Plugin;
-use aquarelay\plugin\PluginException;
+use aquarelay\event\Event;
+use aquarelay\player\Player;
 
-interface PluginLoaderInterface
+abstract class PlayerEvent extends Event
 {
-	public function canLoad(string $path) : bool;
+	protected Player $player;
 
-	/**
-	 * @throws PluginException
-	 */
-	public function load(string $path) : ?Plugin;
+	public function getPlayer() : Player
+	{
+		return $this->player;
+	}
 }

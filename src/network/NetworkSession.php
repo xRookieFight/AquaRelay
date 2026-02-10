@@ -24,6 +24,7 @@ declare(strict_types=1);
 
 namespace aquarelay\network;
 
+use aquarelay\event\default\player\PlayerQuitEvent;
 use aquarelay\form\Form;
 use aquarelay\network\compression\ZlibCompressor;
 use aquarelay\network\handler\downstream\DownstreamResourcePackHandler;
@@ -231,20 +232,12 @@ class NetworkSession
 
 		$this->sendDataPacket(PlayStatusPacket::create(PlayStatusPacket::LOGIN_SUCCESS));
 
-		$infoPacket = ResourcePacksInfoPacket::create(
-			resourcePackEntries: [],
-			behaviorPackEntries: [],
-			mustAccept: false,
-			hasAddons: false,
-			hasScripts: false,
-			forceServerPacks: false,
-			cdnUrls: [],
-			worldTemplateId: Uuid::fromString(Uuid::NIL),
-			worldTemplateVersion: '',
-			forceDisableVibrantVisuals: true,
-		);
-
-		$this->sendDataPacket($infoPacket, true);
+		$packManager = $this->server->getResourcePackManager();
+		if ($packManager->isEnabled()) {
+			$this->sendDataPacket($packManager->getPacksInfoPacket(), true);
+		} else {
+			$this->sendDataPacket($packManager->buildEmptyStackPacket(), true);
+		}
 
 		$this->setHandler(new UpstreamResourcePackHandler($this, $this->server->getLogger()));
 	}
@@ -389,6 +382,9 @@ class NetworkSession
 	{
 		$this->connected = false;
 		$this->info("Session disconnected: $reason");
+
+		$event = new PlayerQuitEvent($this->getPlayer());
+		$event->call();
 
 		NetworkSessionManager::getInstance()->remove($this);
 

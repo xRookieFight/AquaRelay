@@ -26,7 +26,10 @@ namespace aquarelay\plugin;
 
 use aquarelay\plugin\loader\PluginLoaderInterface;
 use aquarelay\ProxyServer;
+use function class_exists;
 use function count;
+use function is_a;
+use function str_starts_with;
 
 class PluginManager
 {
@@ -100,7 +103,11 @@ class PluginManager
 		}
 
 		$plugin->setEnabled(true);
-		$plugin->onEnable();
+		try {
+			$plugin->onEnable();
+		} catch (\Throwable $e) {
+			throw new PluginException($e->getMessage());
+		}
 		$this->server->getLogger()->info('Enabled plugin: ' . $plugin->getName());
 	}
 

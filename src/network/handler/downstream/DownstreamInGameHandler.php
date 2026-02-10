@@ -25,6 +25,7 @@ declare(strict_types=1);
 namespace aquarelay\network\handler\downstream;
 
 use aquarelay\network\rewrite\RewriteData;
+use aquarelay\event\default\player\PlayerJoinEvent;
 use pocketmine\network\mcpe\protocol\AvailableCommandsPacket;
 use pocketmine\network\mcpe\protocol\DisconnectPacket;
 use pocketmine\network\mcpe\protocol\PlayStatusPacket;
@@ -36,12 +37,15 @@ use pocketmine\network\mcpe\protocol\types\command\raw\CommandOverloadRawData;
 use pocketmine\network\mcpe\protocol\types\command\raw\CommandParameterRawData;
 use pocketmine\network\mcpe\protocol\types\command\raw\CommandRawData;
 use pocketmine\network\mcpe\protocol\types\DimensionIds;
+use function array_search;
+use function count;
 use function strtolower;
+use function ucfirst;
 
 class DownstreamInGameHandler extends AbstractDownstreamPacketHandler
 {
 
-	public function handleAvailableCommands(AvailableCommandsPacket $packet): bool
+	public function handleAvailableCommands(AvailableCommandsPacket $packet) : bool
 	{
 		$player = $this->getPlayer();
 		$server = $player->getServer();
@@ -164,6 +168,8 @@ class DownstreamInGameHandler extends AbstractDownstreamPacketHandler
 					$player->getRewriteData()->setTransferring(false);
 				}
 				$player->getNetworkSession()->debug('Sending spawn notification, waiting for spawn response');
+				$event = new PlayerJoinEvent($this->getPlayer());
+				$event->call();
 			}
 		}
 

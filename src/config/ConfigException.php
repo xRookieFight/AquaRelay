@@ -22,17 +22,6 @@
 
 declare(strict_types=1);
 
-namespace aquarelay\plugin\loader;
+namespace aquarelay\config;
 
-use aquarelay\plugin\Plugin;
-use aquarelay\plugin\PluginException;
-
-interface PluginLoaderInterface
-{
-	public function canLoad(string $path) : bool;
-
-	/**
-	 * @throws PluginException
-	 */
-	public function load(string $path) : ?Plugin;
-}
+final class ConfigException extends \RuntimeException {}

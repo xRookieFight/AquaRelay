@@ -24,16 +24,19 @@ declare(strict_types=1);
 
 namespace aquarelay\plugin\loader;
 
-use aquarelay\ProxyServer;
 use aquarelay\plugin\Plugin;
 use aquarelay\plugin\PluginDescription;
 use aquarelay\plugin\PluginException;
+use aquarelay\ProxyServer;
 use Symfony\Component\Yaml\Yaml;
-
 use function class_exists;
 use function file_exists;
-use function is_subclass_of;
+use function file_get_contents;
+use function is_file;
+use function spl_autoload_register;
+use function str_ends_with;
 use function str_replace;
+use const DIRECTORY_SEPARATOR;
 
 readonly class PharPluginLoader implements PluginLoaderInterface
 {
@@ -49,48 +52,67 @@ readonly class PharPluginLoader implements PluginLoaderInterface
 
 	public function load(string $path) : ?Plugin
 	{
+		$pharPath = "phar://{$path}";
+
+		if (!file_exists($pharPath . '/plugin.yml')) {
+			throw new PluginException("Invalid Plugin: 'plugin.yml' missing in '{$path}'");
+		}
+
 		try {
-			$phar = new \Phar($path);
+			$data = Yaml::parse(file_get_contents($pharPath . '/plugin.yml'));
+			$description = PluginDescription::fromYaml($data);
 		} catch (\Throwable $e) {
-			throw new PluginException("Invalid phar file: {$e->getMessage()}");
+			throw new PluginException("Error loading plugin.yml in '{$path}': {$e->getMessage()}");
 		}
 
-		if (!isset($phar['plugin.yml'])) {
-			throw new PluginException("plugin.yml not found in phar");
+		$vendorAutoload = $pharPath . '/vendor/autoload.php';
+		if (file_exists($vendorAutoload)) {
+			require_once $vendorAutoload;
 		}
 
-		$yaml = Yaml::parse($phar['plugin.yml']->getContent());
-		if (!is_array($yaml)) {
-			throw new PluginException("plugin.yml is invalid");
+		$srcPath = $pharPath . '/src';
+		if (file_exists($srcPath)) {
+			$this->registerAutoloader($srcPath);
 		}
 
-		$description = PluginDescription::fromYaml($yaml);
+		$mainClass = $description->getMain();
 
-		$vendor = "phar://$path/vendor/autoload.php";
-		if (file_exists($vendor)) {
-			require_once $vendor;
+		if (!class_exists($mainClass, true)) {
+			$mainFile = $srcPath . '/' . str_replace('\\', '/', $mainClass) . '.php';
+			if (file_exists($mainFile)) {
+				require_once $mainFile;
+			} else {
+				throw new PluginException("Main class file not found: $mainFile");
+			}
 		}
 
-		$main = $description->getMain();
-		$mainFile = "phar://{$path}/src/" . str_replace('\\', '/', $main) . '.php';
-
-		if (!file_exists($mainFile)) {
-			throw new PluginException("Main class file not found: $mainFile");
+		if (!class_exists($mainClass)) {
+			throw new PluginException("Class '$mainClass' not found. Namespace mismatch?");
 		}
 
-		require_once $mainFile;
-
-		if (!class_exists($main, false)) {
-			throw new PluginException("Main class $main not found");
+		try {
+			$plugin = new $mainClass();
+			$plugin->setDescription($description);
+			$plugin->setServer($this->server);
+			$plugin->setDataFolder($this->dataPath . 'data' . DIRECTORY_SEPARATOR . $description->getName());
+			$plugin->setResourceFolder($pharPath . '/resources');
+			$plugin->onLoad();
+		} catch (\Throwable $e) {
+			throw new PluginException("Error enabling plugin '{$description->getName()}': {$e->getMessage()}");
 		}
-
-		$plugin = new $main();
-		$plugin->setDescription($description);
-		$plugin->setServer($this->server);
-		$plugin->setDataFolder($this->dataPath . DIRECTORY_SEPARATOR . $description->getName());
-		$plugin->onLoad();
 
 		return $plugin;
+	}
 
+	private function registerAutoloader(string $srcPath) : void
+	{
+		spl_autoload_register(function (string $class) use ($srcPath) : void {
+			$path = str_replace('\\', '/', $class);
+			$file = $srcPath . '/' . $path . '.php';
+
+			if (file_exists($file)) {
+				require_once $file;
+			}
+		});
 	}
 }

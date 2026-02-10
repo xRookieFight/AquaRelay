@@ -22,17 +22,26 @@
 
 declare(strict_types=1);
 
-namespace aquarelay\plugin\loader;
+namespace aquarelay\resourcepack;
 
-use aquarelay\plugin\Plugin;
-use aquarelay\plugin\PluginException;
+use Ramsey\Uuid\UuidInterface;
 
-interface PluginLoaderInterface
+interface ResourcePack
 {
-	public function canLoad(string $path) : bool;
+	public const TYPE_RESOURCES = "resources";
+	public const TYPE_DATA = "data";
 
-	/**
-	 * @throws PluginException
-	 */
-	public function load(string $path) : ?Plugin;
+	public function getName() : string;
+
+	public function getUuid() : UuidInterface;
+
+	public function getVersion() : string;
+
+	public function getType() : string;
+
+	public function getSize() : int;
+
+	public function getSha256() : string;
+
+	public function getChunk(int $offset, int $length) : string;
 }

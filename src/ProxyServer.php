@@ -27,8 +27,8 @@ namespace aquarelay;
 use aquarelay\command\sender\ConsoleCommandSender;
 use aquarelay\command\SimpleCommandMap;
 use aquarelay\config\ProxyConfig;
-use aquarelay\event\default\ServerStartEvent;
-use aquarelay\event\default\ServerStopEvent;
+use aquarelay\event\default\server\ServerStartEvent;
+use aquarelay\event\default\server\ServerStopEvent;
 use aquarelay\lang\Language;
 use aquarelay\lang\TranslationFactory;
 use aquarelay\network\compression\ZlibCompressor;
@@ -40,6 +40,7 @@ use aquarelay\player\PlayerManager;
 use aquarelay\plugin\loader\PharPluginLoader;
 use aquarelay\plugin\PluginLoader;
 use aquarelay\plugin\PluginManager;
+use aquarelay\resourcepack\ResourcePackManager;
 use aquarelay\server\ServerManager;
 use aquarelay\task\TaskScheduler;
 use aquarelay\utils\Colors;
@@ -47,9 +48,9 @@ use aquarelay\utils\ConsoleReaderThread;
 use aquarelay\utils\MainLogger;
 use aquarelay\utils\SignalHandler;
 use aquarelay\utils\Utils;
-use pocketmine\network\mcpe\protocol\ProtocolInfo;
-use pmmp\thread\ThreadSafeArray;
 use pmmp\thread\Thread;
+use pmmp\thread\ThreadSafeArray;
+use pocketmine\network\mcpe\protocol\ProtocolInfo;
 use function count;
 use function file_exists;
 use function file_get_contents;
@@ -64,7 +65,7 @@ use const DIRECTORY_SEPARATOR;
 class ProxyServer
 {
 	public const NAME = 'AquaRelay';
-	public const VERSION = '1.0.0-alpha2'; // Semver
+	public const VERSION = '1.0.0-alpha3'; // Semver
 	public const IS_DEVELOPMENT = true;
 	public RakLibInterface $interface;
 	private MainLogger $logger;
@@ -78,6 +79,7 @@ class ProxyServer
 	private ServerManager $serverManager;
 	private SimpleCommandMap $commandMap;
 	private PermissionManager $permissionManager;
+	private ResourcePackManager $resourcePackManager;
 
 	private ConsoleCommandSender $consoleSender;
 
@@ -95,10 +97,10 @@ class ProxyServer
 
 		$this->consoleSender = new ConsoleCommandSender($this);
 
-        $this->consoleQueue = new ThreadSafeArray();
+		$this->consoleQueue = new ThreadSafeArray();
 
-        $consoleThread = new ConsoleReaderThread($this->consoleQueue);
-        $consoleThread->start(Thread::INHERIT_ALL);
+		$consoleThread = new ConsoleReaderThread($this->consoleQueue);
+		$consoleThread->start(Thread::INHERIT_ALL);
 
 		self::$instance = $this;
 		$this->startProcessTime = microtime(true);
@@ -140,6 +142,11 @@ class ProxyServer
 		$this->commandMap = new SimpleCommandMap();
 		$this->playerManager = new PlayerManager();
 		$this->taskScheduler = new TaskScheduler();
+		$this->resourcePackManager = new ResourcePackManager(
+			$this,
+			$this->getConfig()->getResourcePackSettings(),
+			$this->dataPath
+		);
 
 		register_shutdown_function([$this, 'shutdown']);
 
@@ -158,15 +165,16 @@ class ProxyServer
 
 		$this->logger->info('Initializing RakLib Interface...');
 		$this->interface = new RakLibInterface($this->dataPath, $this->logger, $this->getAddress(), $this->getPort(), $this->getConfig()->getNetworkSettings()->getMaxMtu());
-		$this->interface->setName($this->getMotd(), $this->getSubMotd());
+		$this->interface->setName($this);
 
 		$pluginsPath = $this->dataPath . 'plugins' . DIRECTORY_SEPARATOR;
 		if (!is_dir($pluginsPath)) {
 			@mkdir($pluginsPath, 0o755, true);
 		}
+
 		$pluginLoader = new PluginLoader($this, $pluginsPath);
 		$this->pluginManager = new PluginManager($this, $pluginLoader);
-		$this->pluginManager->registerLoader(new PharPluginLoader($this, $this->dataPath));
+		$this->pluginManager->registerLoader(new PharPluginLoader($this, $pluginsPath));
 		$this->pluginManager->loadPlugins();
 
 		$this->logger->info("Listening on {$this->getAddress()}:{$this->getPort()}");
@@ -324,12 +332,20 @@ class ProxyServer
 		return $this->permissionManager;
 	}
 
+	/**
+	 * Returns the resource pack manager.
+	 */
+	public function getResourcePackManager(): ResourcePackManager
+	{
+		return $this->resourcePackManager;
+	}
+
 	public function handleConsoleInput() : void
-    {
-        while (($line = $this->consoleQueue->shift()) !== null) {
-            $this->getCommandMap()->dispatch($this->consoleSender, $line);
-        }
-    }
+	{
+		while (($line = $this->consoleQueue->shift()) !== null) {
+			$this->getCommandMap()->dispatch($this->consoleSender, $line);
+		}
+	}
 
 	public function getPlayerByName(string $name) : ?Player
 	{

@@ -30,7 +30,7 @@ bump_version() {
 cd "$1"
 additional_info="$2"
 
-BASE_VERSION="$(sed -nE 's/.*public const VERSION = "([^"]+)".*/\1/p' ./src/ProxyServer.php)"
+BASE_VERSION="$(sed -nE "s/.*VERSION *= *['\"]([^'\"]+)['\"].*/\1/p" ./src/ProxyServer.php)"
 
 echo "BASE_VERSION=$BASE_VERSION"
 
@@ -38,4 +38,5 @@ NEW_VERSION="$(bump_version "$BASE_VERSION")"
 
 sed -i -E "s|public const VERSION = \"[^\"]+\"|public const VERSION = \"$NEW_VERSION\"|" ./src/ProxyServer.php
 
+git add ./src/ProxyServer.php
 git commit -m "Next: $NEW_VERSION" -m "$additional_info" --only ./src/ProxyServer.php

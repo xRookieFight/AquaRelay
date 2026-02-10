@@ -34,6 +34,13 @@ misc-settings:
   language: eng # Selected language for the runtime process
   command-injection: true # Injects proxy commands to backend server
 
+# Resource pack settings
+resource_pack-settings:
+  enabled: false # Enables the proxy-side resource pack system
+  force-accept: false # Disconnect clients that refuse the packs
+  overwrite-client-packs: false # Overrides client resource packs
+  packs-path: "resourcepacks" # Relative to proxy data path
+
 # Network-related settings
 network-settings:
   bind:

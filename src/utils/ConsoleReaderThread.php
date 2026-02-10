@@ -32,22 +32,22 @@ use function trim;
 
 class ConsoleReaderThread extends Thread
 {
-    public function __construct(
-        private ThreadSafeArray $buffer
-    ) {}
+	public function __construct(
+		private ThreadSafeArray $buffer
+	) {}
 
-    public function run() : void
-    {
-        $stdin = fopen("php://stdin", "r");
-        
-        while (true) {
-            $line = fgets($stdin);
-            if ($line !== false) {
-                $trimmed = trim($line);
-                if ($trimmed !== "") {
-                    $this->buffer[] = $trimmed;
-                }
-            }
-        }
-    }
+	public function run() : void
+	{
+		$stdin = fopen("php://stdin", "r");
+
+		while (true) {
+			$line = fgets($stdin);
+			if ($line !== false) {
+				$trimmed = trim($line);
+				if ($trimmed !== "") {
+					$this->buffer[] = $trimmed;
+				}
+			}
+		}
+	}
 }

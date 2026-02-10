@@ -22,17 +22,8 @@
 
 declare(strict_types=1);
 
-namespace aquarelay\plugin\loader;
+namespace aquarelay\resourcepack;
 
-use aquarelay\plugin\Plugin;
-use aquarelay\plugin\PluginException;
-
-interface PluginLoaderInterface
+final class ResourcePackException extends \RuntimeException
 {
-	public function canLoad(string $path) : bool;
-
-	/**
-	 * @throws PluginException
-	 */
-	public function load(string $path) : ?Plugin;
 }

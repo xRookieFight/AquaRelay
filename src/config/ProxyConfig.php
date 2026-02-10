@@ -28,6 +28,7 @@ use aquarelay\config\category\GameSettings;
 use aquarelay\config\category\MiscSettings;
 use aquarelay\config\category\NetworkSettings;
 use aquarelay\config\category\PermissionSettings;
+use aquarelay\config\category\ResourcePackSettings;
 use aquarelay\config\category\ServerSettings;
 use Symfony\Component\Yaml\Yaml;
 
@@ -38,7 +39,8 @@ readonly class ProxyConfig
 		private ServerSettings     $serverSettings,
 		private PermissionSettings $permissionSettings,
 		private MiscSettings       $miscSettings,
-		private NetworkSettings    $networkSettings
+		private NetworkSettings    $networkSettings,
+		private ResourcePackSettings $resourcePackSettings
 	) {}
 
 	public static function load(string $file, string $path) : self
@@ -56,6 +58,7 @@ readonly class ProxyConfig
 		$permissionSettings = $data['permissions'];
 		$miscSettings = $data['misc-settings'];
 		$networkSettings = $data['network-settings'];
+		$resourcePackSettings = $data['resource_pack-settings'];
 
 		return new self(
 			new GameSettings(
@@ -83,6 +86,12 @@ readonly class ProxyConfig
 				(int) $networkSettings['batch-threshold'],
 				(int) $networkSettings['compression-level'],
 				(int) $networkSettings['max-mtu']
+			),
+			new ResourcePackSettings(
+				(bool) $resourcePackSettings['enabled'],
+				(bool) $resourcePackSettings['force-accept'],
+				(bool) $resourcePackSettings['overwrite-client-packs'],
+				$resourcePackSettings['packs-path']
 			)
 		);
 	}
@@ -110,5 +119,10 @@ readonly class ProxyConfig
 	public function getNetworkSettings() : NetworkSettings
 	{
 		return $this->networkSettings;
+	}
+
+	public function getResourcePackSettings() : ResourcePackSettings
+	{
+		return $this->resourcePackSettings;
 	}
 }

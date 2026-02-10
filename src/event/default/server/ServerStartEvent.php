@@ -22,17 +22,19 @@
 
 declare(strict_types=1);
 
-namespace aquarelay\plugin\loader;
+namespace aquarelay\event\default\server;
 
-use aquarelay\plugin\Plugin;
-use aquarelay\plugin\PluginException;
+use aquarelay\event\Event;
 
-interface PluginLoaderInterface
+class ServerStartEvent extends Event
 {
-	public function canLoad(string $path) : bool;
+	private float $startTime;
 
-	/**
-	 * @throws PluginException
-	 */
-	public function load(string $path) : ?Plugin;
+	public function __construct(float $startTime) {
+		$this->startTime = $startTime;
+	}
+
+	public function getStartTime() : float {
+		return $this->startTime;
+	}
 }
