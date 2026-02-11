@@ -46,7 +46,6 @@ use function mkdir;
 use function pathinfo;
 use function rtrim;
 use function scandir;
-use function str_starts_with;
 use function strtolower;
 use const DIRECTORY_SEPARATOR;
 
