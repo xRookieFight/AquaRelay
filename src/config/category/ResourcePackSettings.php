@@ -30,7 +30,6 @@ final class ResourcePackSettings
 		private bool $enabled,
 		private bool $forceAccept,
 		private bool $overwriteClientPacks,
-		private string $packsPath
 	) {}
 
 	public function isEnabled() : bool
@@ -61,15 +60,5 @@ final class ResourcePackSettings
 	public function setOverwriteClientPacks(bool $overwriteClientPacks) : void
 	{
 		$this->overwriteClientPacks = $overwriteClientPacks;
-	}
-
-	public function getPacksPath() : string
-	{
-		return $this->packsPath;
-	}
-
-	public function setPacksPath(string $packsPath) : void
-	{
-		$this->packsPath = $packsPath;
 	}
 }

@@ -90,8 +90,7 @@ readonly class ProxyConfig
 			new ResourcePackSettings(
 				(bool) $resourcePackSettings['enabled'],
 				(bool) $resourcePackSettings['force-accept'],
-				(bool) $resourcePackSettings['overwrite-client-packs'],
-				$resourcePackSettings['packs-path']
+				(bool) $resourcePackSettings['overwrite-client-packs']
 			)
 		);
 	}
