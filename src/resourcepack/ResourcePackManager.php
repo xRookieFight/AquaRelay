@@ -54,9 +54,10 @@ final class ResourcePackManager
 {
 	private const CHUNK_SIZE = 102400;
 	private const PACK_EXTENSIONS = ['zip', 'mcpack'];
-	private const DEFAULT_PACKS_DIR = 'resourcepacks';
+	private const PACKS_FOLDER = "resourcepacks";
 
 	private string $packsPath;
+
 	/** @var ResourcePack[] */
 	private array $packs = [];
 	/** @var array<string, ResourcePack> */
@@ -70,7 +71,7 @@ final class ResourcePackManager
 		private ResourcePackSettings $settings,
 		string $dataPath
 	) {
-		$this->packsPath = $this->resolvePath($settings->getPacksPath(), $dataPath);
+		$this->packsPath = rtrim($dataPath, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . self::PACKS_FOLDER;
 		$this->ensurePacksPath();
 		$this->packsInfoPacket = $this->buildEmptyInfoPacket();
 		$this->stackPacket = $this->buildEmptyStackPacket();
@@ -311,20 +312,5 @@ final class ResourcePackManager
 		if (!is_dir($this->packsPath)) {
 			mkdir($this->packsPath, 0o755, true);
 		}
-	}
-
-	private function resolvePath(string $path, string $dataPath) : string
-	{
-		$path = rtrim($path, DIRECTORY_SEPARATOR);
-
-		if ($path === '') {
-			$path = self::DEFAULT_PACKS_DIR;
-		}
-
-		if (str_starts_with($path, DIRECTORY_SEPARATOR)) {
-			return $path;
-		}
-
-		return rtrim($dataPath, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . $path;
 	}
 }
