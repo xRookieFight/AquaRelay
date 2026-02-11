@@ -70,7 +70,7 @@ final class ResourcePackManager
 		private ResourcePackSettings $settings,
 		string $dataPath
 	) {
-		$this->packsPath = rtrim($dataPath, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . self::PACKS_FOLDER;
+		$this->packsPath = $this->resolvePath($dataPath);
 		$this->ensurePacksPath();
 		$this->packsInfoPacket = $this->buildEmptyInfoPacket();
 		$this->stackPacket = $this->buildEmptyStackPacket();
@@ -311,5 +311,16 @@ final class ResourcePackManager
 		if (!is_dir($this->packsPath)) {
 			mkdir($this->packsPath, 0o755, true);
 		}
+	}
+
+	private function resolvePath(string $dataPath) : string
+	{
+		$path = self::PACKS_FOLDER;
+
+		if (str_starts_with($path, DIRECTORY_SEPARATOR)) {
+			return $path;
+		}
+
+		return rtrim($dataPath, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . $path;
 	}
 }
