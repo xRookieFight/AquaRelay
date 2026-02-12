@@ -143,12 +143,9 @@ class NetworkSession
 
 		$this->debug("Connecting to $ip:$port...");
 
-		$backend = new BackendRakClient(new InternetAddress($ip, $port, 4), $player);
+		$backend = new BackendRakClient($this->server->getLogger(), new InternetAddress($ip, $port, 4), $player);
 
 		$player->setDownstream($backend);
-		$player->sendLoginToBackend();
-
-		$backend->connect();
 	}
 
 	public function setProtocolId(int $protocolId) : void
