@@ -133,9 +133,9 @@ final class BackendRakClient
 			}
 		} catch (SocketException $e) {
 			$this->player->disconnect(TranslationFactory::translate("proxy.backend.read_error", [Uuid::uuid4()->toString()]));
-			$this->player->getNetworkSession()->debug("Backend packet reading error: " . $e->getMessage());
+			$this->player->getNetworkSession()->getLogger()->debug("Backend packet reading error: " . $e->getMessage());
 
-			$this->player->getNetworkSession()->warning("Backend '{$this->player->getBackendServer()?->getName()}' down, redirecting to fallback");
+			$this->player->getNetworkSession()->getLogger()->warning("Backend '{$this->player->getBackendServer()?->getName()}' down, redirecting to fallback");
 			$this->player->tryFallbackOrDisconnect();
 		}
 	}
@@ -376,7 +376,7 @@ final class BackendRakClient
 				}
 				$this->sendQueue = [];
 			}
-			$this->player->getServer()->getProxyLoop()->handleBackendPayload($this->player, $payload);
+			$this->player->handleBackendPayload($this->player, $payload);
 		}
 	}
 
