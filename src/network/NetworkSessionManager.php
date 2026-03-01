@@ -38,20 +38,18 @@ class NetworkSessionManager
 
 	public function add(NetworkSession $session) : void
 	{
-		$id = spl_object_id($session);
-		$this->sessions[$id] = $session;
-		$this->pendingLoginSessions[$id] = $session;
+		$this->sessions[$session->getSessionId()] = $session;
+		$this->pendingLoginSessions[$session->getSessionId()] = $session;
 	}
 
 	public function markLoginReceived(NetworkSession $session) : void
 	{
-		unset($this->pendingLoginSessions[spl_object_id($session)]);
+		unset($this->pendingLoginSessions[$session->getSessionId()]);
 	}
 
 	public function remove(NetworkSession $session) : void
 	{
-		$id = spl_object_id($session);
-		unset($this->sessions[$id], $this->pendingLoginSessions[$id]);
+		unset($this->sessions[$session->getSessionId()], $this->pendingLoginSessions[$session->getSessionId()]);
 	}
 
 	public function getSessions() : array
@@ -72,5 +70,10 @@ class NetworkSessionManager
 				unset($this->sessions[$id]);
 			}
 		}
+	}
+
+	public function getSessionById(int $sessionId) : ?NetworkSession
+	{
+		return $this->sessions[$sessionId] ?? null;
 	}
 }

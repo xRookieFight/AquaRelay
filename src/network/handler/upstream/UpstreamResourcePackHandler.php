@@ -54,7 +54,7 @@ class UpstreamResourcePackHandler extends AbstractUpstreamPacketHandler
 
 	public function handleClientCacheStatus(ClientCacheStatusPacket $packet) : bool
 	{
-		$this->session->debug('Client cache status received: ' . ($packet->isEnabled() ? 'Supported' : 'Not Supported'));
+		$this->session->getLogger()->debug('Client cache status received: ' . ($packet->isEnabled() ? 'Supported' : 'Not Supported'));
 
 		return true;
 	}
@@ -66,7 +66,7 @@ class UpstreamResourcePackHandler extends AbstractUpstreamPacketHandler
 
 		switch ($packet->status) {
 			case ResourcePackClientResponsePacket::STATUS_HAVE_ALL_PACKS:
-				$this->session->debug('Client has all packs. Sending stack...');
+				$this->session->getLogger()->debug('Client has all packs. Sending stack...');
 				if ($packsEnabled) {
 					$this->session->sendDataPacket($packManager->getStackPacket(), true);
 				} else {
@@ -153,7 +153,7 @@ class UpstreamResourcePackHandler extends AbstractUpstreamPacketHandler
 
 	private function completeLogin() : void
 	{
-		$this->session->debug('Resource packs sequence completed.');
+		$this->session->getLogger()->debug('Resource packs sequence completed.');
 
 		$publisher = NetworkChunkPublisherUpdatePacket::create(
 			new BlockPosition(0, 0, 0),

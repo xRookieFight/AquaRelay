@@ -141,14 +141,14 @@ class DownstreamInGameHandler extends AbstractDownstreamPacketHandler
 	public function handlePlayStatus(PlayStatusPacket $packet) : bool
 	{
 		if ($packet->status === PlayStatusPacket::LOGIN_SUCCESS) {
-			$this->getPlayer()->getNetworkSession()->debug('Forwarding LOGIN_SUCCESS from backend to client');
+			$this->getPlayer()->getNetworkSession()->getLogger()->debug('Forwarding LOGIN_SUCCESS from backend to client');
 			return true;
 		}
 		if ($packet->status === PlayStatusPacket::PLAYER_SPAWN) {
 			if ($this->getPlayer()->backendRuntimeId === null) {
-				$this->getPlayer()->getNetworkSession()->debug('Cannot send spawn notification: backendRuntimeId is null.');
+				$this->getPlayer()->getNetworkSession()->getLogger()->debug('Cannot send spawn notification: backendRuntimeId is null.');
 			} else {
-				$this->getPlayer()->getNetworkSession()->debug('Sending spawn notification, waiting for spawn response');
+				$this->getPlayer()->getNetworkSession()->getLogger()->debug('Sending spawn notification, waiting for spawn response');
 				$event = new PlayerJoinEvent($this->getPlayer());
 				$event->call();
 			}
