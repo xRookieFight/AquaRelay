@@ -22,10 +22,46 @@
 
 declare(strict_types=1);
 
-namespace aquarelay\form\image;
+namespace aquarelay\form;
 
-enum ImageType : string
+class ButtonImage
 {
-	case TEXTURE = "path";
-	case URL = "url";
+
+	private string $imageType;
+
+	private string $data;
+
+	public function __construct(string $data, string $imageType)
+	{
+		$this->imageType = $imageType;
+		$this->data = $data;
+	}
+
+	public static function texture(string $data) : self
+	{
+		return new self($data, "path");
+	}
+
+	public static function url(string $data) : self
+	{
+		return new self($data, "url");
+	}
+
+	public function getImageType() : string
+	{
+		return $this->imageType;
+	}
+
+	public function getData() : string
+	{
+		return $this->data;
+	}
+
+	public function toArray() : array
+	{
+		return [
+			"type" => $this->getImageType(),
+			"data" => $this->getData()
+		];
+	}
 }

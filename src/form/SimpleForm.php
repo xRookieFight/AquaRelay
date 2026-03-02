@@ -24,7 +24,6 @@ declare(strict_types=1);
 
 namespace aquarelay\form;
 
-use aquarelay\form\image\ButtonImage;
 use aquarelay\player\Player;
 use function count;
 use function is_int;
