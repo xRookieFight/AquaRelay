@@ -30,8 +30,8 @@ use aquarelay\ProxyServer;
 use pocketmine\network\mcpe\protocol\ProtocolInfo;
 use pocketmine\network\mcpe\protocol\ResourcePackChunkDataPacket;
 use pocketmine\network\mcpe\protocol\ResourcePackDataInfoPacket;
-use pocketmine\network\mcpe\protocol\ResourcePackStackPacket;
 use pocketmine\network\mcpe\protocol\ResourcePacksInfoPacket;
+use pocketmine\network\mcpe\protocol\ResourcePackStackPacket;
 use pocketmine\network\mcpe\protocol\types\Experiments;
 use pocketmine\network\mcpe\protocol\types\resourcepacks\BehaviorPackInfoEntry;
 use pocketmine\network\mcpe\protocol\types\resourcepacks\ResourcePackInfoEntry;
@@ -40,14 +40,16 @@ use pocketmine\network\mcpe\protocol\types\resourcepacks\ResourcePackType;
 use Ramsey\Uuid\Uuid;
 use function count;
 use function in_array;
-use function is_file;
 use function is_dir;
+use function is_file;
 use function mkdir;
 use function pathinfo;
 use function rtrim;
 use function scandir;
+use function str_starts_with;
 use function strtolower;
 use const DIRECTORY_SEPARATOR;
+use const PATHINFO_EXTENSION;
 
 final class ResourcePackManager
 {

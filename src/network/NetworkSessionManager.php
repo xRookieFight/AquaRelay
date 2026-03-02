@@ -25,7 +25,6 @@ declare(strict_types=1);
 namespace aquarelay\network;
 
 use aquarelay\utils\InstanceTrait;
-use function spl_object_id;
 
 class NetworkSessionManager
 {
