@@ -48,12 +48,12 @@ class ModalForm implements Form {
 		$this->button2Text = $button2Text;
 	}
 
-	public function setTitle(string $title) : self {
+	public function title(string $title) : self {
 		$this->title = $title;
 		return $this;
 	}
 
-	public function setContent(string $content) : self {
+	public function content(string $content) : self {
 		$this->content = $content;
 		return $this;
 	}
@@ -62,7 +62,7 @@ class ModalForm implements Form {
 	 * Sets the text and action for the first button (True/Yes).
 	 * @param callable|null $action fn(Player $player)
 	 */
-	public function setButton1(string $text, ?callable $action = null) : self {
+	public function yesButton(string $text, ?callable $action = null) : self {
 		$this->button1Text = $text;
 		$this->button1Action = $action;
 		return $this;
@@ -72,7 +72,7 @@ class ModalForm implements Form {
 	 * Sets the text and action for the second button (False/No).
 	 * @param callable|null $action fn(Player $player)
 	 */
-	public function setButton2(string $text, ?callable $action = null) : self {
+	public function noButton(string $text, ?callable $action = null) : self {
 		$this->button2Text = $text;
 		$this->button2Action = $action;
 		return $this;

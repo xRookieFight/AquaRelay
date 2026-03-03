@@ -45,12 +45,12 @@ class CustomForm implements Form {
 		$this->title = $title;
 	}
 
-	public function setTitle(string $title) : self {
+	public function title(string $title) : self {
 		$this->title = $title;
 		return $this;
 	}
 
-	public function addLabel(string $text) : self {
+	public function label(string $text) : self {
 		$this->elements[] = [
 			'type' => 'label',
 			'text' => $text
@@ -59,29 +59,43 @@ class CustomForm implements Form {
 		return $this;
 	}
 
-	public function addInput(string $text, string $placeholder = "", string $default = "", ?callable $validation = null) : self {
-		$this->elements[] = [
+	public function input(string $text, string $placeholder = "", string $default = "", ?string $tooltip = null, ?callable $validation = null) : self {
+		$element = [
 			'type' => 'input',
 			'text' => $text,
 			'placeholder' => $placeholder,
 			'default' => $default
 		];
+
+		if ($tooltip !== null) {
+			$element["tooltip"] = $tooltip;
+		}
+
+		$this->elements[] = $element;
 		$this->validations[] = $validation;
+
 		return $this;
 	}
 
-	public function addToggle(string $text, bool $default = false, ?callable $validation = null) : self {
-		$this->elements[] = [
+	public function toggle(string $text, bool $default = false, ?string $tooltip = null, ?callable $validation = null) : self {
+		$element = [
 			'type' => 'toggle',
 			'text' => $text,
 			'default' => $default
 		];
+
+		if ($tooltip !== null) {
+			$element["tooltip"] = $tooltip;
+		}
+
+		$this->elements[] = $element;
 		$this->validations[] = $validation;
+
 		return $this;
 	}
 
-	public function addSlider(string $text, float $min, float $max, float $step = 1.0, float $default = 0.0, ?callable $validation = null) : self {
-		$this->elements[] = [
+	public function slider(string $text, float $min, float $max, float $step = 1.0, float $default = 0.0, ?string $tooltip = null, ?callable $validation = null) : self {
+		$element = [
 			'type' => 'slider',
 			'text' => $text,
 			'min' => $min,
@@ -89,29 +103,50 @@ class CustomForm implements Form {
 			'step' => $step,
 			'default' => $default
 		];
+
+		if ($tooltip !== null) {
+			$element["tooltip"] = $tooltip;
+		}
+
+		$this->elements[] = $element;
 		$this->validations[] = $validation;
+
 		return $this;
 	}
 
-	public function addStepSlider(string $text, array $steps, int $defaultIndex = 0, ?callable $validation = null) : self {
-		$this->elements[] = [
+	public function stepSlider(string $text, array $steps, int $defaultIndex = 0, ?string $tooltip = null, ?callable $validation = null) : self {
+		$element = [
 			'type' => 'step_slider',
 			'text' => $text,
 			'steps' => $steps,
 			'default' => $defaultIndex
 		];
+
+		if ($tooltip !== null) {
+			$element["tooltip"] = $tooltip;
+		}
+
+		$this->elements[] = $element;
 		$this->validations[] = $validation;
+
 		return $this;
 	}
 
-	public function addDropdown(string $text, array $options, int $defaultIndex = 0, ?callable $validation = null) : self {
-		$this->elements[] = [
+	public function dropdown(string $text, array $options, int $defaultIndex = 0, ?string $tooltip = null, ?callable $validation = null) : self {
+		$element = [
 			'type' => 'dropdown',
 			'text' => $text,
 			'options' => $options,
 			'default' => $defaultIndex
 		];
+
+		if ($tooltip !== null) {
+			$element["tooltip"] = $tooltip;
+		}
+
+		$this->elements[] = $element;
 		$this->validations[] = $validation;
+
 		return $this;
 	}
 
