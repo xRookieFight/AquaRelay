@@ -22,32 +22,46 @@
 
 declare(strict_types=1);
 
-namespace aquarelay\config;
+namespace aquarelay\form;
 
-use aquarelay\utils\InstanceTrait;
-use function file_exists;
-use function file_get_contents;
-use function file_put_contents;
-use function unlink;
-
-class ConfigUpdater
+class ButtonImage
 {
-	use InstanceTrait;
 
-	public const CONFIG_VERSION = 4;
+	private string $imageType;
 
-	public function isUpToDate(int $configVersion) : bool
+	private string $data;
+
+	public function __construct(string $data, string $imageType)
 	{
-		return $configVersion >= self::CONFIG_VERSION;
+		$this->imageType = $imageType;
+		$this->data = $data;
 	}
 
-	public function update(string $file, string $path) : void
+	public static function texture(string $data) : self
 	{
-		$configFile = $path . 'config.yml';
-		$data = file_get_contents($configFile);
-		if (file_exists($file)) {
-			unlink($file);
-			file_put_contents($file, $data);
-		}
+		return new self($data, "path");
+	}
+
+	public static function url(string $data) : self
+	{
+		return new self($data, "url");
+	}
+
+	public function getImageType() : string
+	{
+		return $this->imageType;
+	}
+
+	public function getData() : string
+	{
+		return $this->data;
+	}
+
+	public function toArray() : array
+	{
+		return [
+			"type" => $this->getImageType(),
+			"data" => $this->getData()
+		];
 	}
 }

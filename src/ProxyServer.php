@@ -31,9 +31,13 @@ use aquarelay\event\default\server\ServerStartEvent;
 use aquarelay\event\default\server\ServerStopEvent;
 use aquarelay\lang\Language;
 use aquarelay\lang\TranslationFactory;
+use aquarelay\network\compression\DecompressionException;
 use aquarelay\network\compression\ZlibCompressor;
-use aquarelay\network\ProxyLoop;
+use aquarelay\network\NetworkSession;
+use aquarelay\network\NetworkSessionManager;
+use aquarelay\network\PacketHandlingException;
 use aquarelay\network\raklib\RakLibInterface;
+use aquarelay\network\raklib\RakLibPacketSender;
 use aquarelay\permission\PermissionManager;
 use aquarelay\player\Player;
 use aquarelay\player\PlayerManager;
@@ -48,9 +52,16 @@ use aquarelay\utils\ConsoleReaderThread;
 use aquarelay\utils\MainLogger;
 use aquarelay\utils\SignalHandler;
 use aquarelay\utils\Utils;
+use pmmp\encoding\ByteBufferReader;
 use pmmp\thread\Thread;
 use pmmp\thread\ThreadSafeArray;
+use pocketmine\network\mcpe\protocol\DataPacket;
+use pocketmine\network\mcpe\protocol\PacketPool;
 use pocketmine\network\mcpe\protocol\ProtocolInfo;
+use pocketmine\network\mcpe\protocol\serializer\PacketBatch;
+use pocketmine\network\mcpe\protocol\types\CompressionAlgorithm;
+use pocketmine\snooze\SleeperHandler;
+use raklib\generic\DisconnectReason;
 use function count;
 use function file_exists;
 use function file_get_contents;
@@ -58,14 +69,16 @@ use function file_put_contents;
 use function is_dir;
 use function microtime;
 use function mkdir;
+use function ord;
 use function register_shutdown_function;
 use function round;
+use function substr;
 use const DIRECTORY_SEPARATOR;
 
 class ProxyServer
 {
 	public const NAME = 'AquaRelay';
-	public const VERSION = '1.0.0-alpha3'; // Semver
+	public const VERSION = '1.0.0-alpha4'; // Semver
 	public const IS_DEVELOPMENT = true;
 	public RakLibInterface $interface;
 	private MainLogger $logger;
@@ -75,7 +88,6 @@ class ProxyServer
 	private PlayerManager $playerManager;
 	private PluginManager $pluginManager;
 	private TaskScheduler $taskScheduler;
-	private ProxyLoop $proxyLoop;
 	private ServerManager $serverManager;
 	private SimpleCommandMap $commandMap;
 	private PermissionManager $permissionManager;
@@ -86,6 +98,11 @@ class ProxyServer
 	private ThreadSafeArray $consoleQueue;
 
 	private float $startProcessTime;
+
+	/** @var NetworkSession[] */
+	private array $sessions = [];
+
+	private SleeperHandler $sleeper;
 
 	public function __construct(
 		private string $dataPath,
@@ -167,6 +184,14 @@ class ProxyServer
 		$this->interface = new RakLibInterface($this->dataPath, $this->logger, $this->getAddress(), $this->getPort(), $this->getConfig()->getNetworkSettings()->getMaxMtu());
 		$this->interface->setName($this);
 
+		$this->sleeper = new SleeperHandler();
+		$this->interface->setHandlers(
+			$this->handleConnect(...),
+			$this->handlePacket(...),
+			$this->handleDisconnect(...),
+			$this->handlePing(...)
+		);
+
 		$pluginsPath = $this->dataPath . 'plugins' . DIRECTORY_SEPARATOR;
 		if (!is_dir($pluginsPath)) {
 			@mkdir($pluginsPath, 0o755, true);
@@ -188,8 +213,7 @@ class ProxyServer
 		$event = new ServerStartEvent($this->startProcessTime);
 		$event->call();
 
-		$this->proxyLoop = new ProxyLoop($this); // TODO: We can merge this into ProxyServer class
-		$this->getProxyLoop()->run();
+		$this->start();
 	}
 
 	/**
@@ -307,11 +331,6 @@ class ProxyServer
 		return $this->taskScheduler;
 	}
 
-	public function getProxyLoop() : ProxyLoop
-	{
-		return $this->proxyLoop;
-	}
-
 	public function getServerManager() : ServerManager {
 		return $this->serverManager;
 	}
@@ -335,7 +354,7 @@ class ProxyServer
 	/**
 	 * Returns the resource pack manager.
 	 */
-	public function getResourcePackManager(): ResourcePackManager
+	public function getResourcePackManager() : ResourcePackManager
 	{
 		return $this->resourcePackManager;
 	}
@@ -398,5 +417,118 @@ class ProxyServer
 		$this->logger->info("Shutdown completed in {$duration}s.");
 		$this->logger->shutdown();
 		@Utils::kill(Utils::pid());
+	}
+
+	public function start() : void
+	{
+		$nextTick = microtime(true);
+
+		while (true) {
+			$now = microtime(true);
+
+			$this->interface->tick();
+
+			if ($now >= $nextTick) {
+				$this->tick();
+				$nextTick += 0.05; // Tick interval
+			}
+
+			$this->sleeper->sleepUntil($nextTick);
+		}
+	}
+
+	private function tick() : void
+	{
+		$this->getScheduler()->processAll();
+		$this->handleConsoleInput();
+
+		foreach (NetworkSessionManager::getInstance()->getSessions() as $id => $session) {
+			$player = $session->getPlayer();
+			$player?->getDownstream()?->tick();
+		}
+	}
+
+	public function handleBackendPayload(Player $player, string $payload) : void
+	{
+		$pid = ord($payload[0]);
+		if ($pid !== 0xFE) {
+			return;
+		}
+
+		$compression = ord($payload[1]);
+		$buffer = substr($payload, 2);
+
+		if ($compression === CompressionAlgorithm::ZLIB) {
+			try {
+				$buffer = ZlibCompressor::getInstance()->decompress($buffer);
+			}  catch (DecompressionException $e) {
+				$this->getLogger()->critical("Backend decompression failed: " . $e->getMessage());
+				$player->disconnect(TranslationFactory::translate("session.login.corrupt_packet"));
+				return;
+			}
+		}
+
+		try {
+			$stream = new ByteBufferReader($buffer);
+
+			$generator = PacketBatch::decodePackets(
+				$stream,
+				$player->getProtocol(),
+				PacketPool::getInstance()
+			);
+
+			foreach ($generator as $packet) {
+				if ($packet instanceof DataPacket) {
+					$player->handleBackendPacket($packet);
+				}
+			}
+
+		} catch (PacketHandlingException $e) {
+			$this->getLogger()->error("Backend packet decode error: " . $e->getMessage());
+		} catch (\Throwable $e) {
+			// Catch generic errors (like buffer underflow) that aren't strict PacketHandlingExceptions
+			$this->getLogger()->debug("General decode error: " . $e->getMessage());
+		}
+	}
+
+	private function handleConnect(int $sessionId, string $ip, int $port) : void
+	{
+		$session = new NetworkSession(
+			$this,
+			NetworkSessionManager::getInstance(),
+			PacketPool::getInstance(),
+			new RakLibPacketSender($sessionId, $this->interface),
+			$ip,
+			$port,
+			$sessionId
+		);
+
+		$session->getLogger()->info("Session opened");
+	}
+
+	private function handlePacket(int $sessionId, string $payload) : void
+	{
+		$firstByte = ord($payload[0]);
+		if ($firstByte !== 0xFE) return;
+
+		$session = NetworkSessionManager::getInstance()->getSessionById($sessionId);
+		$session?->handleEncodedPacket(substr($payload, 1));
+	}
+
+	private function handleDisconnect(int $sessionId, int $reason) : void
+	{
+		$session = NetworkSessionManager::getInstance()->getSessionById($sessionId);
+		$reason = match ($reason){
+			DisconnectReason::CLIENT_DISCONNECT => "Client disconnected",
+			DisconnectReason::PEER_TIMEOUT => "Session timed out",
+			DisconnectReason::CLIENT_RECONNECT => "New session established on same IP and port"
+		};
+		$session?->onDisconnect($reason);
+	}
+
+	private function handlePing(int $sessionId, int $ping) : void
+	{
+		$session = NetworkSessionManager::getInstance()->getSessionById($sessionId);
+		$session?->setPing($ping);
 	}
 }

@@ -44,7 +44,6 @@ use pocketmine\network\mcpe\protocol\ModalFormRequestPacket;
 use pocketmine\network\mcpe\protocol\PacketPool;
 use pocketmine\network\mcpe\protocol\PlayStatusPacket;
 use pocketmine\network\mcpe\protocol\ProtocolInfo;
-use pocketmine\network\mcpe\protocol\ResourcePacksInfoPacket;
 use pocketmine\network\mcpe\protocol\serializer\PacketBatch;
 use pocketmine\network\mcpe\protocol\SetTitlePacket;
 use pocketmine\network\mcpe\protocol\TextPacket;
@@ -52,12 +51,10 @@ use pocketmine\network\mcpe\protocol\ToastRequestPacket;
 use pocketmine\network\mcpe\protocol\types\CompressionAlgorithm;
 use raklib\generic\DisconnectReason;
 use raklib\utils\InternetAddress;
-use Ramsey\Uuid\Uuid;
 use function count;
 use function json_encode;
 use function ord;
 use function substr;
-use function time;
 use const JSON_THROW_ON_ERROR;
 
 class NetworkSession
@@ -65,7 +62,6 @@ class NetworkSession
 	/** @var string[] */
 	private array $sendBuffer = [];
 	private ?bool $enableCompression = null;
-	private int $lastUsed;
 	private ?int $protocolId = null;
 	private ?string $username = null;
 	private ?int $ping = null;
@@ -73,6 +69,7 @@ class NetworkSession
 	private bool $logged = false;
 	private ?AbstractUpstreamPacketHandler $handler;
 	private ?Player $player = null;
+	private \PrefixedLogger $logger;
 
 	public function __construct(
 		private readonly ProxyServer           $server,
@@ -84,8 +81,13 @@ class NetworkSession
 		private readonly int                   $sessionId
 	) {
 		$this->manager->add($this);
-		$this->lastUsed = time();
+		$this->logger = new \PrefixedLogger($this->server->getLogger(), "NetworkSession: " . $this->getDisplayName());
 		$this->setHandler(new UpstreamPreLoginHandler($this, $this->server->getLogger()));
+	}
+
+	public function getDisplayName() : string
+	{
+		return $this->username ?? "$this->ip:$this->port";
 	}
 
 	public function getServer() : ProxyServer
@@ -132,7 +134,7 @@ class NetworkSession
 					$this->processSinglePacket($buffer);
 				}
 			} catch (\Exception $e) {
-				$this->debug('Batch decode error: ' . $e->getMessage());
+				$this->getLogger()->debug('Batch decode error: ' . $e->getMessage());
 			}
 		}
 	}
@@ -142,7 +144,7 @@ class NetworkSession
 		$player = $this->player;
 		if ($player === null) return;
 
-		$this->debug("Connecting to $ip:$port...");
+		$this->getLogger()->debug("Connecting to $ip:$port...");
 
 		if ($transfer) {
 			$this->getPlayer()->getRewriteData()->setTransferring(true);
@@ -228,7 +230,7 @@ class NetworkSession
 
 	public function onClientLoginSuccess() : void
 	{
-		$this->debug('Login handled. Starting Resource Pack sequence...');
+		$this->getLogger()->debug('Login handled. Starting Resource Pack sequence...');
 
 		$this->sendDataPacket(PlayStatusPacket::create(PlayStatusPacket::LOGIN_SUCCESS));
 
@@ -255,11 +257,6 @@ class NetworkSession
 	public function getPing() : int
 	{
 		return $this->ping;
-	}
-
-	public function tick() : void
-	{
-		$this->lastUsed = time();
 	}
 
 	public function getUsername() : string
@@ -348,24 +345,6 @@ class NetworkSession
 		$this->sendDataPacket(ToastRequestPacket::create($title, $body));
 	}
 
-	public function debug(string $message) : void
-	{
-		$format = $this->username ?? "$this->ip:$this->port";
-		$this->server->getLogger()->debug("[NetworkSession - $format]: $message");
-	}
-
-	public function info(string $message) : void
-	{
-		$format = $this->username ?? "$this->ip:$this->port";
-		$this->server->getLogger()->info("[NetworkSession - $format]: $message");
-	}
-
-	public function warning(string $message) : void
-	{
-		$format = $this->username ?? "$this->ip:$this->port";
-		$this->server->getLogger()->warning("[NetworkSession - $format]: $message");
-	}
-
 	private function processSinglePacket(string $buffer) : void
 	{
 		$packet = $this->packetPool->getPacket($buffer);
@@ -381,7 +360,7 @@ class NetworkSession
 	public function onDisconnect(string $reason) : void
 	{
 		$this->connected = false;
-		$this->info("Session disconnected: $reason");
+		$this->getLogger()->info("Session disconnected: $reason");
 
 		$event = new PlayerQuitEvent($this->getPlayer());
 		$event->call();
@@ -392,5 +371,10 @@ class NetworkSession
 		$player?->getDownstream()?->disconnect();
 
 		$this->server->getPlayerManager()->removePlayer($this);
+	}
+
+	public function getLogger() : \PrefixedLogger
+	{
+		return $this->logger;
 	}
 }

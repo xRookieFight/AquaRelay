@@ -30,8 +30,8 @@ use aquarelay\ProxyServer;
 use pocketmine\network\mcpe\protocol\ProtocolInfo;
 use pocketmine\network\mcpe\protocol\ResourcePackChunkDataPacket;
 use pocketmine\network\mcpe\protocol\ResourcePackDataInfoPacket;
-use pocketmine\network\mcpe\protocol\ResourcePackStackPacket;
 use pocketmine\network\mcpe\protocol\ResourcePacksInfoPacket;
+use pocketmine\network\mcpe\protocol\ResourcePackStackPacket;
 use pocketmine\network\mcpe\protocol\types\Experiments;
 use pocketmine\network\mcpe\protocol\types\resourcepacks\BehaviorPackInfoEntry;
 use pocketmine\network\mcpe\protocol\types\resourcepacks\ResourcePackInfoEntry;
@@ -40,8 +40,8 @@ use pocketmine\network\mcpe\protocol\types\resourcepacks\ResourcePackType;
 use Ramsey\Uuid\Uuid;
 use function count;
 use function in_array;
-use function is_file;
 use function is_dir;
+use function is_file;
 use function mkdir;
 use function pathinfo;
 use function rtrim;
@@ -49,14 +49,16 @@ use function scandir;
 use function str_starts_with;
 use function strtolower;
 use const DIRECTORY_SEPARATOR;
+use const PATHINFO_EXTENSION;
 
 final class ResourcePackManager
 {
 	private const CHUNK_SIZE = 102400;
 	private const PACK_EXTENSIONS = ['zip', 'mcpack'];
-	private const DEFAULT_PACKS_DIR = 'resourcepacks';
+	private const PACKS_FOLDER = "resourcepacks";
 
 	private string $packsPath;
+
 	/** @var ResourcePack[] */
 	private array $packs = [];
 	/** @var array<string, ResourcePack> */
@@ -70,7 +72,7 @@ final class ResourcePackManager
 		private ResourcePackSettings $settings,
 		string $dataPath
 	) {
-		$this->packsPath = $this->resolvePath($settings->getPacksPath(), $dataPath);
+		$this->packsPath = $this->resolvePath($dataPath);
 		$this->ensurePacksPath();
 		$this->packsInfoPacket = $this->buildEmptyInfoPacket();
 		$this->stackPacket = $this->buildEmptyStackPacket();
@@ -313,13 +315,9 @@ final class ResourcePackManager
 		}
 	}
 
-	private function resolvePath(string $path, string $dataPath) : string
+	private function resolvePath(string $dataPath) : string
 	{
-		$path = rtrim($path, DIRECTORY_SEPARATOR);
-
-		if ($path === '') {
-			$path = self::DEFAULT_PACKS_DIR;
-		}
+		$path = self::PACKS_FOLDER;
 
 		if (str_starts_with($path, DIRECTORY_SEPARATOR)) {
 			return $path;

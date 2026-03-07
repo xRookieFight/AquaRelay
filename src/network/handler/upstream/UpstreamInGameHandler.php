@@ -39,6 +39,7 @@ use pocketmine\network\mcpe\protocol\InventoryTransactionPacket;
 use pocketmine\network\mcpe\protocol\ItemStackRequestPacket;
 use pocketmine\network\mcpe\protocol\LevelSoundEventPacket;
 use pocketmine\network\mcpe\protocol\MobEquipmentPacket;
+use pocketmine\network\mcpe\protocol\ModalFormResponsePacket;
 use pocketmine\network\mcpe\protocol\MovePlayerPacket;
 use pocketmine\network\mcpe\protocol\NetworkStackLatencyPacket;
 use pocketmine\network\mcpe\protocol\PlayerActionPacket;
@@ -231,6 +232,14 @@ class UpstreamInGameHandler extends AbstractUpstreamPacketHandler
 	public function handleNetworkStackLatency(NetworkStackLatencyPacket $packet) : bool
 	{
 		$this->forward($packet);
+		return true;
+	}
+
+	public function handleModalFormResponse(ModalFormResponsePacket $packet) : bool
+	{
+		if (!$this->session->getPlayer()->onFormSubmit($packet->formId, $packet->formData)) {
+			$this->forward($packet);
+		}
 		return true;
 	}
 

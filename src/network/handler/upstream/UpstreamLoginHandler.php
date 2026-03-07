@@ -82,8 +82,9 @@ class UpstreamLoginHandler extends AbstractUpstreamPacketHandler
 					protocolVersion: $packet->protocol
 				);
 
-				$this->session->info("Player: " . Colors::AQUA . $clientData->xname);
+				$this->session->getLogger()->info("Player: " . Colors::AQUA . $clientData->xname);
 				$this->session->setUsername($clientData->xname);
+				$this->session->getLogger()->setPrefix("NetworkSession: " . $this->session->getDisplayName());
 
 				$player = ProxyServer::getInstance()->getPlayerManager()->createPlayer($this->session, $loginData);
 				$this->session->setPlayer($player);
@@ -175,7 +176,9 @@ class UpstreamLoginHandler extends AbstractUpstreamPacketHandler
 				protocolVersion: $packet->protocol
 			);
 
+			$this->session->getLogger()->info("Player: " . Colors::AQUA . $username);
 			$this->session->setUsername($username);
+			$this->session->getLogger()->setPrefix("NetworkSession: " . $this->session->getDisplayName());
 			$player = ProxyServer::getInstance()->getPlayerManager()->createPlayer($this->session, $loginData);
 			$this->session->setPlayer($player);
 		}

@@ -7,7 +7,7 @@
 
 <p align="center">
 	<a href="https://github.com/AquaRelay/AquaRelay/actions/workflows/php.yml">
-      <img src="https://github.com/AquaRelay/AquaRelay/actions/workflows/php.yml/badge.svg" alt="CI" />
+      <img src="https://github.com/AquaRelay/AquaRelay/actions/workflows/php.yml/badge.svg" alt="Build Status" />
     </a>
 	<a href="https://discord.gg/VBjqNgCPq4">
       <img src="https://img.shields.io/discord/1456325670790762599?label=discord&color=7289DA&logo=discord" alt="Discord" />

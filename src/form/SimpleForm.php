@@ -42,20 +42,20 @@ class SimpleForm implements Form {
 		$this->content = $content;
 	}
 
-	public function setTitle(string $title) : self {
+	public function title(string $title) : self {
 		$this->title = $title;
 		return $this;
 	}
 
-	public function setContent(string $content) : self {
+	public function content(string $content) : self {
 		$this->content = $content;
 		return $this;
 	}
 
-	public function addButton(string $text, ?callable $action = null, ?array $image = null) : self {
+	public function button(string $text, ?ButtonImage $image = null, ?callable $action = null) : self {
 		$button = ['text' => $text];
 		if ($image !== null) {
-			$button['image'] = $image;
+			$button['image'] = $image->toArray();
 		}
 		$this->buttons[] = $button;
 		$this->buttonActions[] = $action;

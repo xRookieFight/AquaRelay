@@ -33,6 +33,7 @@ use function fopen;
 use function fread;
 use function fseek;
 use function hash_file;
+use function is_array;
 use function is_string;
 use function json_decode;
 use function preg_match;

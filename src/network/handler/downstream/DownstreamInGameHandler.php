@@ -29,6 +29,7 @@ use aquarelay\event\default\player\PlayerJoinEvent;
 use pocketmine\network\mcpe\protocol\AvailableCommandsPacket;
 use pocketmine\network\mcpe\protocol\DisconnectPacket;
 use pocketmine\network\mcpe\protocol\PlayStatusPacket;
+use pocketmine\network\mcpe\protocol\RequestChunkRadiusPacket;
 use pocketmine\network\mcpe\protocol\SetLocalPlayerAsInitializedPacket;
 use pocketmine\network\mcpe\protocol\StartGamePacket;
 use pocketmine\network\mcpe\protocol\TransferPacket;
@@ -130,26 +131,20 @@ class DownstreamInGameHandler extends AbstractDownstreamPacketHandler
 
 	public function handleStartGame(StartGamePacket $packet) : bool
 	{
-		RewriteData::sendChunkRadius($this->getPlayer());
+		$chunkRadiusPacket = new RequestChunkRadiusPacket();
+		$chunkRadiusPacket->radius = 8;
+		$chunkRadiusPacket->maxRadius = 8;
 
-		$position = $packet->playerPosition;
-		$runtimeId = $packet->actorRuntimeId;
+		$this->getPlayer()->getDownstream()->sendGamePacket($chunkRadiusPacket);
+		$this->getPlayer()->backendRuntimeId = $packet->actorRuntimeId;
 
-		if ($this->getPlayer()->getRewriteData()->isTransferring()){
-			$this->getPlayer()->getRewriteData()->setLastPosition($position);
-
-			RewriteData::injectPosition($this->getPlayer(), $position, $runtimeId);
-			RewriteData::injectDimChange($this->getPlayer(), DimensionIds::NETHER, $position); // TODO: what if the player is already in nether?
-		}
-
-		$this->getPlayer()->getRewriteData()->setActorRuntimeId($runtimeId);
-		return false;
+		return true;
 	}
 
 	public function handlePlayStatus(PlayStatusPacket $packet) : bool
 	{
 		if ($packet->status === PlayStatusPacket::LOGIN_SUCCESS) {
-			$this->getPlayer()->getNetworkSession()->debug('Forwarding LOGIN_SUCCESS from backend to client');
+			$this->getPlayer()->getNetworkSession()->getLogger()->debug('Forwarding LOGIN_SUCCESS from backend to client');
 			return false;
 		}
 		if ($packet->status === PlayStatusPacket::PLAYER_SPAWN) {
@@ -158,7 +153,7 @@ class DownstreamInGameHandler extends AbstractDownstreamPacketHandler
 			$actorRuntimeId = $rewriteData->getActorRuntimeId();
 
 			if ($actorRuntimeId === null) {
-				$player->getNetworkSession()->debug('Cannot send spawn notification: backendRuntimeId is null.');
+				$player->getNetworkSession()->getLogger()->debug('Cannot send spawn notification: backendRuntimeId is null.');
 			} else {
 				if ($player->getRewriteData()->isTransferring()) {
 					RewriteData::injectPosition($player, $rewriteData->getLastPosition(), $actorRuntimeId);
@@ -166,10 +161,11 @@ class DownstreamInGameHandler extends AbstractDownstreamPacketHandler
 
 					$player->getDownstream()->sendGamePacket(SetLocalPlayerAsInitializedPacket::create($actorRuntimeId));
 					$player->getRewriteData()->setTransferring(false);
+				} else {
+					$player->getNetworkSession()->getLogger()->debug('Sending spawn notification, waiting for spawn response');
+					$event = new PlayerJoinEvent($this->getPlayer());
+					$event->call();
 				}
-				$player->getNetworkSession()->debug('Sending spawn notification, waiting for spawn response');
-				$event = new PlayerJoinEvent($this->getPlayer());
-				$event->call();
 			}
 		}
 

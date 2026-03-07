@@ -1,4 +1,4 @@
-name: PHP CI
+name: Build Status
 
 on:
   push:
