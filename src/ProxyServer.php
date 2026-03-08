@@ -99,9 +99,6 @@ class ProxyServer
 
 	private float $startProcessTime;
 
-	/** @var NetworkSession[] */
-	private array $sessions = [];
-
 	private SleeperHandler $sleeper;
 
 	public function __construct(
@@ -357,6 +354,15 @@ class ProxyServer
 	public function getResourcePackManager() : ResourcePackManager
 	{
 		return $this->resourcePackManager;
+	}
+
+	/**
+	 * Returns the tick sleeper handler.
+	 * @return SleeperHandler
+	 */
+	public function getTickSleeper() : SleeperHandler
+	{
+		return $this->sleeper;
 	}
 
 	public function handleConsoleInput() : void
