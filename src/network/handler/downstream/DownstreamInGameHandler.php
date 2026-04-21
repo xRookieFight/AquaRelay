@@ -24,17 +24,20 @@ declare(strict_types=1);
 
 namespace aquarelay\network\handler\downstream;
 
+use aquarelay\network\rewrite\RewriteData;
 use aquarelay\event\default\player\PlayerJoinEvent;
 use pocketmine\network\mcpe\protocol\AvailableCommandsPacket;
 use pocketmine\network\mcpe\protocol\DisconnectPacket;
 use pocketmine\network\mcpe\protocol\PlayStatusPacket;
 use pocketmine\network\mcpe\protocol\RequestChunkRadiusPacket;
+use pocketmine\network\mcpe\protocol\SetLocalPlayerAsInitializedPacket;
 use pocketmine\network\mcpe\protocol\StartGamePacket;
 use pocketmine\network\mcpe\protocol\TransferPacket;
 use pocketmine\network\mcpe\protocol\types\command\raw\CommandEnumRawData;
 use pocketmine\network\mcpe\protocol\types\command\raw\CommandOverloadRawData;
 use pocketmine\network\mcpe\protocol\types\command\raw\CommandParameterRawData;
 use pocketmine\network\mcpe\protocol\types\command\raw\CommandRawData;
+use pocketmine\network\mcpe\protocol\types\DimensionIds;
 use function array_search;
 use function count;
 use function strtolower;
@@ -49,7 +52,7 @@ class DownstreamInGameHandler extends AbstractDownstreamPacketHandler
 		$server = $player->getServer();
 
 		if (!$server->getConfig()->getMiscSettings()->getCommandInjection()){
-			return true;
+			return false;
 		}
 
 		$commandMap = $server->getCommandMap();
@@ -123,7 +126,7 @@ class DownstreamInGameHandler extends AbstractDownstreamPacketHandler
 			$added[$name] = true;
 		}
 
-		return true;
+		return false;
 	}
 
 	public function handleStartGame(StartGamePacket $packet) : bool
@@ -142,19 +145,31 @@ class DownstreamInGameHandler extends AbstractDownstreamPacketHandler
 	{
 		if ($packet->status === PlayStatusPacket::LOGIN_SUCCESS) {
 			$this->getPlayer()->getNetworkSession()->getLogger()->debug('Forwarding LOGIN_SUCCESS from backend to client');
-			return true;
+			return false;
 		}
 		if ($packet->status === PlayStatusPacket::PLAYER_SPAWN) {
-			if ($this->getPlayer()->backendRuntimeId === null) {
-				$this->getPlayer()->getNetworkSession()->getLogger()->debug('Cannot send spawn notification: backendRuntimeId is null.');
+			$player = $this->getPlayer();
+			$rewriteData = $player->getRewriteData();
+			$actorRuntimeId = $rewriteData->getActorRuntimeId();
+
+			if ($actorRuntimeId === null) {
+				$player->getNetworkSession()->getLogger()->debug('Cannot send spawn notification: backendRuntimeId is null.');
 			} else {
-				$this->getPlayer()->getNetworkSession()->getLogger()->debug('Sending spawn notification, waiting for spawn response');
-				$event = new PlayerJoinEvent($this->getPlayer());
-				$event->call();
+				if ($player->getRewriteData()->isTransferring()) {
+					RewriteData::injectPosition($player, $rewriteData->getLastPosition(), $actorRuntimeId);
+					RewriteData::injectDimChange($player, DimensionIds::OVERWORLD, $rewriteData->getLastPosition());
+
+					$player->getDownstream()->sendGamePacket(SetLocalPlayerAsInitializedPacket::create($actorRuntimeId));
+					$player->getRewriteData()->setTransferring(false);
+				} else {
+					$player->getNetworkSession()->getLogger()->debug('Sending spawn notification, waiting for spawn response');
+					$event = new PlayerJoinEvent($this->getPlayer());
+					$event->call();
+				}
 			}
 		}
 
-		return true;
+		return false;
 	}
 
 	public function handleTransfer(TransferPacket $packet) : bool
@@ -163,8 +178,10 @@ class DownstreamInGameHandler extends AbstractDownstreamPacketHandler
 		$ipAddress = $packet->address;
 
 		$server = $serverManager->get($ipAddress);
-		if ($server !== null){
-			$this->getPlayer()->transferToBackend($server);
+		if ($server !== null) {
+			$packet->address = $this->getPlayer()->getServer()->getAddress();
+			$packet->port = $this->getPlayer()->getServer()->getPort();
+			$this->getPlayer()->transfer($server);
 			return true;
 		}
 
@@ -172,7 +189,9 @@ class DownstreamInGameHandler extends AbstractDownstreamPacketHandler
 
 		foreach ($serverManager->getAll() as $data) {
 			if ($data->getAddress() === $ipAddress && $data->getPort() === $port) {
-				$this->getPlayer()->transferToBackend($serverManager->get($data->getName()));
+				$packet->address = $this->getPlayer()->getServer()->getAddress();
+				$packet->port = $this->getPlayer()->getServer()->getPort();
+				$this->getPlayer()->transfer($serverManager->get($data->getName()));
 				break;
 			}
 		}
@@ -183,6 +202,6 @@ class DownstreamInGameHandler extends AbstractDownstreamPacketHandler
 	public function handleDisconnect(DisconnectPacket $packet) : bool
 	{
 		$this->getPlayer()->tryFallbackOrDisconnect();
-		return true;
+		return false;
 	}
 }

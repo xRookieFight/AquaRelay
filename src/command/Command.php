@@ -51,12 +51,21 @@ abstract class Command {
 		return $this->builder->getAliases();
 	}
 
-	public function getPermission() : ?string {
+	public function getPermission() : string|array|null {
 		return $this->builder->getPermission();
 	}
 
 	public function testPermission(CommandSender $sender) : bool {
 		if ($this->getPermission() === null || $this->getPermission() === "") return true;
+
+        if (is_array($this->getPermission())){
+            foreach ($this->getPermission() as $perm){
+                if ($sender->hasPermission($perm)){
+                    return true;
+                }
+            }
+            return false;
+        }
 
 		return $sender->hasPermission($this->getPermission());
 	}

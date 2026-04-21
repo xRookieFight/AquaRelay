@@ -71,6 +71,36 @@ class ServerManager
 		};
 	}
 
+	public function selectAfter() : BackendServer
+	{
+		$servers = $this->getAll();
+
+		if ($servers === []) {
+			throw new ServerException("No backend servers available");
+		}
+
+		usort(
+			$servers,
+			fn($a, $b) => $a->getPriority() <=> $b->getPriority()
+		);
+
+		$current = $this->select();
+
+		foreach ($servers as $index => $server) {
+			if ($server->getName() === $current->getName()) {
+				$nextIndex = $index + 1;
+
+				if (isset($servers[$nextIndex])) {
+					return $servers[$nextIndex];
+				}
+
+				break;
+			}
+		}
+
+		throw new ServerException("No backend server available after '{$current->getName()}'");
+	}
+
 	private function priority(array $servers) : BackendServer
 	{
 		usort(

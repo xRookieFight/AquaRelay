@@ -29,4 +29,6 @@ class DefaultPermissionNames
 	const COMMAND_PROXYLIST = "aquarelay.command.proxylist";
 	const COMMAND_PROXYPLUGINS = "aquarelay.command.proxyplugins";
 	const COMMAND_PROXYSTOP = "aquarelay.command.proxystop";
+	const COMMAND_TRANSFER_SELF = "aquarelay.command.transfer.self";
+	const COMMAND_TRANSFER_OTHER = "aquarelay.command.transfer.other";
 }

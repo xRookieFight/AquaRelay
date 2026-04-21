@@ -372,6 +372,17 @@ class ProxyServer
 		}
 	}
 
+	public function getPlayerByName(string $name) : ?Player
+	{
+		foreach($this->getOnlinePlayers() as $player) {
+			if (strtolower($player->getName()) === strtolower($name)) {
+				return $player;
+			}
+		}
+
+		return null;
+	}
+
 	public function broadcastMessage(string $message) : void
 	{
 		foreach ($this->getOnlinePlayers() as $player) {

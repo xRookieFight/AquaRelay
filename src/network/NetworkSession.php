@@ -27,6 +27,7 @@ namespace aquarelay\network;
 use aquarelay\event\default\player\PlayerQuitEvent;
 use aquarelay\form\Form;
 use aquarelay\network\compression\ZlibCompressor;
+use aquarelay\network\handler\downstream\DownstreamResourcePackHandler;
 use aquarelay\network\handler\upstream\AbstractUpstreamPacketHandler;
 use aquarelay\network\handler\upstream\UpstreamLoginHandler;
 use aquarelay\network\handler\upstream\UpstreamPreLoginHandler;
@@ -138,17 +139,22 @@ class NetworkSession
 		}
 	}
 
-	public function connectBackendTo(string $ip, int $port) : void
+	public function connectBackendTo(string $ip, int $port, bool $transfer) : void
 	{
 		$player = $this->player;
 		if ($player === null) return;
 
 		$this->getLogger()->debug("Connecting to $ip:$port...");
 
+		if ($transfer) {
+			$this->getPlayer()->getRewriteData()->setTransferring(true);
+		}
+
 		$backend = new BackendRakClient(new InternetAddress($ip, $port, 4), $player);
 
 		$player->setDownstream($backend);
 		$player->sendLoginToBackend();
+		$this->getPlayer()->setHandler(new DownstreamResourcePackHandler($this->getPlayer(), $this->getServer()->getLogger()));
 
 		$backend->connect();
 	}
