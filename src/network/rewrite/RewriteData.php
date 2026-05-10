@@ -34,6 +34,8 @@ use pocketmine\network\mcpe\protocol\NetworkChunkPublisherUpdatePacket;
 use pocketmine\network\mcpe\protocol\RequestChunkRadiusPacket;
 use pocketmine\network\mcpe\protocol\types\BlockPosition;
 use pocketmine\network\mcpe\protocol\types\ChunkPosition;
+use function chr;
+use function str_repeat;
 
 final class RewriteData
 {
@@ -144,7 +146,7 @@ final class RewriteData
 	public static function injectPosition(Player $player, Vector3 $position, int $runtimeId) : void
 	{
 		$packet = new MovePlayerPacket();
-		$packet->actorRuntimeId =  $runtimeId;
+		$packet->actorRuntimeId = $runtimeId;
 		$packet->position = $position;
 		$packet->mode = MovePlayerPacket::MODE_RESET;
 		$packet->pitch = 0.0;
@@ -189,7 +191,7 @@ final class RewriteData
 		return $this->lastPosition;
 	}
 
-	public function getTargetServer(): ?BackendServer
+	public function getTargetServer() : ?BackendServer
 	{
 		return $this->targetServer;
 	}

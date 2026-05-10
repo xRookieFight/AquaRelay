@@ -24,8 +24,8 @@ declare(strict_types=1);
 
 namespace aquarelay\network\handler\downstream;
 
-use aquarelay\network\rewrite\RewriteData;
 use aquarelay\event\default\player\PlayerJoinEvent;
+use aquarelay\network\rewrite\RewriteData;
 use pocketmine\network\mcpe\protocol\AvailableCommandsPacket;
 use pocketmine\network\mcpe\protocol\DisconnectPacket;
 use pocketmine\network\mcpe\protocol\PlayStatusPacket;
@@ -136,7 +136,7 @@ class DownstreamInGameHandler extends AbstractDownstreamPacketHandler
 		$chunkRadiusPacket->maxRadius = 8;
 
 		$this->getPlayer()->getDownstream()->sendGamePacket($chunkRadiusPacket);
-		$this->getPlayer()->backendRuntimeId = $packet->actorRuntimeId;
+		$this->getPlayer()->getRewriteData()->setActorRuntimeId($packet->actorRuntimeId);
 
 		return true;
 	}

@@ -72,6 +72,7 @@ use function mkdir;
 use function ord;
 use function register_shutdown_function;
 use function round;
+use function strtolower;
 use function substr;
 use const DIRECTORY_SEPARATOR;
 

@@ -48,7 +48,6 @@ use pocketmine\network\mcpe\protocol\DataPacket;
 use pocketmine\network\mcpe\protocol\LoginPacket;
 use pocketmine\network\mcpe\protocol\PacketPool;
 use pocketmine\network\mcpe\protocol\serializer\PacketBatch;
-use pocketmine\network\mcpe\protocol\TransferPacket;
 use pocketmine\network\mcpe\protocol\types\CompressionAlgorithm;
 use Ramsey\Uuid\Uuid;
 use Ramsey\Uuid\UuidInterface;

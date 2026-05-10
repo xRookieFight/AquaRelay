@@ -24,8 +24,8 @@ declare(strict_types=1);
 
 namespace aquarelay\command\default;
 
-use aquarelay\command\Command;
 use aquarelay\command\builder\CommandBuilder;
+use aquarelay\command\Command;
 use aquarelay\command\sender\CommandSender;
 use aquarelay\permission\DefaultPermissionNames;
 use aquarelay\player\Player;
@@ -33,7 +33,7 @@ use aquarelay\ProxyServer;
 
 class ProxyTransferCommand extends Command
 {
-	public function getBuilder(): CommandBuilder
+	public function getBuilder() : CommandBuilder
 	{
 		return new CommandBuilder(
 			"transfer",
@@ -44,7 +44,7 @@ class ProxyTransferCommand extends Command
 		);
 	}
 
-	public function execute(CommandSender $sender, string $label, array $args): bool
+	public function execute(CommandSender $sender, string $label, array $args) : bool
 	{
 		if (!isset($args[0])) {
 			$sender->sendMessage("§cUsage: " . $this->getBuilder()->getUsage());

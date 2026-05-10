@@ -24,9 +24,6 @@ declare(strict_types=1);
 
 namespace aquarelay\server;
 
-use function fclose;
-use function fsockopen;
-
 final readonly class BackendServer
 {
 	public function __construct(

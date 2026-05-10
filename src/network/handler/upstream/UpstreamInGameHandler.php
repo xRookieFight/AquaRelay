@@ -129,12 +129,12 @@ class UpstreamInGameHandler extends AbstractUpstreamPacketHandler
 		return true;
 	}
 
-	public function handleSubChunkRequest(SubChunkRequestPacket $packet): bool
+	public function handleSubChunkRequest(SubChunkRequestPacket $packet) : bool
 	{
 		return true;
 	}
 
-	public function handleClientCacheStatus(ClientCacheStatusPacket $packet): bool
+	public function handleClientCacheStatus(ClientCacheStatusPacket $packet) : bool
 	{
 		return true;
 	}

@@ -26,6 +26,7 @@ namespace aquarelay\command;
 
 use aquarelay\command\builder\CommandBuilder;
 use aquarelay\command\sender\CommandSender;
+use function is_array;
 
 abstract class Command {
 
@@ -58,14 +59,14 @@ abstract class Command {
 	public function testPermission(CommandSender $sender) : bool {
 		if ($this->getPermission() === null || $this->getPermission() === "") return true;
 
-        if (is_array($this->getPermission())){
-            foreach ($this->getPermission() as $perm){
-                if ($sender->hasPermission($perm)){
-                    return true;
-                }
-            }
-            return false;
-        }
+		if (is_array($this->getPermission())){
+			foreach ($this->getPermission() as $perm){
+				if ($sender->hasPermission($perm)){
+					return true;
+				}
+			}
+			return false;
+		}
 
 		return $sender->hasPermission($this->getPermission());
 	}
