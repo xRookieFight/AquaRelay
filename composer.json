@@ -42,7 +42,7 @@
       },
 	  {
 		 "type": "vcs",
-		 "url":  "https://github.com/AquaRelay/RakLibIpc"
+		 "url":  "git@github.com:xRookieFight/RakLibIpc.git"
 	  }
    ],
    "minimum-stability": "dev",
