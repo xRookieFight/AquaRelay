@@ -6,15 +6,15 @@
 </p>
 
 <p align="center">
-	<a href="https://github.com/AquaRelay/AquaRelay/actions/workflows/php.yml">
-      <img src="https://github.com/AquaRelay/AquaRelay/actions/workflows/php.yml/badge.svg" alt="Build Status" />
+	<a href="https://github.com/xRookieFight/AquaRelay/actions/workflows/php.yml">
+      <img src="https://github.com/xRookieFight/AquaRelay/actions/workflows/php.yml/badge.svg" alt="Build Status" />
     </a>
-	<a href="https://discord.gg/VBjqNgCPq4">
-      <img src="https://img.shields.io/discord/1456325670790762599?label=discord&color=7289DA&logo=discord" alt="Discord" />
+	<a href="https://discord.gg/DYSEf2WGPQ">
+      <img src="https://img.shields.io/discord/373199722573201408?label=discord&color=7289DA&logo=discord" alt="Discord" />
     </a>
 	<br>
-	<a href="https://github.com/AquaRelay/AquaRelay/releases">
-      <img alt="GitHub all releases" src="https://img.shields.io/github/downloads/AquaRelay/AquaRelay/total?label=downloads">
+	<a href="https://github.com/xRookieFight/AquaRelay/releases">
+      <img alt="GitHub all releases" src="https://img.shields.io/github/downloads/xRookieFight/AquaRelay/total?label=downloads">
     </a>
     <a href="https://www.gnu.org/licenses/lgpl-3.0.html" target="_blank">
       <img alt="License: LGPL-3" src="https://img.shields.io/badge/License-LGPL--3-yellow.svg" />

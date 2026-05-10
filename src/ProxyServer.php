@@ -79,7 +79,7 @@ use const DIRECTORY_SEPARATOR;
 class ProxyServer
 {
 	public const NAME = 'AquaRelay';
-	public const VERSION = '1.0.0-alpha4'; // Semver
+	public const VERSION = '1.0.0-alpha5'; // Semver
 	public const IS_DEVELOPMENT = true;
 	public RakLibInterface $interface;
 	private MainLogger $logger;
@@ -99,9 +99,6 @@ class ProxyServer
 	private ThreadSafeArray $consoleQueue;
 
 	private float $startProcessTime;
-
-	/** @var NetworkSession[] */
-	private array $sessions = [];
 
 	private SleeperHandler $sleeper;
 
@@ -358,6 +355,15 @@ class ProxyServer
 	public function getResourcePackManager() : ResourcePackManager
 	{
 		return $this->resourcePackManager;
+	}
+
+	/**
+	 * Returns the tick sleeper handler.
+	 * @return SleeperHandler
+	 */
+	public function getTickSleeper() : SleeperHandler
+	{
+		return $this->sleeper;
 	}
 
 	public function handleConsoleInput() : void
