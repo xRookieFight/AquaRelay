@@ -58,14 +58,18 @@ use const JSON_THROW_ON_ERROR;
 
 class NetworkSession
 {
+	private const BATCH_COMPRESSION_NONE = "\xff";
+	private const BATCH_COMPRESSION_ZLIB = "\x00";
+	private const PACKET_ID_SINGLE = 0xC1;
+
 	/** @var string[] */
 	private array $sendBuffer = [];
 	private ?bool $enableCompression = null;
 	private ?int $protocolId = null;
-	private ?string $username = null;
-	private ?int $ping = null;
+	private string $username = "";
+	private int $ping = -1;
 	private bool $connected = true;
-	private bool $logged = false;
+	private bool $isLoggedIn = false;
 	private ?AbstractUpstreamPacketHandler $handler;
 	private ?Player $player = null;
 	private \PrefixedLogger $logger;
@@ -117,14 +121,14 @@ class NetworkSession
 		if ($compressionType === CompressionAlgorithm::ZLIB) {
 			try {
 				$data = ZlibCompressor::getInstance()->decompress($data);
-			} catch (\Exception $e) {
-				$this->server->getLogger()->error('Decompressing error: ' . $e->getMessage());
+			} catch (\Throwable $e) {
+				$this->logger->error('Decompressing error: ' . $e->getMessage());
 
 				return;
 			}
 		}
 
-		if (ord($data[0]) === 0xC1) {
+		if (ord($data[0]) === self::PACKET_ID_SINGLE) {
 			$this->processSinglePacket($data);
 		} else {
 			try {
@@ -132,8 +136,8 @@ class NetworkSession
 				foreach (PacketBatch::decodeRaw($stream) as $buffer) {
 					$this->processSinglePacket($buffer);
 				}
-			} catch (\Exception $e) {
-				$this->getLogger()->debug('Batch decode error: ' . $e->getMessage());
+			} catch (\Throwable $e) {
+				$this->logger->debug('Batch decode error: ' . $e->getMessage());
 			}
 		}
 	}
@@ -188,12 +192,14 @@ class NetworkSession
 			if ($this->enableCompression === null) {
 				$finalPayload = $batchData;
 			} else {
-				$finalPayload = $this->enableCompression ? "\x00" . ZlibCompressor::getInstance()->compress($batchData) : "\xff" . $batchData;
+				$finalPayload = $this->enableCompression ? self::BATCH_COMPRESSION_ZLIB . ZlibCompressor::getInstance()->compress($batchData) : self::BATCH_COMPRESSION_NONE . $batchData;
 			}
 
 			try {
 				$this->sendEncoded($finalPayload);
-			} catch (\Throwable) {}
+			} catch (\Throwable $e) {
+				$this->logger->error("Failed to send encoded packet: " . $e->getMessage());
+			}
 		}
 	}
 
@@ -281,9 +287,9 @@ class NetworkSession
 		return $this->connected;
 	}
 
-	public function isLogged() : bool
+	public function isLoggedIn() : bool
 	{
-		return $this->logged;
+		return $this->isLoggedIn;
 	}
 
 	public function setHandler(?AbstractUpstreamPacketHandler $handler) : void
@@ -294,7 +300,7 @@ class NetworkSession
 		}
 	}
 
-	public function onMessage(string $message) : void
+	public function sendMessage(string $message) : void
 	{
 		$this->sendDataPacket(TextPacket::raw($message));
 	}
@@ -353,17 +359,21 @@ class NetworkSession
 
 	public function onDisconnect(string $reason) : void
 	{
+		if (!$this->connected) {
+			return;
+		}
 		$this->connected = false;
-		$this->getLogger()->info("Session disconnected: $reason");
-
-		$event = new PlayerQuitEvent($this->getPlayer());
-		$event->call();
-
-		NetworkSessionManager::getInstance()->remove($this);
+		$this->logger->info("Session disconnected: $reason");
 
 		$player = $this->getPlayer();
-		$player?->getDownstream()?->disconnect();
+		if ($player !== null) {
+			$event = new PlayerQuitEvent($player);
+			$event->call();
 
+			$player->getDownstream()?->disconnect();
+		}
+
+		$this->manager->remove($this);
 		$this->server->getPlayerManager()->removePlayer($this);
 	}
 
