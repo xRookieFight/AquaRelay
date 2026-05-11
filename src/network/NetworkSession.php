@@ -47,21 +47,16 @@ use pocketmine\network\mcpe\protocol\serializer\PacketBatch;
 use pocketmine\network\mcpe\protocol\SetTitlePacket;
 use pocketmine\network\mcpe\protocol\TextPacket;
 use pocketmine\network\mcpe\protocol\ToastRequestPacket;
-use pocketmine\network\mcpe\protocol\types\CompressionAlgorithm;
 use raklib\generic\DisconnectReason;
 use raklib\utils\InternetAddress;
 use function count;
 use function json_encode;
-use function ord;
-use function substr;
 use const JSON_THROW_ON_ERROR;
 
 class NetworkSession
 {
 	private const BATCH_COMPRESSION_NONE = "\xff";
 	private const BATCH_COMPRESSION_ZLIB = "\x00";
-	private const PACKET_ID_SINGLE = 0xC1;
-
 	/** @var string[] */
 	private array $sendBuffer = [];
 	private ?bool $enableCompression = null;
@@ -115,30 +110,8 @@ class NetworkSession
 
 	public function handleEncodedPacket(string $payload) : void
 	{
-		$compressionType = ord($payload[0]);
-		$data = substr($payload, 1);
-
-		if ($compressionType === CompressionAlgorithm::ZLIB) {
-			try {
-				$data = ZlibCompressor::getInstance()->decompress($data);
-			} catch (\Throwable $e) {
-				$this->logger->error('Decompressing error: ' . $e->getMessage());
-
-				return;
-			}
-		}
-
-		if (ord($data[0]) === self::PACKET_ID_SINGLE) {
-			$this->processSinglePacket($data);
-		} else {
-			try {
-				$stream = new ByteBufferReader($data);
-				foreach (PacketBatch::decodeRaw($stream) as $buffer) {
-					$this->processSinglePacket($buffer);
-				}
-			} catch (\Throwable $e) {
-				$this->logger->debug('Batch decode error: ' . $e->getMessage());
-			}
+		foreach (PacketBatchDecoder::decodeRaw($payload, $this->logger, $this->enableCompression !== null) as $buffer) {
+			$this->processSinglePacket($buffer);
 		}
 	}
 
@@ -352,7 +325,11 @@ class NetworkSession
 			$packet->decode(new ByteBufferReader($buffer), $this->getProtocolId());
 
 			if ($this->handler !== null) {
-				$packet->handle($this->handler);
+				if (!$packet->handle($this->handler) && $this->handler->shouldForwardUnhandled()) {
+					if ($this->player !== null && $this->player->getDownstream() !== null) {
+						$this->player->sendToBackend($packet);
+					}
+				}
 			}
 		}
 	}

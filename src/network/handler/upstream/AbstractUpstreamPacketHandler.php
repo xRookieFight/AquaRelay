@@ -41,4 +41,9 @@ abstract class AbstractUpstreamPacketHandler implements PacketHandlerInterface
 	}
 
 	public function setUp() : void {}
+
+	public function shouldForwardUnhandled() : bool
+	{
+		return false;
+	}
 }

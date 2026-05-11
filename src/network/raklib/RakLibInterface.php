@@ -44,6 +44,7 @@ use function rtrim;
 class RakLibInterface implements ServerEventListener
 {
 	public const MCPE_RAKNET_PACKET_ID = "\xfe";
+	public const MCPE_RAKNET_PACKET_ID_BYTE = 0xfe;
 	public const RAKNET_PROTOCOL_VERSION = 11;
 
 	private int $tickCounter = 0;

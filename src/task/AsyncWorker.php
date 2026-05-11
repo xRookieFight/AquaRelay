@@ -116,7 +116,6 @@ class AsyncWorker extends Worker
 				try {
 					$task->run();
 				} catch (\Throwable $e) {
-					// Log exception in result
 				}
 				++$count;
 			}

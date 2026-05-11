@@ -124,7 +124,7 @@ class MainLogger extends ThreadSafe implements \Logger
 
 	public function logException(\Throwable $e, $trace = null) : void
 	{
-		$this->critical('Uncaught exception: ' . $e->getMessage());
+		$this->critical('Uncaught exception: ' . $e->getMessage() . "\n" . $e->getTraceAsString());
 	}
 
 	public function shutdown() : void

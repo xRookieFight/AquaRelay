@@ -31,11 +31,9 @@ use aquarelay\event\default\server\ServerStartEvent;
 use aquarelay\event\default\server\ServerStopEvent;
 use aquarelay\lang\Language;
 use aquarelay\lang\TranslationFactory;
-use aquarelay\network\compression\DecompressionException;
 use aquarelay\network\compression\ZlibCompressor;
 use aquarelay\network\NetworkSession;
 use aquarelay\network\NetworkSessionManager;
-use aquarelay\network\PacketHandlingException;
 use aquarelay\network\raklib\RakLibInterface;
 use aquarelay\network\raklib\RakLibPacketSender;
 use aquarelay\permission\PermissionManager;
@@ -55,11 +53,8 @@ use aquarelay\utils\Utils;
 use pmmp\encoding\ByteBufferReader;
 use pmmp\thread\Thread;
 use pmmp\thread\ThreadSafeArray;
-use pocketmine\network\mcpe\protocol\DataPacket;
 use pocketmine\network\mcpe\protocol\PacketPool;
 use pocketmine\network\mcpe\protocol\ProtocolInfo;
-use pocketmine\network\mcpe\protocol\serializer\PacketBatch;
-use pocketmine\network\mcpe\protocol\types\CompressionAlgorithm;
 use pocketmine\snooze\SleeperHandler;
 use raklib\generic\DisconnectReason;
 use function count;
@@ -437,52 +432,9 @@ class ProxyServer
 		$this->getScheduler()->processAll();
 		$this->handleConsoleInput();
 
-		foreach (NetworkSessionManager::getInstance()->getSessions() as $id => $session) {
+		foreach (NetworkSessionManager::getInstance()->getSessions() as $session) {
 			$player = $session->getPlayer();
 			$player?->getDownstream()?->tick();
-		}
-	}
-
-	public function handleBackendPayload(Player $player, string $payload) : void
-	{
-		$pid = ord($payload[0]);
-		if ($pid !== 0xFE) {
-			return;
-		}
-
-		$compression = ord($payload[1]);
-		$buffer = substr($payload, 2);
-
-		if ($compression === CompressionAlgorithm::ZLIB) {
-			try {
-				$buffer = ZlibCompressor::getInstance()->decompress($buffer);
-			}  catch (DecompressionException $e) {
-				$this->getLogger()->critical("Backend decompression failed: " . $e->getMessage());
-				$player->disconnect(TranslationFactory::translate("session.login.corrupt_packet"));
-				return;
-			}
-		}
-
-		try {
-			$stream = new ByteBufferReader($buffer);
-
-			$generator = PacketBatch::decodePackets(
-				$stream,
-				$player->getProtocol(),
-				PacketPool::getInstance()
-			);
-
-			foreach ($generator as $packet) {
-				if ($packet instanceof DataPacket) {
-					$player->handleBackendPacket($packet);
-				}
-			}
-
-		} catch (PacketHandlingException $e) {
-			$this->getLogger()->error("Backend packet decode error: " . $e->getMessage());
-		} catch (\Throwable $e) {
-			// Catch generic errors (like buffer underflow) that aren't strict PacketHandlingExceptions
-			$this->getLogger()->debug("General decode error: " . $e->getMessage());
 		}
 	}
 
@@ -503,8 +455,7 @@ class ProxyServer
 
 	private function handlePacket(int $sessionId, string $payload) : void
 	{
-		$firstByte = ord($payload[0]);
-		if ($firstByte !== 0xFE) return;
+		if (ord($payload[0]) !== RakLibInterface::MCPE_RAKNET_PACKET_ID_BYTE) return;
 
 		$session = NetworkSessionManager::getInstance()->getSessionById($sessionId);
 		$session?->handleEncodedPacket(substr($payload, 1));

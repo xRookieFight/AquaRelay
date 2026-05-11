@@ -28,12 +28,9 @@ use aquarelay\command\sender\CommandSender;
 use aquarelay\form\Form;
 use aquarelay\form\FormValidationException;
 use aquarelay\lang\TranslationFactory;
-use aquarelay\network\compression\DecompressionException;
-use aquarelay\network\compression\ZlibCompressor;
 use aquarelay\network\handler\downstream\AbstractDownstreamPacketHandler;
 use aquarelay\network\handler\downstream\DownstreamResourcePackHandler;
 use aquarelay\network\NetworkSession;
-use aquarelay\network\PacketHandlingException;
 use aquarelay\network\raklib\client\BackendRakClient;
 use aquarelay\permission\PermissionHolder;
 use aquarelay\ProxyServer;
@@ -41,20 +38,14 @@ use aquarelay\server\BackendServer;
 use aquarelay\server\ServerException;
 use aquarelay\utils\LoginData;
 use aquarelay\utils\Utils;
-use pmmp\encoding\ByteBufferReader;
 use pocketmine\network\mcpe\protocol\ClientboundPacket;
 use pocketmine\network\mcpe\protocol\DataPacket;
 use pocketmine\network\mcpe\protocol\LoginPacket;
-use pocketmine\network\mcpe\protocol\PacketPool;
-use pocketmine\network\mcpe\protocol\serializer\PacketBatch;
 use pocketmine\network\mcpe\protocol\TransferPacket;
-use pocketmine\network\mcpe\protocol\types\CompressionAlgorithm;
 use Ramsey\Uuid\Uuid;
 use Ramsey\Uuid\UuidInterface;
 use function get_class;
 use function json_encode;
-use function ord;
-use function substr;
 
 class Player implements CommandSender, PermissionHolder
 {
@@ -147,49 +138,6 @@ class Player implements CommandSender, PermissionHolder
 	public function setHandler(AbstractDownstreamPacketHandler $handler) : void
 	{
 		$this->handler = $handler;
-	}
-
-	public function handleBackendPayload(Player $player, string $payload) : void
-	{
-		$pid = ord($payload[0]);
-		if ($pid !== 0xFE) {
-			return;
-		}
-
-		$compression = ord($payload[1]);
-		$buffer = substr($payload, 2);
-
-		if ($compression === CompressionAlgorithm::ZLIB) {
-			try {
-				$buffer = ZlibCompressor::getInstance()->decompress($buffer);
-			}  catch (DecompressionException $e) {
-				$this->getNetworkSession()->getLogger()->critical("Backend decompression failed: " . $e->getMessage());
-				$player->disconnect(TranslationFactory::translate("session.login.corrupt_packet"));
-				return;
-			}
-		}
-
-		try {
-			$stream = new ByteBufferReader($buffer);
-
-			$generator = PacketBatch::decodePackets(
-				$stream,
-				$player->getProtocol(),
-				PacketPool::getInstance()
-			);
-
-			foreach ($generator as $packet) {
-				if ($packet instanceof DataPacket) {
-					$player->handleBackendPacket($packet);
-				}
-			}
-
-		} catch (PacketHandlingException $e) {
-			$this->getServer()->getLogger()->error("Backend packet decode error: " . $e->getMessage());
-		} catch (\Throwable $e) {
-			// Catch generic errors (like buffer underflow) that aren't strict PacketHandlingExceptions
-			$this->getServer()->getLogger()->debug("General decode error: " . $e->getMessage());
-		}
 	}
 
 	public function handleBackendPacket(DataPacket $packet) : void
@@ -334,11 +282,21 @@ class Player implements CommandSender, PermissionHolder
 
 	public function transfer(BackendServer $server) : void
 	{
-		$this->sendToBackend(TransferPacket::create(
-				$server->getAddress(),
-				$server->getPort(),
-				false
-			));
+		$this->sendDataPacket(TransferPacket::create(
+			$server->getAddress(),
+			$server->getPort(),
+			false
+		));
+	}
+
+	public function getBackendRuntimeId() : ?int
+	{
+		return $this->backendRuntimeId;
+	}
+
+	public function setBackendRuntimeId(?int $id) : void
+	{
+		$this->backendRuntimeId = $id;
 	}
 
 	public function hasPermission(string $permission) : bool

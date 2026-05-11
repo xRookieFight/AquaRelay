@@ -26,10 +26,13 @@ namespace aquarelay\network\raklib\client;
 
 use aquarelay\lang\TranslationFactory;
 use aquarelay\network\compression\ZlibCompressor;
+use aquarelay\network\PacketBatchDecoder;
 use aquarelay\network\raklib\RakLibInterface;
 use aquarelay\player\Player;
 use pmmp\encoding\ByteBufferWriter;
+use pmmp\encoding\ByteBufferReader;
 use pocketmine\network\mcpe\protocol\DataPacket;
+use pocketmine\network\mcpe\protocol\PacketPool;
 use pocketmine\network\mcpe\protocol\RequestNetworkSettingsPacket;
 use pocketmine\utils\Binary;
 use raklib\client\ClientSocket;
@@ -66,8 +69,6 @@ final class BackendRakClient extends Session
 
 	private const ID_USER_PACKET_ENUM = 0x80;
 
-	private const ID_MCPE_GAME_PACKET = 0xFE;
-
 	private const DEFAULT_MTU = 1492;
 
 	private ClientSocket $socket;
@@ -80,6 +81,7 @@ final class BackendRakClient extends Session
 	private array $sendQueue = [];
 
 	private ?int $rakCookie = null;
+	private bool $compressionEnabled = false;
 
 	public function __construct(
 		InternetAddress $address,
@@ -182,22 +184,30 @@ final class BackendRakClient extends Session
 	protected function onPacketReceive(string $packet) : void
 	{
 		$id = ord($packet[0]);
-		if ($id === self::ID_MCPE_GAME_PACKET) {
+		if ($id === RakLibInterface::MCPE_RAKNET_PACKET_ID_BYTE) {
 			if ($this->connState === ConnectionState::GAME_HANDSHAKE) {
 				$this->connState = ConnectionState::LOGGED_IN;
+				$this->compressionEnabled = true;
 
 				foreach ($this->sendQueue as $p) {
 					$this->encodeAndSend($p);
 				}
 				$this->sendQueue = [];
 			}
-			$this->player->handleBackendPayload($this->player, $packet);
+
+			foreach (PacketBatchDecoder::decodeRaw($packet, $this->getLogger(), $this->compressionEnabled) as $buffer) {
+				$pk = PacketPool::getInstance()->getPacket($buffer);
+				if ($pk instanceof DataPacket) {
+					$pk->decode(new ByteBufferReader($buffer), $this->player->getProtocol());
+					$this->player->handleBackendPacket($pk);
+				}
+			}
 		}
 	}
 
 	protected function onPingMeasure(int $pingMS) : void
 	{
-		$this->getLogger()->debug("Ping measurement: {$pingMS}ms");
+		$this->player->getNetworkSession()->setPing($pingMS);
 	}
 
 	private function handleInternalPacket(string $buf) : void
