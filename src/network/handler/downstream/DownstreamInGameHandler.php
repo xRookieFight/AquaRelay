@@ -25,123 +25,184 @@ declare(strict_types=1);
 namespace aquarelay\network\handler\downstream;
 
 use aquarelay\event\default\player\PlayerJoinEvent;
+use pocketmine\network\mcpe\protocol\AddActorPacket;
+use pocketmine\network\mcpe\protocol\AddPlayerPacket;
 use pocketmine\network\mcpe\protocol\AvailableCommandsPacket;
+use pocketmine\network\mcpe\protocol\BossEventPacket;
 use pocketmine\network\mcpe\protocol\DisconnectPacket;
+use pocketmine\network\mcpe\protocol\PlayerListPacket;
 use pocketmine\network\mcpe\protocol\PlayStatusPacket;
+use pocketmine\network\mcpe\protocol\RemoveActorPacket;
+use pocketmine\network\mcpe\protocol\RemoveObjectivePacket;
 use pocketmine\network\mcpe\protocol\RequestChunkRadiusPacket;
+use pocketmine\network\mcpe\protocol\serializer\AvailableCommandsPacketAssembler;
+use pocketmine\network\mcpe\protocol\serializer\AvailableCommandsPacketDisassembler;
+use pocketmine\network\mcpe\protocol\SetDisplayObjectivePacket;
 use pocketmine\network\mcpe\protocol\StartGamePacket;
 use pocketmine\network\mcpe\protocol\TransferPacket;
-use pocketmine\network\mcpe\protocol\types\command\raw\CommandEnumRawData;
-use pocketmine\network\mcpe\protocol\types\command\raw\CommandOverloadRawData;
-use pocketmine\network\mcpe\protocol\types\command\raw\CommandParameterRawData;
-use pocketmine\network\mcpe\protocol\types\command\raw\CommandRawData;
-use function array_search;
-use function count;
+use pocketmine\network\mcpe\protocol\types\command\CommandData;
+use pocketmine\network\mcpe\protocol\types\command\CommandHardEnum;
+use pocketmine\network\mcpe\protocol\types\command\CommandOverload;
+use pocketmine\network\mcpe\protocol\types\command\CommandParameter;
+use pocketmine\network\mcpe\protocol\types\command\CommandPermissions;
+use function array_map;
+use function in_array;
 use function strtolower;
 use function ucfirst;
 
 class DownstreamInGameHandler extends AbstractDownstreamPacketHandler
 {
 
-	public function handleAvailableCommands(AvailableCommandsPacket $packet) : bool
-	{
+	public function handleAvailableCommands(AvailableCommandsPacket $packet) : bool{
 		$player = $this->getPlayer();
 		$server = $player->getServer();
 
-		if (!$server->getConfig()->getMiscSettings()->getCommandInjection()){
-			return true;
+		if(!$server->getConfig()->getMiscSettings()->getCommandInjection()){
+			return false;
 		}
 
 		$commandMap = $server->getCommandMap();
 
-		$added = [];
+		$disassembled = AvailableCommandsPacketDisassembler::disassemble($packet);
+		$data = $disassembled->commandData;
+		$softEnums = $disassembled->unusedSoftEnums;
+		$hardEnums = $disassembled->unusedHardEnums;
 
 		foreach ($commandMap->getCommands() as $command) {
-			$name = strtolower($command->getName());
+				$exists = false;
 
-			if (isset($added[$name])) {
-				continue;
-			}
-
-			if (!$command->testPermission($player)) {
-				continue;
-			}
-
-			if ($command->getName() === "help") {
-				continue;
-			}
-
-			$aliasIndexes = [];
-			$aliases = $command->getAliases();
-			$aliases[] = $name;
-
-			foreach ($aliases as $alias) {
-				$alias = strtolower($alias);
-
-				if ($alias === "help") {
-					continue;
+				foreach($data as $commandData){
+						if(strtolower($commandData->name) === strtolower($command->getName())){
+								$exists = true;
+								break;
+						}
 				}
 
-				$index = array_search($alias, $packet->enumValues, true);
-				if ($index === false) {
-					$packet->enumValues[] = $alias;
-					$index = count($packet->enumValues) - 1;
+				if($exists || $command->getName() === "help" || !$command->testPermission($player)){
+						continue;
 				}
 
-				$aliasIndexes[] = $index;
-			}
+				$name = strtolower($command->getName());
+				$enum = null;
+				$aliases = array_map('strtolower', $command->getAliases());
 
-			$enumIndex = -1;
+				if (!empty($aliases)) {
+						if (!in_array($name, $aliases, true)) {
+								$aliases[] = $name;
+						}
 
-			if ($aliasIndexes !== []) {
-				$packet->enums[] = new CommandEnumRawData(
-					ucfirst($name) . "Aliases",
-					$aliasIndexes
+						$enum = new CommandHardEnum(
+								ucfirst($name) . "Aliases",
+								$aliases
+						);
+				}
+
+				$commandData = new CommandData(
+						$name,
+						$command->getBuilder()->getDescription(),
+						0,
+						CommandPermissions::NORMAL,
+						$enum,
+						[
+							new CommandOverload(false, [
+								CommandParameter::standard(
+										"args",
+										AvailableCommandsPacket::ARG_TYPE_RAWTEXT,
+										0,
+										true
+								)
+							]),
+						],
+						[]
 				);
 
-				$enumIndex = count($packet->enums) - 1;
-			}
-
-			$packet->commandData[] = new CommandRawData(
-				$name,
-				$command->getBuilder()->getDescription(),
-				0,
-				"any",
-				$enumIndex,
-				[],
-				[
-					new CommandOverloadRawData(false, [
-						new CommandParameterRawData(
-							"args",
-							1048646,
-							true,
-							0)
-					]) // TODO: what this magic typeInfo could be?
-				]
-			);
-
-			$added[$name] = true;
+				$data[] = $commandData;
 		}
+
+		$this->getPlayer()->sendDataPacket(
+				AvailableCommandsPacketAssembler::assemble($data, $hardEnums, $softEnums)
+		);
 
 		return true;
 	}
 
 	public function handleStartGame(StartGamePacket $packet) : bool
 	{
+		$player = $this->getPlayer();
 		$chunkRadiusPacket = new RequestChunkRadiusPacket();
 		$chunkRadiusPacket->radius = 8;
 		$chunkRadiusPacket->maxRadius = 8;
 
-		$this->getPlayer()->getDownstream()->sendGamePacket($chunkRadiusPacket);
-		$this->getPlayer()->backendRuntimeId = $packet->actorRuntimeId;
+		if ($player->getRewriteData()->entityId !== 0) {
+			$player->getDownstream()->sendGamePacket($chunkRadiusPacket);
+		}
+		$player->setBackendRuntimeId($packet->actorRuntimeId);
 
-		return true;
+		$rewriteData = $player->getRewriteData();
+		$rewriteData->entityId = $packet->actorRuntimeId;
+		$rewriteData->originalEntityId = $packet->actorRuntimeId;
+		$rewriteData->dimension = $packet->levelSettings->spawnSettings->getDimension();
+
+		return false;
+	}
+
+	public function handleAddPlayer(AddPlayerPacket $packet) : bool
+	{
+		$this->getPlayer()->addEntity($packet->actorRuntimeId);
+		return false;
+	}
+
+	public function handleAddActor(AddActorPacket $packet) : bool
+	{
+		$this->getPlayer()->addEntity($packet->actorRuntimeId);
+		return false;
+	}
+
+	public function handleRemoveActor(RemoveActorPacket $packet) : bool
+	{
+		$this->getPlayer()->removeEntity($packet->actorUniqueId);
+		return false;
+	}
+
+	public function handleBossEvent(BossEventPacket $packet) : bool
+	{
+		if ($packet->eventType === BossEventPacket::TYPE_SHOW) {
+			$this->getPlayer()->addBossbar($packet->bossActorUniqueId);
+		} elseif ($packet->eventType === BossEventPacket::TYPE_HIDE) {
+			$this->getPlayer()->removeBossbar($packet->bossActorUniqueId);
+		}
+		return false;
+	}
+
+	public function handlePlayerList(PlayerListPacket $packet) : bool
+	{
+		$player = $this->getPlayer();
+		foreach ($packet->entries as $entry) {
+			if ($packet->type === PlayerListPacket::TYPE_ADD) {
+				$player->addPlayerToList($entry->uuid->toString());
+			} else {
+				$player->removePlayerFromList($entry->uuid->toString());
+			}
+		}
+		return false;
+	}
+
+	public function handleSetDisplayObjective(SetDisplayObjectivePacket $packet) : bool
+	{
+		$this->getPlayer()->addObjective($packet->objectiveName);
+		return false;
+	}
+
+	public function handleRemoveObjective(RemoveObjectivePacket $packet) : bool
+	{
+		$this->getPlayer()->removeObjective($packet->objectiveName);
+		return false;
 	}
 
 	public function handlePlayStatus(PlayStatusPacket $packet) : bool
 	{
 		if ($packet->status === PlayStatusPacket::LOGIN_SUCCESS) {
-			$this->getPlayer()->getNetworkSession()->getLogger()->debug('Forwarding LOGIN_SUCCESS from backend to client');
+			$this->getPlayer()->getNetworkSession()->getLogger()->debug('Suppressing duplicate LOGIN_SUCCESS from backend');
 			return true;
 		}
 		if ($packet->status === PlayStatusPacket::PLAYER_SPAWN) {
@@ -154,7 +215,7 @@ class DownstreamInGameHandler extends AbstractDownstreamPacketHandler
 			}
 		}
 
-		return true;
+		return false;
 	}
 
 	public function handleTransfer(TransferPacket $packet) : bool

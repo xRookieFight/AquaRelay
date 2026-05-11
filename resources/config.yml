@@ -23,7 +23,7 @@ server-settings:
 permissions:
   xRookieFight: # Example permissions
     - aquarelay.command.proxylist
-    - aquarelay.command.transfer
+    - aquarelay.command.transfer.*
   GabBiswajit:
     - aquarelay.command.proxystop
     - aquarelay.command.proxylist
@@ -33,6 +33,7 @@ misc-settings:
   log-name: proxy.log # File name used for proxy log output
   language: eng # Selected language for the runtime process
   command-injection: true # Injects proxy commands to backend server
+  fast-transfer: true # Enables the fast dimension change for seamless server transfers
 
 # Resource pack settings
 resource_pack-settings:

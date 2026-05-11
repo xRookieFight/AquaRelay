@@ -22,13 +22,34 @@
 
 declare(strict_types=1);
 
-namespace aquarelay\permission;
+namespace aquarelay\network\protocol;
 
-class DefaultPermissionNames
+use pocketmine\math\Vector3;
+use pocketmine\network\mcpe\protocol\types\DimensionIds;
+use pocketmine\network\mcpe\protocol\types\GameRule;
+
+class RewriteData
 {
-	const COMMAND_PROXYLIST = "aquarelay.command.proxylist";
-	const COMMAND_PROXYPLUGINS = "aquarelay.command.proxyplugins";
-	const COMMAND_PROXYSTOP = "aquarelay.command.proxystop";
-	const COMMAND_TRANSFER_SELF = "aquarelay.command.transfer.self";
-	const COMMAND_TRANSFER_OTHER = "aquarelay.command.transfer.other";
+
+	public int $entityId = 0;
+
+	public int $originalEntityId = 0;
+
+	public int $dimension = DimensionIds::OVERWORLD;
+
+	public ?Vector3 $spawnPosition = null;
+
+	public float $pitch = 0.0;
+
+	public float $yaw = 0.0;
+
+	/**
+	 * @var GameRule[]
+	 * @phpstan-var array<string, GameRule>
+	 */
+	public array $gameRules = [];
+
+	public ?TransferCallback $transferCallback = null;
+
+	public bool $immobileFlag = false;
 }

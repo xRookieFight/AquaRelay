@@ -125,7 +125,7 @@ class NetworkSession
 		$backend = new BackendRakClient(new InternetAddress($ip, $port, 4), $player);
 
 		$player->setDownstream($backend);
-		$player->sendLoginToBackend();
+		$player->sendCacheStatus();
 
 		$backend->connect();
 	}
@@ -273,7 +273,7 @@ class NetworkSession
 		}
 	}
 
-	public function sendMessage(string $message) : void
+	public function onMessage(string $message) : void
 	{
 		$this->sendDataPacket(TextPacket::raw($message));
 	}

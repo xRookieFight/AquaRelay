@@ -26,19 +26,27 @@ namespace aquarelay\network\handler\downstream;
 
 use pocketmine\network\mcpe\protocol\ResourcePackClientResponsePacket;
 use pocketmine\network\mcpe\protocol\ResourcePacksInfoPacket;
+use pocketmine\network\mcpe\protocol\ResourcePackStackPacket;
 
-class DownstreamResourcePackHandler extends AbstractDownstreamPacketHandler
+class SwitchDownstreamResourcePackHandler extends AbstractDownstreamPacketHandler
 {
 	public function handleResourcePacksInfo(ResourcePacksInfoPacket $packet) : bool
 	{
-		$pk = ResourcePackClientResponsePacket::create(
+		$this->getPlayer()->sendToBackend(ResourcePackClientResponsePacket::create(
+			ResourcePackClientResponsePacket::STATUS_HAVE_ALL_PACKS,
+			[]
+		));
+		return true;
+	}
+
+	public function handleResourcePackStack(ResourcePackStackPacket $packet) : bool
+	{
+		$this->getPlayer()->sendToBackend(ResourcePackClientResponsePacket::create(
 			ResourcePackClientResponsePacket::STATUS_COMPLETED,
 			[]
-		);
+		));
 
-		$this->getPlayer()->sendToBackend($pk);
-
-		$this->getPlayer()->setHandler(new DownstreamInGameHandler($this->getPlayer(), $this->logger));
-		return false;
+		$this->getPlayer()->setHandler(new SwitchDownstreamHandler($this->getPlayer(), $this->logger));
+		return true;
 	}
 }

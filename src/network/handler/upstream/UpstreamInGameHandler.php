@@ -25,9 +25,13 @@ declare(strict_types=1);
 namespace aquarelay\network\handler\upstream;
 
 use aquarelay\event\default\player\PlayerChatEvent;
+use pocketmine\network\mcpe\protocol\ClientCacheStatusPacket;
 use pocketmine\network\mcpe\protocol\CommandRequestPacket;
 use pocketmine\network\mcpe\protocol\ModalFormResponsePacket;
+use pocketmine\network\mcpe\protocol\PlayerActionPacket;
 use pocketmine\network\mcpe\protocol\TextPacket;
+use pocketmine\network\mcpe\protocol\TransferPacket;
+use pocketmine\network\mcpe\protocol\types\PlayerAction;
 use function array_shift;
 use function count;
 use function explode;
@@ -53,7 +57,6 @@ class UpstreamInGameHandler extends AbstractUpstreamPacketHandler
 		if ($event->isCancelled()) {
 			return true;
 		}
-		
 		return false;
 	}
 
@@ -84,7 +87,7 @@ class UpstreamInGameHandler extends AbstractUpstreamPacketHandler
 			if ($command === null) {
 				return false;
 			}
-			
+
 			$commandMap->dispatch($player, $commandName . (count($args) > 0 ? " " : "") . implode(" ", $args));
 		}
 		return true;
@@ -95,7 +98,46 @@ class UpstreamInGameHandler extends AbstractUpstreamPacketHandler
 		if ($this->session->getPlayer()->onFormSubmit($packet->formId, $packet->formData)) {
 			return true;
 		}
-		
+
+		return false;
+	}
+
+	public function handlePlayerAction(PlayerActionPacket $packet) : bool
+	{
+		if ($packet->action === PlayerAction::DIMENSION_CHANGE_ACK) {
+			$rewriteData = $this->session->getPlayer()->getRewriteData();
+			if ($rewriteData->transferCallback !== null) {
+				return $rewriteData->transferCallback->onDimChangeSuccess();
+			}
+		}
+		return false;
+	}
+
+	public function handleClientCacheStatus(ClientCacheStatusPacket $packet) : bool
+	{
+		return true;
+	}
+
+	public function handleTransfer(TransferPacket $packet) : bool
+	{
+		$serverManager = $this->session->getPlayer()?->getServer()->getServerManager();
+		$ipAddress = $packet->address;
+
+		$server = $serverManager->get($ipAddress);
+		if ($server !== null){
+			$this->session->getPlayer()?->transferToBackend($server);
+			return false;
+		}
+
+		$port = $packet->port;
+
+		foreach ($serverManager->getAll() as $data) {
+			if ($data->getAddress() === $ipAddress && $data->getPort() === $port) {
+				$this->session->getPlayer()?->transferToBackend($serverManager->get($data->getName()));
+				break;
+			}
+		}
+
 		return false;
 	}
 }

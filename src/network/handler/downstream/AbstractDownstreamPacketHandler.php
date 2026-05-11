@@ -45,5 +45,10 @@ abstract class AbstractDownstreamPacketHandler implements PacketHandlerInterface
 		return $this->player;
 	}
 
+	public function shouldForwardUnhandled() : bool
+	{
+		return true;
+	}
+
 	public function setUp() : void {}
 }

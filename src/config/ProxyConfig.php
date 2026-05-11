@@ -78,7 +78,8 @@ readonly class ProxyConfig
 				(bool) $miscSettings['debug-mode'],
 				$miscSettings['log-name'],
 				$miscSettings['language'],
-				(bool) $miscSettings['command-injection']
+				(bool) $miscSettings['command-injection'],
+				(bool) ($miscSettings['fast-transfer'])
 			),
 			new NetworkSettings(
 				$networkSettings['bind']['address'],

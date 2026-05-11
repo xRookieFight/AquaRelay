@@ -30,7 +30,8 @@ final class MiscSettings
 		private bool $debugMode,
 		private string $logName,
 		private string $selectedLanguage,
-		private bool $commandInjection
+		private bool $commandInjection,
+		private bool $fastTransfer
 	) {}
 
 	public function isDebugMode() : bool
@@ -71,5 +72,15 @@ final class MiscSettings
 	public function setCommandInjection(bool $commandInjection) : void
 	{
 		$this->commandInjection = $commandInjection;
+	}
+
+	public function getFastTransfer() : bool
+	{
+		return $this->fastTransfer;
+	}
+
+	public function setFastTransfer(bool $fastTransfer) : void
+	{
+		$this->fastTransfer = $fastTransfer;
 	}
 }

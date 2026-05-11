@@ -103,6 +103,11 @@ final class BackendRakClient extends Session
 		$this->sendUnconnectedPing();
 	}
 
+	public function isConnected() : bool
+	{
+		return $this->connState === ConnectionState::LOGGED_IN;
+	}
+
 	public function sendGamePacket(DataPacket $packet) : void
 	{
 		if ($this->connState->value < ConnectionState::LOGGED_IN->value) {
@@ -140,7 +145,6 @@ final class BackendRakClient extends Session
 			$this->player->tryFallbackOrDisconnect();
 		} catch (\Throwable $e) {
 			$this->getLogger()->logException($e);
-			throw $e;
 		}
 	}
 

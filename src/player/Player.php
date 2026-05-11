@@ -30,6 +30,8 @@ use aquarelay\form\FormValidationException;
 use aquarelay\lang\TranslationFactory;
 use aquarelay\network\handler\downstream\AbstractDownstreamPacketHandler;
 use aquarelay\network\handler\downstream\DownstreamResourcePackHandler;
+use aquarelay\network\handler\downstream\SwitchDownstreamResourcePackHandler;
+use aquarelay\network\protocol\RewriteData;
 use aquarelay\network\NetworkSession;
 use aquarelay\network\raklib\client\BackendRakClient;
 use aquarelay\permission\PermissionHolder;
@@ -39,6 +41,7 @@ use aquarelay\server\ServerException;
 use aquarelay\utils\LoginData;
 use aquarelay\utils\Utils;
 use pocketmine\network\mcpe\protocol\ClientboundPacket;
+use pocketmine\network\mcpe\protocol\ClientCacheStatusPacket;
 use pocketmine\network\mcpe\protocol\DataPacket;
 use pocketmine\network\mcpe\protocol\LoginPacket;
 use pocketmine\network\mcpe\protocol\TransferPacket;
@@ -56,8 +59,20 @@ class Player implements CommandSender, PermissionHolder
 	private ?BackendServer $backendServer = null;
 	private ?AbstractDownstreamPacketHandler $handler = null;
 	protected int $formIdCounter = 0;
+	private ?ClientCacheStatusPacket $cacheStatusPacket = null;
 	/** @var Form[] */
 	protected array $forms = [];
+
+	private RewriteData $rewriteData;
+
+	/** @var int[] */
+	private array $entities = [];
+	/** @var int[] */
+	private array $bossbars = [];
+	/** @var string[] */
+	private array $playerList = [];
+	/** @var string[] */
+	private array $scoreboards = [];
 
 	public function __construct(
 		private readonly ProxyServer    $proxyServer,
@@ -67,6 +82,7 @@ class Player implements CommandSender, PermissionHolder
 	{
 		$this->xuid = $loginData->xuid;
 		$this->uuid = $loginData->uuid;
+		$this->rewriteData = new RewriteData();
 
 		$this->setHandler(new DownstreamResourcePackHandler($this, $this->proxyServer->getLogger()));
 	}
@@ -120,19 +136,20 @@ class Player implements CommandSender, PermissionHolder
 		return $this->xuid;
 	}
 
-	public function sendLoginToBackend() : void
+	public function sendCacheStatus() : void
 	{
 		if ($this->downstreamConnection === null) {
 			return;
 		}
 
-		$pk = LoginPacket::create(
-			$this->loginData->protocolVersion,
-			json_encode($this->loginData->chainData),
-			$this->loginData->clientData
-		);
+		if ($this->cacheStatusPacket !== null) {
+			$this->sendToBackend($this->cacheStatusPacket);
+		}
+	}
 
-		$this->sendToBackend($pk);
+	public function setCacheStatusPacket(ClientCacheStatusPacket $packet) : void
+	{
+		$this->cacheStatusPacket = $packet;
 	}
 
 	public function setHandler(AbstractDownstreamPacketHandler $handler) : void
@@ -143,9 +160,12 @@ class Player implements CommandSender, PermissionHolder
 	public function handleBackendPacket(DataPacket $packet) : void
 	{
 		if ($this->handler !== null) {
-			$packet->handle($this->handler);
+			if (!$packet->handle($this->handler)) {
+				$this->sendDataPacket($packet);
+			}
+		} else {
+			$this->sendDataPacket($packet);
 		}
-		$this->sendDataPacket($packet);
 	}
 
 	public function sendMessage(string $message) : void
@@ -248,6 +268,12 @@ class Player implements CommandSender, PermissionHolder
 
 		$this->backendServer = $server;
 
+		if ($this->getServer()->getConfig()->getMiscSettings()->getFastTransfer() && $this->rewriteData->entityId !== 0) {
+			$this->setHandler(new SwitchDownstreamResourcePackHandler($this, $this->proxyServer->getLogger()));
+		} else {
+			$this->setHandler(new DownstreamResourcePackHandler($this, $this->proxyServer->getLogger()));
+		}
+
 		$this->upstreamSession->connectBackendTo($server->getAddress(), $server->getPort());
 		$this->getNetworkSession()->getLogger()->info("Transferring to server: {$server->getName()}");
 	}
@@ -339,5 +365,90 @@ class Player implements CommandSender, PermissionHolder
 	public function getPing() : int
 	{
 		return $this->getNetworkSession()->getPing();
+	}
+
+	public function getRewriteData() : RewriteData
+	{
+		return $this->rewriteData;
+	}
+
+	public function addEntity(int $id) : void
+	{
+		$this->entities[$id] = $id;
+	}
+
+	public function removeEntity(int $id) : void
+	{
+		unset($this->entities[$id]);
+	}
+
+	public function clearEntities() : void
+	{
+		$this->entities = [];
+	}
+
+	public function getEntities() : array
+	{
+		return $this->entities;
+	}
+
+	public function addBossbar(int $id) : void
+	{
+		$this->bossbars[$id] = $id;
+	}
+
+	public function removeBossbar(int $id) : void
+	{
+		unset($this->bossbars[$id]);
+	}
+
+	public function clearBossbars() : void
+	{
+		$this->bossbars = [];
+	}
+
+	public function getBossbars() : array
+	{
+		return $this->bossbars;
+	}
+
+	public function addPlayerToList(string $uuid) : void
+	{
+		$this->playerList[$uuid] = $uuid;
+	}
+
+	public function removePlayerFromList(string $uuid) : void
+	{
+		unset($this->playerList[$uuid]);
+	}
+
+	public function clearPlayerList() : void
+	{
+		$this->playerList = [];
+	}
+
+	public function getPlayerList() : array
+	{
+		return $this->playerList;
+	}
+
+	public function addObjective(string $id) : void
+	{
+		$this->scoreboards[$id] = $id;
+	}
+
+	public function removeObjective(string $id) : void
+	{
+		unset($this->scoreboards[$id]);
+	}
+
+	public function clearScoreboards() : void
+	{
+		$this->scoreboards = [];
+	}
+
+	public function getScoreboards() : array
+	{
+		return $this->scoreboards;
 	}
 }
