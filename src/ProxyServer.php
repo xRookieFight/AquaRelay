@@ -73,8 +73,8 @@ use const DIRECTORY_SEPARATOR;
 class ProxyServer
 {
 	public const NAME = 'AquaRelay';
-	public const VERSION = '1.0.0-alpha5'; // Semver
-	public const IS_DEVELOPMENT = true;
+	public const VERSION = '1.0.0'; // Semver
+	public const IS_DEVELOPMENT = false;
 	public RakLibInterface $interface;
 	private MainLogger $logger;
 	private ProxyConfig $config;
